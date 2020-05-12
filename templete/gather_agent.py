@@ -13,7 +13,11 @@ import time
 import json
 import ssl
 import smtplib
+import redis
+import pymongo
 from email.mime.text import MIMEText
+from elasticsearch import Elasticsearch
+
 
 def exception_interface(v_title,v_content):
     v_templete = '''
@@ -102,20 +106,66 @@ def exception_connect_db(config,p_error):
     send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
 
 def get_ds_mysql(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8')
-    return conn
+    try:
+        conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8',connect_timeout=3)
+        return conn
+    except  Exception as e:
+        print('get_ds_mysql exceptiion:' + traceback.format_exc())
+        return None
 
 def get_ds_mysql_test(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8',read_timeout=3)
     return conn
 
 def get_ds_sqlserver(ip, port, service, user, password):
-    conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8')
-    return conn
+    try:
+        conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8')
+        return conn
+    except  Exception as e:
+        print('get_ds_sqlserver exceptiion:' + traceback.format_exc())
+        return None
 
 def get_ds_sqlserver_test(ip, port, service, user, password):
     conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8',timeout=3)
     return conn
+
+
+def get_ds_redis(ip,port,password):
+    try:
+        if password is None or password=='':
+           conn =redis.Redis(host=ip, port=int(port), db=0)
+        else:
+           conn = redis.StrictRedis(host=ip, port=int(port), password=password, db=0)
+        return conn
+    except  Exception as e:
+        print('get_ds_redis exceptiion:' + traceback.format_exc())
+        return None
+
+def get_ds_mongo(ip, port):
+    try:
+        conn = pymongo.MongoClient('mongodb://{0}:{1}/'.format(ip, int(port)))
+        return conn
+    except  Exception as e:
+        print('get_ds_mongo exceptiion:' + traceback.format_exc())
+        return None
+
+def get_ds_mongo_auth(ip, port,user,password,service):
+    try:
+        conn          = pymongo.MongoClient('mongodb://{0}:{1}/'.format(ip,int(port)))
+        db            = conn[service]
+        db.authenticate(user, password)
+        return db
+    except  Exception as e:
+        print('get_ds_mongo exceptiion:' + traceback.format_exc())
+        return None
+
+def get_ds_es(p_ip,p_port):
+    try:
+        conn = Elasticsearch([p_ip],port=p_port)
+        return conn
+    except  Exception as e:
+        print('get_ds_sqlserver exceptiion:' + traceback.format_exc())
+        return None
 
 def aes_decrypt(p_password,p_key):
     values = {
@@ -160,14 +210,28 @@ def get_config_from_db(tag):
                db_service = config['db_service']
                db_user    = config['db_user']
                db_type    = config['db_type']
-               db_pass    = aes_decrypt(config['db_pass'], db_user)
-               print('get_config_from_db=',db_ip,db_port,db_service,db_user,db_type,db_pass)
                if db_type=='0':
+                   db_pass = aes_decrypt(config['db_pass'], db_user)
                    config['db_string'] = 'msyql://'+db_ip + ':' + db_port + '/' + db_service
                    config['db_mysql']  = get_ds_mysql(db_ip, db_port, db_service, db_user, db_pass)
+                   print('get_config_from_db=', db_ip, db_port, db_service, db_user, db_type, db_pass)
                elif db_type=='2':
+                   db_pass = aes_decrypt(config['db_pass'], db_user)
                    config['db_string'] = 'mssql://'+db_ip + ':' + db_port + '/' + db_service
                    config['db_mssql']  = get_ds_sqlserver(db_ip, db_port, db_service, db_user, db_pass)
+                   print('get_config_from_db=', db_ip, db_port, db_service, db_user, db_type, db_pass)
+               elif db_type=='4' :
+                   config['db_string'] = 'elasticsearch://' + db_ip + ':' + db_port
+                   config['db_elasticsearch'] =  get_ds_es(db_ip, db_port)
+               elif db_type == '5':
+                   db_pass=''
+                   if config['db_pass'] !='':
+                      db_pass = aes_decrypt(config['db_pass'], db_user)
+                   config['db_string'] = 'redis://' + db_ip + ':' + db_port
+                   config['db_redis']  = get_ds_redis(db_ip, db_port,db_pass)
+               elif db_type == '6':
+                   config['db_string'] = 'mongo://' + db_ip + ':' + db_port
+                   config['db_mongo']  = get_ds_mongo(db_ip, db_port)
                else:
                    pass
 
@@ -292,8 +356,9 @@ def get_mysql_available(config):
         db         = get_ds_mysql_test(db_ip, db_port, db_service, db_user, db_pass)
         cr         = db.cursor()
         cr.execute("SELECT 1")
+        db.commit()
         cr.close()
-        return 100
+        return 1
     except Exception as e:
         print('get_mysql_available exceptiion:' + traceback.format_exc())
         return 0
@@ -331,19 +396,68 @@ def get_mssql_available(config):
         db         = get_ds_sqlserver_test(db_ip, db_port, db_service, db_user, db_pass)
         cr         = db.cursor()
         cr.execute("SELECT 1")
+        db.commit()
         cr.close()
-        return 100
+        return 1
     except Exception as e:
         print('get_mssql_available exceptiion:' + traceback.format_exc())
         return 0
+
+
+def getUniqueNumber():
+    import datetime
+    import random;
+    for i in range(0, 10):
+        nowTime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    randomNum = random.randint(0, 100)
+    if randomNum <= 10:
+        randomNum = str(0) + str(randomNum)
+    uniqueNum = str(nowTime) + str(randomNum)
+    return  uniqueNum
+
+
+def get_es_available(config):
+    try:
+        es= config['db_elasticsearch']
+        indx = 'dbapi_'+getUniqueNumber()
+        body = {'title': 'How do you do ?'}
+        print('get_es_available=', indx)
+        es.indices.create(index=indx,ignore=400)
+        es.indices.delete(index=indx)
+        return 1
+    except Exception as e:
+        print('get_es_available exceptiion:' + traceback.format_exc())
+        return 0
+
+def get_redis_available(config):
+    try:
+        r= config['db_redis']
+        key = 'dbapi_' + getUniqueNumber()
+        r.set(key,'0')
+        r.delete(key)
+        return 1
+    except Exception as e:
+        print('get_redis_available exceptiion:' + traceback.format_exc())
+        return 0
+
+def get_mongo_available(config):
+    try:
+        mongo = config['db_mongo']
+        db_names = mongo.list_database_names()
+        print('get_mongo_available=',db_names)
+        return 1
+    except Exception as e:
+        print('get_mongo_available exceptiion:' + traceback.format_exc())
+        return 0
+
 
 def gather(config):
     d_item = {}
     for idx in config['templete_indexes'].split(','):
         if idx == 'cpu_total_usage':
-           d_item['cpu_total_usage'] = psutil.cpu_percent(interval=1)
+           d_item['cpu_total_usage'] = psutil.cpu_percent(interval=3, percpu=False)
         elif idx == 'cpu_core_usage':
-           d_item['cpu_core_usage'] = psutil.cpu_percent(interval=1, percpu=True)
+           d_item['cpu_core_usage'] = psutil.cpu_percent(interval=3, percpu=True)
         elif idx == 'mem_usage':
            d_item['mem_usage']  = psutil.virtual_memory().percent
         elif idx == 'disk_usage':
@@ -367,7 +481,13 @@ def gather(config):
         elif idx == 'mssql_active_connect':
            d_item['active_connect'] = get_mssql_active_connect(config)
         elif idx == 'mssql_available':
-           d_item['db_available']   =  get_mssql_available(config)
+           d_item['db_available'] =  get_mssql_available(config)
+        elif idx == 'es_available':
+           d_item['db_available'] = get_es_available(config)
+        elif idx == 'redis_available':
+           d_item['db_available'] = get_redis_available(config)
+        elif idx == 'mongo_available':
+           d_item['db_available'] = get_mongo_available(config)
         else:
            pass
 

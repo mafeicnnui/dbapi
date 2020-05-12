@@ -233,7 +233,7 @@ def get_db_sync_config(p_tag):
                             CONCAT(c.ip,':',c.port,':',c.service,':',c.user,':',c.password)
                           END AS sync_db_sour,                          
                           CASE WHEN d.service='' THEN 
-                            CONCAT(d.ip,':',d.port,':',a.sync_schema,':',d.user,':',d.password)
+                            CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,a.sync_schema),':',d.user,':',d.password)
                           ELSE
                             CONCAT(d.ip,':',d.port,':',d.service,':',d.user,':',d.password)
                           END AS sync_db_dest,                          
