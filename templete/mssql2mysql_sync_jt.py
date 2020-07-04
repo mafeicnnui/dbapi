@@ -191,10 +191,10 @@ def get_sync_time_type_name(sync_time_type):
     else:
         return ''
 
-def aes_decrypt(p_password,p_key):
+def aes_decrypt(p_password, p_key):
     values = {
         'password': p_password,
-        'key':p_key
+        'key': p_key
     }
     url = 'http://$$API_SERVER$$/read_db_decrypt'
     context = ssl._create_unverified_context()
@@ -210,57 +210,203 @@ def aes_decrypt(p_password,p_key):
         print('接口read_db_decrypt 调用失败!,{0}'.format(res['msg']))
         sys.exit(0)
 
+def exception_interface(v_title, v_content):
+    v_templete = '''
+           <html>
+              <head>
+                 <style type="text/css">
+                     .xwtable {width: 100%;border-collapse: collapse;border: 1px solid #ccc;}
+                     .xwtable thead td {font-size: 12px;color: #333333;
+                                        text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                        border: 1px solid #ccc; font-weight:bold;}
+                     .xwtable thead th {font-size: 12px;color: #333333;
+                                        text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                        border: 1px solid #ccc; font-weight:bold;}
+                     .xwtable tbody tr {background: #fff;font-size: 12px;color: #666666;}
+                     .xwtable tbody tr.alt-row {background: #f2f7fc;}
+                     .xwtable td{line-height:20px;text-align: left;padding:4px 10px 3px 10px;height: 18px;border: 1px solid #ccc;}
+                 </style>
+              </head>
+              <body>             
+                 $$TABLE$$           
+              </body>
+           </html>
+          '''
+    v_templete = v_templete.replace('$$TABLE$$', v_content)
+    send_mail25('190343@lifeat.cn', 'Hhc5HBtAuYTPGHQ8', '190343@lifeat.cn', v_title, v_templete)
 
-def get_config_from_db(tag):
-    values = {
-        'tag': tag
-    }
-    print('values=', values)
-    url = 'http://$$API_SERVER$$/read_config_sync'
-    context = ssl._create_unverified_context()
-    data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    print('data=', data)
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
-    print(res, res['code'])
-    if res['code'] == 200:
-        print('接口调用成功!')
-        config = res['msg']
-        config['sync_time_type_name'] = get_sync_time_type_name(config['sync_time_type'])
-        db_sour_ip      = config['sync_db_sour'].split(':')[0]
-        db_sour_port    = config['sync_db_sour'].split(':')[1]
-        db_sour_service = config['sync_db_sour'].split(':')[2]
-        db_sour_user    = config['sync_db_sour'].split(':')[3]
-        db_sour_pass    = config['sync_db_sour'].split(':')[4]
-        db_dest_ip      = config['sync_db_dest'].split(':')[0]
-        db_dest_port    = config['sync_db_dest'].split(':')[1]
-        db_dest_service = config['sync_db_dest'].split(':')[2]
-        db_dest_user    = config['sync_db_dest'].split(':')[3]
-        db_dest_pass    = config['sync_db_dest'].split(':')[4]
-        config['db_sqlserver_ip']      = db_sour_ip
-        config['db_sqlserver_port']    = db_sour_port
-        config['db_sqlserver_service'] = db_sour_service
-        config['db_sqlserver_user']    = db_sour_user
-        config['db_sqlserver_pass']    = aes_decrypt(db_sour_pass,db_sour_user)
-        config['db_mysql_ip']          = db_dest_ip
-        config['db_mysql_port']        = db_dest_port
-        config['db_mysql_service']     = db_dest_service
-        config['db_mysql_user']        = db_dest_user
-        config['db_mysql_pass']        = aes_decrypt(db_dest_pass,db_dest_user)
-        config['db_sqlserver_string']  = db_sour_ip + ':' + db_sour_port + '/' + db_sour_service
-        config['db_mysql_string']      = db_dest_ip + ':' + db_dest_port + '/' + db_dest_service
-        config['db_sqlserver']         = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user, db_sour_pass)
-        config['db_sqlserver2']        = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
-                                                   db_sour_pass)
-        config['db_mysql']      = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
-        config['db_sqlserver3'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
-                                                   db_sour_pass)
-        config['db_mysql3']     = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
+def write_local_config_file(config):
+    sync_db_sour = config['db_sqlserver_ip'] + ':' + \
+                   config['db_sqlserver_port'] + ':' + \
+                   config['db_sqlserver_service'] + ':' + \
+                   config['db_sqlserver_user'] + ':' + \
+                   config['db_sqlserver_pass']
+
+    sync_db_dest = config['db_mysql_ip'] + ':' + \
+                   config['db_mysql_port'] + ':' + \
+                   config['db_mysql_service'] + ':' + \
+                   config['db_mysql_user'] + ':' + \
+                   config['db_mysql_pass']
+
+    file_name = config['script_path'] + '/config/' + config['sync_tag'] + '.ini'
+    file_handle = open(file_name, 'w')
+    file_handle.write('[sync]' + '\n')
+    file_handle.write('sync_db_server={0}\n'.format(sync_db_sour))
+    file_handle.write('sync_db_mysql={0}\n'.format(sync_db_dest))
+    file_handle.write('sync_table={0}\n'.format(config['sync_table']))
+    file_handle.write('sync_col_name={0}\n'.format(config['sync_col_name']))
+    file_handle.write('sync_col_val={0}\n'.format(config['sync_col_val']))
+    file_handle.write('batch_size={0}\n'.format(config['batch_size']))
+    file_handle.write('batch_size_incr={0}\n'.format(config['batch_size_incr']))
+    file_handle.write('sync_time_type={0}\n'.format(config['sync_time_type']))
+    file_handle.write('sync_gap={0}\n'.format(config['sync_gap']))
+    file_handle.close()
+    print("{0} export complete!".format(file_name))
+
+def exception_connect_db(config, p_error):
+    v_templete = '''
+        <html>
+           <head>
+              <style type="text/css">
+                  .xwtable {width: 100%;border-collapse: collapse;border: 1px solid #ccc;}
+                  .xwtable thead td {font-size: 12px;color: #333333;
+                                     text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                     border: 1px solid #ccc; font-weight:bold;}
+                  .xwtable thead th {font-size: 12px;color: #333333;
+                                     text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                     border: 1px solid #ccc; font-weight:bold;}
+                  .xwtable tbody tr {background: #fff;font-size: 12px;color: #666666;}
+                  .xwtable tbody tr.alt-row {background: #f2f7fc;}
+                  .xwtable td{line-height:20px;text-align: left;padding:4px 10px 3px 10px;height: 18px;border: 1px solid #ccc;}
+              </style>
+           </head>
+           <body>             
+              <table class='xwtable'>
+                  <tr><td  width="30%">任务描述</td><td  width="70%">$$task_desc$$</td></tr>
+                  <tr><td>任务标识</td><td>$$sync_tag$$</td></tr>                 
+                  <tr><td>业务类型</td><td>$$sync_ywlx$$</td></tr>
+                  <tr><td>同步方向</td><td>$$sync_type$$</td></tr>
+                  <tr><td>同步服务器</td><td>$$server_id$$</td></tr>
+                  <tr><td>源数据源</td><td>$$sync_db_sour$$</td></tr>
+                  <tr><td>目标数据源</td><td>$$sync_db_dest$$</td></tr>
+                  <tr><td>同步表名</td><td>$$sync_table$$</td></tr>
+                  <tr><td>时间类型</td><td>$$sync_time_type$$</td></tr>
+                  <tr><td>同步脚本</td><td>$$script_file$$</td></tr>
+                  <tr><td>运行时间</td><td>$$run_time$$</td></tr>                
+                  <tr><td>异常信息</td><td>$$run_error$$</td></tr>
+              </table>                
+           </body>
+        </html>
+       '''
+    v_title = config.get('comments') + '数据同步数据库异常[★★★]'
+    v_content = v_templete.replace('$$task_desc$$', config.get('comments'))
+    v_content = v_content.replace('$$sync_tag$$', config.get('sync_tag'))
+    v_content = v_content.replace('$$sync_ywlx$$', config.get('sync_ywlx_name'))
+    v_content = v_content.replace('$$sync_type$$', config.get('sync_type_name'))
+    v_content = v_content.replace('$$server_id$$', str(config.get('server_desc')))
+    v_content = v_content.replace('$$sync_db_sour$$', config.get('sync_db_sour'))
+    v_content = v_content.replace('$$sync_db_dest$$', config.get('sync_db_dest'))
+    v_content = v_content.replace('$$sync_table$$', config.get('sync_table'))
+    v_content = v_content.replace('$$sync_time_type$$', config.get('sync_time_type_name'))
+    v_content = v_content.replace('$$script_file$$', config.get('script_file'))
+    v_content = v_content.replace('$$run_time$$', config.get('run_time'))
+    v_content = v_content.replace('$$run_error$$', str(p_error))
+    send_mail25('190343@lifeat.cn', 'Hhc5HBtAuYTPGHQ8', '190343@lifeat.cn', v_title, v_content)
+
+def get_config_from_db(tag, workdir):
+    try:
+        values = {'tag': tag}
+        print('values=', values)
+        url = 'http://$$API_SERVER$$/read_config_sync'
+        context = ssl._create_unverified_context()
+        data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
+        print('data=', data)
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
+        res = json.loads(res.read())
+        print(res, res['code'])
+        if res['code'] == 200:
+            print('接口调用成功!')
+            try:
+                config = res['msg']
+                config['sync_time_type_name'] = get_sync_time_type_name(config['sync_time_type'])
+                db_sour_ip = config['sync_db_sour'].split(':')[0]
+                db_sour_port = config['sync_db_sour'].split(':')[1]
+                db_sour_service = config['sync_db_sour'].split(':')[2]
+                db_sour_user = config['sync_db_sour'].split(':')[3]
+                db_sour_pass = aes_decrypt(config['sync_db_sour'].split(':')[4], db_sour_user)
+                db_dest_ip = config['sync_db_dest'].split(':')[0]
+                db_dest_port = config['sync_db_dest'].split(':')[1]
+                db_dest_service = config['sync_db_dest'].split(':')[2]
+                db_dest_user = config['sync_db_dest'].split(':')[3]
+                db_dest_pass = aes_decrypt(config['sync_db_dest'].split(':')[4], db_dest_user)
+                config['db_sqlserver_ip'] = db_sour_ip
+                config['db_sqlserver_port'] = db_sour_port
+                config['db_sqlserver_service'] = db_sour_service
+                config['db_sqlserver_user'] = db_sour_user
+                config['db_sqlserver_pass'] = db_sour_pass
+                config['db_mysql_ip'] = db_dest_ip
+                config['db_mysql_port'] = db_dest_port
+                config['db_mysql_service'] = db_dest_service
+                config['db_mysql_user'] = db_dest_user
+                config['db_mysql_pass'] = db_dest_pass
+                config['db_sqlserver_string'] = db_sour_ip + ':' + db_sour_port + '/' + db_sour_service
+                config['db_mysql_string'] = db_dest_ip + ':' + db_dest_port + '/' + db_dest_service
+                config['db_sqlserver'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
+                                                          db_sour_pass)
+                config['db_sqlserver2'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
+                                                           db_sour_pass)
+                config['db_mysql'] = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
+                config['db_sqlserver3'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
+                                                           db_sour_pass)
+                config['db_mysql3'] = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user,
+                                                   db_dest_pass)
+                config['run_mode'] = 'remote'
+                # write local config file
+                write_local_config_file(config)
+                return config
+            except Exception as e:
+                v_error = '从接口配置获取数据库连接对象时出现异常:{0}'.format(traceback.format_exc())
+                print(v_error)
+                exception_connect_db(config, v_error)
+                exit(0)
+        else:
+            print('接口调用失败!,{0}'.format(res['msg']))  # 发异常邮件
+            v_title = '数据同步接口异常[★]'
+            v_content = '''<table class='xwtable'>
+                               <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
+                               <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
+                               <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr>            
+                           </table>'''
+            v_content = v_content.replace('$$interface$$', url)
+            v_content = v_content.replace('$$parameter$$', json.dumps(values))
+            v_content = v_content.replace('$$error$$', res['msg'])
+            if res['code'] != -3:
+                exception_interface(v_title, v_content)
+                sys.exit(0)
+            else:
+                print(res['msg'])
+                sys.exit(0)
+
+    except Exception as e:
+        file_name = workdir + '/config/' + tag + '.ini'
+        print('接口调用失败:{0}'.format(str(e)))
+        print('从本地读取最近一次配置文件1：{0}'.format(file_name))
+        v_title = '数据同步接口异常[★★]'
+        v_desc = '同步任务运行于本地配置文件模式中，请尽快处理! 自动从本地读取最近一次配置文件进行同步：{0}'.format(file_name)
+        v_content = '''<table class='xwtable'>
+                           <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
+                           <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
+                           <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr> 
+                           <tr><td  width="30%">说明信息</td><td  width="70%">$$desc$$</td></tr>               
+                       </table>'''
+        v_content = v_content.replace('$$interface$$', url)
+        v_content = v_content.replace('$$parameter$$', json.dumps(values))
+        v_content = v_content.replace('$$error$$', traceback.format_exc())
+        v_content = v_content.replace('$$desc$$', v_desc)
+        exception_interface(v_title, v_content)
+        config = get_config(file_name, tag)
         return config
-    else:
-        print('接口调用失败!,{0}'.format(res['msg']))
-        sys.exit(0)
 
 
 def write_log(msg):
@@ -1283,7 +1429,7 @@ def get_pk_vals_sqlserver(config, ftab):
     cr_source = db_source.cursor()
     tab = ftab.split(':')[0]
     v_pk_cols = get_sync_table_pk_vals(config, tab)
-    v_sql = "select {0} from {1} with(nolock) {2}".format(v_pk_cols, tab, get_sync_where_incr(ftab))
+    v_sql = "select {0} from {1} with(nolock) {2}".format(v_pk_cols, tab, get_sync_where_incr(ftab,config))
     cr_source.execute(v_sql)
     rs_source = cr_source.fetchall()
     l_pk_vals = []
@@ -1298,7 +1444,7 @@ def get_pk_vals_mysql(config, ftab):
     cr_dest = db_dest.cursor()
     tab = ftab.split(':')[0]
     v_pk_cols = get_sync_table_pk_vals_mysql(config, tab)
-    v_sql = "select {0} from {1} {2}".format(v_pk_cols, get_mapping_tname(tab), get_sync_where_incr_mysql(ftab))
+    v_sql = "select {0} from {1} {2}".format(v_pk_cols, get_mapping_tname(tab), get_sync_where_incr_mysql(ftab,config))
     cr_dest.execute(v_sql)
     rs_dest = cr_dest.fetchall()
     l_pk_vals = []
@@ -1659,9 +1805,9 @@ def check_full_sync(config, tab):
         return False
 
 
-def sync(config, debug):
+def sync(config, debug,workdir):
     # init dict
-    config = get_config_from_db(config)
+    config = get_config_from_db(config,workdir)
 
     # print dict
     if debug:
@@ -1693,6 +1839,8 @@ def main():
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             config = sys.argv[p + 1]
+        elif sys.argv[p] == "-workdir":
+            workdir = sys.argv[p + 1]
         elif sys.argv[p] == "-debug":
             debug = True
     print('config=', config)
@@ -1701,7 +1849,7 @@ def main():
         sys.exit(0)
 
     # process
-    sync(config, debug)
+    sync(config, debug, workdir)
 
 
 if __name__ == "__main__":
