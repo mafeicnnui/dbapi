@@ -11,7 +11,7 @@
   </component>
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/dbapi$mysql_backup.coverage" NAME="mysql_backup Coverage Results" MODIFIED="1571578497013" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/templete" />
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1589078645237" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1600136326413" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$elastic_backup.coverage" NAME="elastic_backup Coverage Results" MODIFIED="1572061733562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/templete" />
     <SUITE FILE_PATH="coverage/dbapi$datax_sync.coverage" NAME="datax_sync Coverage Results" MODIFIED="1579081941377" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/datax" />
   </component>
@@ -34,8 +34,8 @@
       <file leaf-file-name="dbapi.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/dbapi.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3834">
-              <caret line="224" column="26" selection-start-line="224" selection-start-column="26" selection-end-line="224" selection-end-column="26" />
+            <state relative-caret-position="18198">
+              <caret line="1022" selection-start-line="1022" selection-end-line="1022" />
               <folding>
                 <element signature="e#168#189#0" expanded="true" />
               </folding>
@@ -43,42 +43,14 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="mysql2mysql_sync.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_sync.py">
+      <file leaf-file-name="db_creator.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/templete/db_creator.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="832">
-              <caret line="1008" column="48" selection-start-line="1008" selection-start-column="12" selection-end-line="1008" selection-end-column="48" />
+            <state relative-caret-position="183">
+              <caret line="143" column="22" selection-start-line="143" selection-start-column="4" selection-end-line="143" selection-end-column="22" />
               <folding>
-                <element signature="e#46993#49412#0" />
-                <element signature="e#54795#56136#0" />
+                <element signature="e#136#172#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="db_archive.sh" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/templete/db_archive.sh">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="54">
-              <caret line="3" column="34" selection-start-line="3" selection-start-column="34" selection-end-line="3" selection-end-column="34" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="mysql2mysql_archive.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_archive.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="5688">
-              <caret line="329" column="38" selection-start-line="328" selection-start-column="8" selection-end-line="329" selection-end-column="38" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="gather_agent.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/templete/gather_agent.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="279">
-              <caret line="477" column="58" selection-start-line="477" selection-start-column="39" selection-end-line="477" selection-end-column="58" />
             </state>
           </provider>
         </entry>
@@ -94,36 +66,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>traceback</find>
-      <find>stop_remote_sync_task</find>
-      <find>str(ret, encoding='utf-8')</find>
-      <find>delete from</find>
-      <find>get_pk_vals_mysql2</find>
-      <find>get_pk_vals_mysql3</find>
-      <find>get_pk_vals_incr</find>
-      <find>calc_pk_minus</find>
-      <find>get_mysql_tab_incr_rows</find>
-      <find>get_mysql_tab_rows</find>
-      <find>get_mysql_tab_rows_where</find>
-      <find>run_remote_cmd_transfer</find>
-      <find>commit</find>
-      <find>v_where</find>
-      <find>v_pk_names</find>
-      <find>print_dict</find>
+      <find>write_disk_init_info</find>
+      <find>service</find>
+      <find>备份标</find>
+      <find>amount</find>
+      <find>get_date</find>
+      <find>write_monitor_log</find>
+      <find>write_remote_crontab_sync</find>
+      <find>push_script_remote_monitor</find>
+      <find>get_config_from_db</find>
       <find>exception_interface</find>
-      <find>debug</find>
-      <find>timeout</find>
-      <find>get_config</find>
-      <find>sync_incr_where</find>
-      <find>rows</find>
-      <find>market_id</find>
-      <find>sync_col_name</find>
-      <find>sync_col_val</find>
-      <find>sync_mysql_data_no_pkid</find>
-      <find>read_config_db</find>
-      <find>dict</find>
-      <find>get_ds_mysql_test</find>
-      <find>get_mysql_available</find>
+      <find>print_dict</find>
+      <find>create_remote_inst</find>
+      <find>chmod success</find>
+      <find>$$SCRIPT_PATH$$</find>
+      <find>with open</find>
+      <find>write_inst_log</find>
+      <find>create_db_inst</find>
+      <find>sock</find>
+      <find>inst</find>
+      <find>mode</find>
+      <find>with</find>
+      <find>os.</find>
+      <find>update_db_inst_reboot_status</find>
+      <find>slow</find>
+      <find>transfer_remote_file_monitor</find>
+      <find>cfile</find>
+      <find>dver</find>
+      <find>t_inst_log</find>
+      <find>get_day</find>
+      <find>write_slow_log</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -136,13 +108,10 @@
         <option value="$PROJECT_DIR$/script/mysql_backup.py" />
         <option value="$PROJECT_DIR$/restart.sh" />
         <option value="$PROJECT_DIR$/templete/elastic_backup.py" />
-        <option value="$PROJECT_DIR$/templete/db_backup.sh" />
         <option value="$PROJECT_DIR$/templete/mssql2mysql_sync_jt2.py" />
         <option value="$PROJECT_DIR$/templete/mssql2mysql.ini" />
         <option value="$PROJECT_DIR$/templete/mysql2mysql.ini" />
         <option value="$PROJECT_DIR$/templete/redis_backup.py" />
-        <option value="$PROJECT_DIR$/templete/mysql_backup.py" />
-        <option value="$PROJECT_DIR$/templete/mssql2mysql_sync_jt.py" />
         <option value="$PROJECT_DIR$/README.md" />
         <option value="$PROJECT_DIR$/datax/datax_sync.sh" />
         <option value="$PROJECT_DIR$/datax/repstr.sh" />
@@ -153,14 +122,27 @@
         <option value="$PROJECT_DIR$/templete/mysql2mysql_transfer.py" />
         <option value="$PROJECT_DIR$/templete/mysql2mysql_archive.py" />
         <option value="$PROJECT_DIR$/templete/datax_sync.py" />
-        <option value="$PROJECT_DIR$/templete/mysql2mysql_sync.py" />
-        <option value="$PROJECT_DIR$/templete/mssql2mysql_sync.py" />
         <option value="$PROJECT_DIR$/templete/mssql2mysql_sync_car.py" />
         <option value="$PROJECT_DIR$/templete/monitor_agent2.py" />
         <option value="$PROJECT_DIR$/templete/monitor_agent.py" />
         <option value="$PROJECT_DIR$/templete/mongo_backup.py" />
+        <option value="$PROJECT_DIR$/templete/mssql2mysql_sync_jt.py" />
+        <option value="$PROJECT_DIR$/templete/mysql2mysql_sync.py" />
+        <option value="$PROJECT_DIR$/templete/mssql2mysql_sync.py" />
+        <option value="$PROJECT_DIR$/templete/mssql2mysql_sync_repair.py" />
+        <option value="$PROJECT_DIR$/templete/mysql2mysql_sync_repair.py" />
+        <option value="$PROJECT_DIR$/templete/db_backup.bat" />
+        <option value="$PROJECT_DIR$/templete/db_backup.sh" />
+        <option value="$PROJECT_DIR$/templete/oracle_backup.py" />
+        <option value="$PROJECT_DIR$/templete/mssql_backup.py" />
+        <option value="$PROJECT_DIR$/templete/mysql_backup.py" />
+        <option value="$PROJECT_DIR$/stop.sh" />
+        <option value="$PROJECT_DIR$/templete/db_creator.sh" />
+        <option value="$PROJECT_DIR$/templete/gather_slow.sh" />
         <option value="$PROJECT_DIR$/templete/gather_agent.py" />
+        <option value="$PROJECT_DIR$/templete/db_creator.py" />
         <option value="$PROJECT_DIR$/dbapi.py" />
+        <option value="$PROJECT_DIR$/templete/gather_slow.py" />
       </list>
     </option>
   </component>
@@ -174,7 +156,7 @@
     <packageJsonPaths />
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-8" />
+    <option name="x" value="1912" />
     <option name="y" value="-8" />
     <option name="width" value="1936" />
     <option name="height" value="1056" />
@@ -189,6 +171,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -205,19 +188,12 @@
               <item name="dbapi" type="b2602c69:ProjectViewProjectNode" />
               <item name="dbapi" type="462c0819:PsiDirectoryNode" />
               <item name="templete" type="462c0819:PsiDirectoryNode" />
-              <item name="gather_agent.py" type="8704e2dd:PyFileNode" />
-            </path>
-            <path>
-              <item name="dbapi" type="b2602c69:ProjectViewProjectNode" />
-              <item name="dbapi" type="462c0819:PsiDirectoryNode" />
-              <item name="templete" type="462c0819:PsiDirectoryNode" />
-              <item name="mysql2mysql_sync.py" type="8704e2dd:PyFileNode" />
+              <item name="db_creator.py" type="8704e2dd:PyFileNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -227,6 +203,7 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
+    <property name="last_opened_file_path" value="C:/video_info" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
@@ -387,33 +364,58 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <frame x="1912" y="-8" width="1936" height="1056" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3293348" />
       <window_info anchor="bottom" id="Event Log" order="13" sideWeight="0.5010661" side_tool="true" weight="0.17666303" />
       <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
+      <window_info active="true" anchor="bottom" id="Run" order="5" sideWeight="0.4989339" visible="true" weight="0.31515813" />
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.3293348" />
-      <window_info anchor="bottom" id="Python Console" order="10" weight="0.32824427" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.4989339" weight="0.0" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.54198474" />
       <window_info anchor="bottom" id="Terminal" order="11" weight="0.3293348" />
-      <window_info anchor="right" id="Remote Host" order="3" weight="0.0" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.23987207" />
+      <window_info anchor="right" id="Remote Host" order="5" side_tool="true" visible="true" weight="0.0" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.17590618" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
-      <window_info anchor="right" id="Database" order="4" sideWeight="0.49217638" side_tool="true" visible="true" weight="0.0" />
-      <window_info anchor="right" id="SciView" order="5" sideWeight="0.5078236" side_tool="true" weight="0.0" />
+      <window_info anchor="right" id="Database" order="3" sideWeight="0.49217638" side_tool="true" weight="0.0" />
+      <window_info anchor="right" id="SciView" order="4" sideWeight="0.5078236" side_tool="true" weight="0.0" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Debug" order="2" weight="0.31188658" />
       <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.16575791" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="Inspection" order="4" weight="0.4" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="File Transfer" order="12" visible="true" weight="0.33260632" />
+      <window_info anchor="bottom" id="Cvs" order="3" weight="0.25" />
+      <window_info anchor="bottom" id="File Transfer" order="12" weight="0.041439477" />
       <window_info anchor="bottom" id="Find" order="1" />
     </layout>
+    <layout-to-restore>
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.4989339" visible="true" weight="0.15267175" />
+      <window_info anchor="right" id="Remote Host" order="4" side_tool="true" visible="true" weight="0.0" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1977612" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3293348" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.3293348" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.31188658" />
+      <window_info anchor="bottom" id="Terminal" order="11" weight="0.3293348" />
+      <window_info anchor="bottom" id="Event Log" order="13" sideWeight="0.5010661" side_tool="true" weight="0.17666303" />
+      <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="right" id="SciView" order="5" sideWeight="0.5078236" side_tool="true" weight="0.0" />
+      <window_info anchor="bottom" id="File Transfer" order="12" weight="0.041439477" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="right" id="Database" order="3" sideWeight="0.49217638" side_tool="true" weight="0.0" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.54198474" />
+    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
@@ -427,13 +429,6 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/dbapi.py</url>
-          <line>958</line>
-          <option name="timeStamp" value="57" />
-        </line-breakpoint>
-      </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
           <properties notifyOnTerminate="true" exception="BaseException">
@@ -441,156 +436,10 @@
           </properties>
         </breakpoint>
       </default-breakpoints>
-      <option name="time" value="79" />
+      <option name="time" value="102" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql.ini" />
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/172039270/tornado/iostream.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="352" selection-start-line="352" selection-end-line="352" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/172039270/tornado/stack_context.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="365">
-          <caret line="333" selection-start-line="333" selection-end-line="333" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/172039270/tornado/httpserver.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="175">
-          <caret line="339" selection-start-line="339" selection-end-line="339" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/172039270/tornado/ioloop.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="419">
-          <caret line="659" selection-start-line="659" selection-end-line="659" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/db_backup.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="36">
-          <caret line="2" selection-start-line="2" selection-end-line="3" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/script/mysql_sync.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="72">
-          <caret line="4" column="33" lean-forward="true" selection-end-line="4" selection-end-column="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/datax/datax_sync.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="72">
-          <caret line="4" column="38" selection-start-line="4" selection-start-column="26" selection-end-line="4" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/datax/repstr.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="18">
-          <caret line="1" column="4" selection-start-line="1" selection-start-column="4" selection-end-line="1" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/pymysql/connections.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="423">
-          <caret line="134" column="23" selection-start-line="134" selection-start-column="11" selection-end-line="134" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/db_sync.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="72">
-          <caret line="4" column="49" selection-start-line="4" selection-start-column="49" selection-end-line="4" selection-end-column="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync.bak.py" />
-    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_transfer.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="12852">
-          <caret line="727" column="132" selection-start-line="727" selection-start-column="132" selection-end-line="727" selection-end-column="132" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/restart.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="162">
-          <caret line="9" column="15" selection-start-line="9" selection-start-column="15" selection-end-line="9" selection-end-column="15" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/start.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="18">
-          <caret line="1" column="30" selection-start-line="1" selection-end-line="2" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/172039270/tornado/web.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="159">
-          <caret line="1156" selection-start-line="1156" selection-end-line="1156" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_archive_bak.py" />
-    <entry file="file://$PROJECT_DIR$/datax/datax_sync.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2070">
-          <caret line="121" column="15" selection-start-line="121" selection-start-column="15" selection-end-line="121" selection-end-column="15" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="SPLIT">
-          <first_editor relative-caret-position="217">
-            <caret line="65" selection-start-line="65" selection-end-line="65" />
-          </first_editor>
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/db_transfer.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="72">
-          <caret line="4" column="56" lean-forward="true" selection-start-line="4" selection-start-column="56" selection-end-line="4" selection-end-column="56" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/db_monitor.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret column="19" lean-forward="true" selection-start-column="19" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/script/db_monitor.sh">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="72">
-          <caret line="4" column="50" lean-forward="true" selection-start-line="4" selection-start-column="50" selection-end-line="4" selection-end-column="50" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_transfer.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="172">
-          <caret line="183" column="47" selection-start-line="183" selection-start-column="36" selection-end-line="183" selection-end-column="47" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/-480142217/typing.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="241">
@@ -605,42 +454,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/pymysql/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="655">
-          <caret line="129" column="9" selection-start-line="129" selection-start-column="9" selection-end-line="129" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/datax_sync.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="179">
-          <caret line="294" column="11" selection-start-line="294" selection-start-column="11" selection-end-line="294" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_bak.py" />
     <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_bak2.py" />
     <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_car_bak.py" />
     <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_archive.py.bak" />
-    <entry file="file://$PROJECT_DIR$/templete/mysql_backup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="831">
-          <caret line="205" column="58" lean-forward="true" selection-start-line="205" selection-start-column="58" selection-end-line="205" selection-end-column="58" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.PyCharm2018.1/system/python_stubs/227451941/pymssql.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="351">
           <caret line="46" column="21" selection-start-line="46" selection-start-column="14" selection-end-line="46" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_jt.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="397">
-          <caret line="252" column="106" selection-start-line="252" selection-start-column="106" selection-end-line="252" selection-end-column="106" />
         </state>
       </provider>
     </entry>
@@ -651,38 +472,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templete/elastic_backup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="831">
-          <caret line="83" column="26" selection-start-line="83" selection-start-column="26" selection-end-line="83" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/redis_backup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1803">
-          <caret line="309" selection-start-line="309" selection-end-line="311" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/redis/client.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="171">
           <caret line="481" column="74" lean-forward="true" selection-start-line="481" selection-start-column="74" selection-end-line="481" selection-end-column="74" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_car.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="831">
-          <caret line="1161" column="16" selection-start-line="1161" selection-start-column="16" selection-end-line="1161" selection-end-column="16" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="308">
-          <caret line="1678" column="76" lean-forward="true" selection-start-line="1678" selection-start-column="8" selection-end-line="1678" selection-end-column="76" />
         </state>
       </provider>
     </entry>
@@ -700,13 +493,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templete/mongo_backup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="288">
-          <caret line="34" column="15" lean-forward="true" selection-start-line="34" selection-start-column="15" selection-end-line="34" selection-end-column="15" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/psutil/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-946">
@@ -714,34 +500,188 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templete/monitor_agent.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="489">
-          <caret line="108" column="15" selection-start-line="108" selection-start-column="15" selection-end-line="108" selection-end-column="15" />
-        </state>
-      </provider>
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/redis/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/templete/datax_sync.sh">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="72">
-          <caret line="4" column="21" selection-end-line="4" selection-end-column="49" />
+          <caret line="4" column="10" selection-end-line="4" selection-end-column="49" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/dbapi.py">
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/elasticsearch/client/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3834">
-          <caret line="224" column="26" selection-start-line="224" selection-start-column="26" selection-end-line="224" selection-end-column="26" />
-          <folding>
-            <element signature="e#168#189#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="297">
+          <caret line="61" column="6" selection-start-line="61" selection-start-column="6" selection-end-line="61" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/db_monitor.sh">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="19" lean-forward="true" selection-start-column="19" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/python_stubs/227451941/cx_Oracle/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="279">
+          <caret line="144" column="8" selection-start-line="144" selection-start-column="8" selection-end-line="144" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/python_stubs/227451941/cx_Oracle/connect.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="162">
+          <caret line="9" lean-forward="true" selection-start-line="9" selection-end-line="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/db_backup.bat">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="59" selection-start-column="44" selection-end-column="59" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/db_sync.sh">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="72">
+          <caret line="4" column="16" selection-end-line="4" selection-end-column="81" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/datax_sync.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="179">
+          <caret line="294" column="11" selection-start-line="294" selection-start-column="11" selection-end-line="294" selection-end-column="11" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/-480142217/genericpath.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="828">
+          <caret line="47" column="4" selection-start-line="47" selection-start-column="4" selection-end-line="47" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/stop.sh">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18">
+          <caret line="1" column="18" selection-start-line="1" selection-start-column="18" selection-end-line="1" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="18">
+            <caret line="45" column="18" lean-forward="true" selection-start-line="45" selection-start-column="18" selection-end-line="45" selection-end-column="18" />
+          </first_editor>
+          <second_editor />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/templete/db_archive.sh">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="54">
-          <caret line="3" column="34" selection-start-line="3" selection-start-column="34" selection-end-line="3" selection-end-column="34" />
+        <state relative-caret-position="36">
+          <caret line="2" selection-start-line="2" selection-end-line="2" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/python_stubs/227451941/builtins.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="284">
+          <caret line="1177" column="8" selection-start-line="1177" selection-start-column="8" selection-end-line="1177" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="uml://Python/#C:/dbapi/templete/db_creator.py">
+      <provider selected="true" editor-type-id="UmlEditorProvider">
+        <state>
+          <ID>Python</ID>
+          <OriginalElement>#C:/dbapi/templete/db_creator.py</OriginalElement>
+          <nodes />
+          <notes />
+          <edges />
+          <settings layout="Hierarchic Group" zoom="1.0" x="764.0" y="331.0" />
+          <SelectedNodes />
+          <Categories />
+          <SCOPE>All</SCOPE>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/elastic_backup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="538">
+          <caret line="84" column="21" selection-start-line="84" selection-start-column="15" selection-end-line="84" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm2018.1/system/remote_sources/227451941/959659291/pymysql/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="360">
+          <caret line="107" selection-start-line="107" selection-end-line="107" />
+          <folding>
+            <element signature="e#1123#1133#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/db_backup.sh">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="5" selection-end-column="49" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/gather_slow.sh">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="72">
+          <caret line="4" column="57" selection-start-line="4" selection-start-column="42" selection-end-line="4" selection-end-column="57" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/gather_agent.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="287">
+          <caret line="167" column="4" selection-start-line="167" selection-start-column="4" selection-end-line="167" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/redis_backup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="720">
+          <caret line="50" selection-start-line="50" selection-end-line="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/oracle_backup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="800">
+          <caret line="262" column="79" selection-start-line="262" selection-start-column="55" selection-end-line="262" selection-end-column="79" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mysql_backup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18">
+          <caret line="198" column="4" selection-start-line="198" selection-start-column="4" selection-end-line="198" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_transfer.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="172">
+          <caret line="183" column="47" selection-start-line="183" selection-start-column="36" selection-end-line="183" selection-end-column="47" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_sync_repair.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="193">
+          <caret line="630" column="28" lean-forward="true" selection-start-line="630" selection-start-column="28" selection-end-line="630" selection-end-column="28" />
         </state>
       </provider>
     </entry>
@@ -752,21 +692,99 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mssql_backup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4320">
+          <caret line="249" column="20" selection-start-line="249" selection-start-column="20" selection-end-line="249" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_transfer.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_repair.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="19134">
+          <caret line="1076" column="61" selection-start-line="1076" selection-start-column="61" selection-end-line="1076" selection-end-column="61" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_jt.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="22428">
+          <caret line="1259" column="32" selection-start-line="1259" selection-start-column="32" selection-end-line="1259" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync_car.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="20070">
+          <caret line="1128" column="63" selection-start-line="1128" selection-start-column="47" selection-end-line="1128" selection-end-column="63" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mssql2mysql_sync.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="29340">
+          <caret line="1643" column="36" selection-start-line="1643" selection-end-line="1644" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/monitor_agent.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3438">
+          <caret line="204" column="30" selection-start-line="204" selection-start-column="14" selection-end-line="204" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/mongo_backup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="450">
+          <caret line="34" column="15" lean-forward="true" selection-start-line="34" selection-start-column="15" selection-end-line="34" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/templete/mysql2mysql_sync.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="832">
-          <caret line="1008" column="48" selection-start-line="1008" selection-start-column="12" selection-end-line="1008" selection-end-column="48" />
+        <state relative-caret-position="18">
+          <caret line="1248" column="4" selection-start-line="1248" selection-start-column="4" selection-end-line="1248" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/db_creator.sh">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="72">
+          <caret line="4" column="63" selection-start-line="4" selection-start-column="63" selection-end-line="4" selection-end-column="63" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/dbapi.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18198">
+          <caret line="1022" selection-start-line="1022" selection-end-line="1022" />
           <folding>
-            <element signature="e#46993#49412#0" />
-            <element signature="e#54795#56136#0" />
+            <element signature="e#168#189#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templete/gather_agent.py">
+    <entry file="file://$PROJECT_DIR$/templete/gather_slow.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="279">
-          <caret line="477" column="58" selection-start-line="477" selection-start-column="39" selection-end-line="477" selection-end-column="58" />
+        <state relative-caret-position="329">
+          <caret line="116" column="25" selection-start-line="116" selection-start-column="25" selection-end-line="116" selection-end-column="25" />
+          <folding>
+            <element signature="e#153#164#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templete/db_creator.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="183">
+          <caret line="143" column="22" selection-start-line="143" selection-start-column="4" selection-end-line="143" selection-end-column="22" />
+          <folding>
+            <element signature="e#136#172#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

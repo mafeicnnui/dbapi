@@ -7,9 +7,10 @@
 # @Software: PyCharm
 
 import sys,os
+from os.path import join, getsize
 import traceback
 import warnings
-import pymysql
+import pymssql
 import datetime
 import json
 import urllib.parse
@@ -25,11 +26,11 @@ def get_time():
 def get_time2(t):
     return t.strftime("%Y-%m-%d %H:%M:%S")
 
+def get_backup_time():
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
 def get_date():
     return datetime.datetime.now().strftime("%Y%m%d")
-
-def get_date2():
-    return datetime.datetime.now().strftime("%Y-%m-%d")
 
 def get_year():
     return datetime.datetime.now().strftime("%Y")
@@ -38,14 +39,6 @@ def exception_info():
     e_str=traceback.format_exc()
     return e_str[e_str.find("pymysql.err."):]
 
-def get_ds_mysql(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8')
-    return conn
-
-def get_db_mysql(config):
-    v_password =aes_decrypt(config['db_pass'],config['db_user'])
-    config['newpass']=v_password
-    return get_ds_mysql(config['db_ip'],config['db_port'],'',config['db_user'],v_password)
 
 def get_seconds(b):
     a=datetime.datetime.now()
@@ -91,14 +84,12 @@ def read_config(tag):
     req = urllib.request.Request(url, data=data)
     res = urllib.request.urlopen(req, context=context)
     res = json.loads(res.read())
-    #write_log(res+','+str(res['code']))
     if res['code'] == 200:
         print('接口调用成功!')
         config=res['msg']
         config['year'] = get_year()
         config['day']  = get_date()
         config['bk_path']=config['bk_base']+'/'+get_date()
-        config['db_mysql'] = get_db_mysql(config)
         return config
     else:
         print('接口调用失败!,{0}'.format(res['msg']))
@@ -112,7 +103,7 @@ def write_backup_total(config):
         'start_time'      : config['start_time'],
         'end_time'        : config['end_time'],
         'elaspsed_backup' : config['elaspsed_backup'],
-        'elaspsed_gzip'   : config['elaspsed_gzip'],
+        'elaspsed_gzip'   : 0,
         'bk_base'         : config['bk_base'],
         'status'          : config['status']
     }
@@ -124,14 +115,14 @@ def write_backup_total(config):
     url = 'http://$$API_SERVER$$/write_backup_total'
     context = ssl._create_unverified_context()
     data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
+    req  = urllib.request.Request(url, data=data)
+    res  = urllib.request.urlopen(req, context=context)
+    res  = json.loads(res.read())
     print(res, res['code'])
     if res['code'] == 200:
-        write_log('接口调用成功!')
+        print('接口调用成功!')
     else:
-        write_log('接口调用失败!')
+        print('接口调用失败!')
 
 def write_backup_detail(config):
     v_tag = {
@@ -144,7 +135,7 @@ def write_backup_detail(config):
         'start_time'      : config['start_time'],
         'end_time'        : config['end_time'],
         'elaspsed_backup' : config['elaspsed_backup'],
-        'elaspsed_gzip'   : config['elaspsed_gzip'],
+        'elaspsed_gzip'   : 0,
         'status'          : config['status'],
         'error'           : config['error']
     }
@@ -153,17 +144,16 @@ def write_backup_detail(config):
         'tag': v_msg
     }
     print('values=',values)
-    url = 'http://$$API_SERVER$$/write_backup_detail'
+    url  = 'http://$$API_SERVER$$/write_backup_detail'
     context = ssl._create_unverified_context()
     data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
-    #write_log(res+','+str(res['code']))
+    req  = urllib.request.Request(url, data=data)
+    res  = urllib.request.urlopen(req, context=context)
+    res  = json.loads(res.read())
     if res['code'] == 200:
-        write_log('接口调用成功!')
+        print('接口调用成功!')
     else:
-        write_log('接口调用失败!')
+        print('接口调用失败!')
 
 def get_file_contents(filename):
     file_handle = open(filename, 'r')
@@ -183,113 +173,96 @@ def get_path_size(path):
     r = os.popen('du -sh {0}'.format(path)).read()
     return r.split('\t')[0]
 
-def get_file_size(file):
+def format_file_size(filesize):
     try:
-      r = os.popen('ls -lh {0}'.format(file)).read()
-      return r.split(' ')[4]
+      if filesize/1024/1024/1024>1:
+         return str(round(filesize/1024/1024/1024,2))+'G'
+      elif filesize/1024/1024>1:
+         return str(round(filesize/1024/1024,2))+'M'
+      elif filesize/1024>1:
+         return str(round(filesize/1024,2))+'K'
+      else:
+         return str(filesize ) + 'B'
     except:
       return 0
 
-def write_log(msg):
-    file_name   = '/tmp/mysql_backup.log'
-    file_handle = open(file_name, 'a+')
-    file_handle.write(msg + '\n')
-    file_handle.close()
+def get_file_size(file):
+    try:
+      return getsize(file.replace('\\','\\\\'))
+    except:
+      return 0
+
+def get_filename(db):
+    return '{}_{}'.format(db, get_backup_time())
+
 
 def db_backup(config):
     print_dict(config)
-    db=config['db_mysql']
-    cr=db.cursor()
-    if config['backup_databases'] is not None :
-        if ',' in config['backup_databases']:
-            v_sql = '''SELECT schema_name 
-                          FROM information_schema.schemata 
-                         WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')
-                          and instr('{0}',schema_name)>0
-                    '''.format(config['backup_databases'])
-        else:
-            v_sql = '''SELECT schema_name 
-                                      FROM information_schema.schemata 
-                                     WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')
-                                      and instr(schema_name,'{0}')>0
-                    '''.format(config['backup_databases'])
-    else:
-        v_sql = '''SELECT schema_name 
-                     FROM information_schema.schemata 
-                    WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')                            
-                '''
-    cr.execute(v_sql)
-    rs=cr.fetchall()
-    print('rs=',rs)
-
     bk_begin_time=get_now()
     n_elaspsed_backup_total=0
-    n_elaspsed_gzip_total=0
+    n_total_size=0
     g_status='0'
-    for db in list(rs):
-        error  = ''
+    for db in config['backup_databases'].split(','):
         status = '0'
-        os.system('mkdir -p {0}'.format(config['bk_path']))
-        print('Performing backup database {0}...'.format(db[0]))
-        start_time     = get_now()
-        file_name      = config['bk_path']+'/'+db[0]+'_'+get_date()+'.sql'
-        err_name       = '/tmp/'+db[0]+'_'+get_date()+'.err'
-        full_gzip_name = file_name+'.gz'
-        gzip_name      = db[0]+'_'+get_date()+'.sql.gz'
-        bk_cmd         = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
-                        '--routines --force --databases {5} -r {6} &>{7}'.\
-                        format(config['bk_cmd'],config['db_user'],config['newpass'],
-                               config['db_ip'] ,config['db_port'],db[0],file_name,err_name)
+        print('Performing backup database {0}...'.format(db))
+        start_time        = get_now()
+        file_name         = config['db_service']+'_'+get_filename(db)
+        config['newpass'] = aes_decrypt(config['db_pass'], config['db_user'])
+        bk_env            = 'set ORACLE_SID={}'.format(config['db_service'])
+        bk_cmd            = '''
+{} && {} {}/{}  directory=beifen schemas={}  COMPRESSION=ALL dumpfile="{}.dmp"  logfile="{}.log"
+'''.format(bk_env,
+           config['bk_cmd'],
+           config['db_user'],
+           config['newpass'],
+           db,
+           file_name,
+           file_name,
+          )
         print(bk_cmd)
         try:
-          r=os.system(bk_cmd)
-          if r!=0:
-             error  = format_sql(get_file_contents(err_name).
-                                 replace('Warning: Using a password on the command line interface can be insecure.',''))
-             status = '1'
-             os.system('rm {0}'.format(err_name))
+          os.system(bk_cmd)
+        except:
+          status='1'
 
-          end_time = get_now()
-          os.system('cd {0} && gzip -f {1}'.format(config['bk_path'],file_name))
-          end_zip_time = get_now()
-        except Exception as e:
-            r = -1
-            error = format_sql(str(e))
-            status = '1'
-            end_time = get_now()
-            end_zip_time = get_now()
-
-        config['db_name']     = db[0]
-        config['create_date'] = get_date2()
-        config['file_name']   = gzip_name
-        config['db_size']     = get_file_size(full_gzip_name)
-        config['start_time']  = get_time2(start_time)
-        config['end_time']    = get_time2(end_zip_time)
+        end_time                  = get_now()
+        file_size                 = get_file_size(config['bk_base']+'\\'+file_name+'.dmp')
+        print('file_size=',file_size)
+        config['db_name']         = db
+        config['create_date']     = get_date()
+        config['file_name']       = file_name+'.dmp'
+        config['db_size']         = format_file_size(file_size)
+        config['start_time']      = get_time2(start_time)
+        config['end_time']        = get_time2(end_time)
         config['elaspsed_backup'] = get_seconds(end_time, start_time)
-        config['elaspsed_gzip']   = get_seconds(end_zip_time, end_time)
         config['status']          = status
-        config['error']           = error
+        config['error']           = 'success' if status=='0' else 'failure'
+
         if status=='1':
            g_status='1'
         write_backup_detail(config)
         n_elaspsed_backup_total=n_elaspsed_backup_total+config['elaspsed_backup']
-        n_elaspsed_gzip_total=n_elaspsed_gzip_total+config['elaspsed_gzip']
-        os.system('rm -f {0}'.format(err_name))
+        n_total_size=n_total_size+config['elaspsed_backup']+file_size
 
-    bk_end_time = get_now()
-    config['create_date']     = get_date2()
+    bk_end_time               = get_now()
+    config['create_date']     = get_date()
     config['start_time']      = get_time2(bk_begin_time)
     config['end_time']        = get_time2(bk_end_time)
-    config['total_size']      = get_path_size(config['bk_path'])
+    config['total_size']      = format_file_size(n_total_size)
     config['elaspsed_backup'] = n_elaspsed_backup_total
-    config['elaspsed_gzip']   = n_elaspsed_gzip_total
+    config['elaspsed_gzip']   = 0
     config['status']          = g_status
     write_backup_total(config)
 
-    #delete recent 7 day data
-    v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
+    print('delete recent {} day backup...'.format(config['expire']))
+    v_del='''forfiles /p "{}" /s /m *.* /d -{} /c "cmd /c del @path"'''.format(config['bk_base'],config['expire'])
     print(v_del)
     os.system(v_del)
+
+    print('remote backup...')
+    v_remote ="""D:\\cwRsync\\rsync.bat '{}'""".format(file_name.split('_')[-1])
+    print(v_remote)
+    os.system(v_remote)
 
 
 def main():

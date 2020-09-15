@@ -4,6 +4,7 @@ import urllib.request
 import traceback
 import pymysql
 import pymssql
+import cx_Oracle
 import sys
 import os.path
 import warnings
@@ -129,6 +130,11 @@ def get_ds_sqlserver_test(ip, port, service, user, password):
     conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8',timeout=3)
     return conn
 
+def get_ds_oracle(ip,port,instance,user,password):
+    print(ip,port,instance,user,password)
+    tns          = cx_Oracle.makedsn(ip,int(port),instance)
+    db           = cx_Oracle.connect(user,password,tns)
+    return db
 
 def get_ds_redis(ip,port,password):
     try:
@@ -156,7 +162,7 @@ def get_ds_mongo_auth(ip, port,user,password,service):
         db.authenticate(user, password)
         return db
     except  Exception as e:
-        print('get_ds_mongo exceptiion:' + traceback.format_exc())
+        print('get_ds_mongo_auth exceptiion:' + traceback.format_exc())
         return None
 
 def get_ds_es(p_ip,p_port):
@@ -164,7 +170,7 @@ def get_ds_es(p_ip,p_port):
         conn = Elasticsearch([p_ip],port=p_port)
         return conn
     except  Exception as e:
-        print('get_ds_sqlserver exceptiion:' + traceback.format_exc())
+        print('get_ds_es exceptiion:' + traceback.format_exc())
         return None
 
 def aes_decrypt(p_password,p_key):
@@ -215,6 +221,11 @@ def get_config_from_db(tag):
                    config['db_string'] = 'msyql://'+db_ip + ':' + db_port + '/' + db_service
                    config['db_mysql']  = get_ds_mysql(db_ip, db_port, db_service, db_user, db_pass)
                    print('get_config_from_db=', db_ip, db_port, db_service, db_user, db_type, db_pass)
+               if db_type=='1':
+                   db_pass = aes_decrypt(config['db_pass'], db_user)
+                   config['db_string'] = 'msyql://'+db_ip + ':' + db_port + '/' + db_service
+                   config['db_oracle']  = get_ds_oracle(db_ip, db_port, db_service, db_user, db_pass)
+                   print('get_config_from_db=', db_ip, db_port, db_service, db_user, db_type, db_pass)
                elif db_type=='2':
                    db_pass = aes_decrypt(config['db_pass'], db_user)
                    config['db_string'] = 'mssql://'+db_ip + ':' + db_port + '/' + db_service
@@ -257,24 +268,43 @@ def get_config_from_db(tag):
 
 def init(config):
     config = get_config_from_db(config)
-
     #init disk I/O info
-    if not os.path.isfile(config['script_path']+'/disk_io.ini'):
+    if not os.path.isfile(os.getcwd()+'/disk_io.ini'):
        write_disk_init_info(config)
-
     #init net i/o info
-    if not os.path.isfile(config['script_path'] + '/net_io.ini'):
+    if not os.path.isfile(os.getcwd()+ '/net_io.ini'):
        write_net_init_info(config)
-
     print_dict(config)
     return config
 
 def get_disk_usage():
     partitions = {}
     for partition in psutil.disk_partitions(all=True):
-        if partition.mountpoint in('/','/home/hopson/apps','/home','/home/hopson/data'):
-           partitions[partition.mountpoint] = psutil.disk_usage(partition.mountpoint).percent
+        if partition.mountpoint in('/','/home/hopson/apps','/home','/home/hopson/data','/db-backup','/file-backup','C:\\','D:\\'):
+           partitions[partition.mountpoint.replace(':\\','')] = psutil.disk_usage(partition.mountpoint).percent
     return partitions
+
+def get_tbs_usage(config):
+    tbs_usage = {}
+    db = config['db_oracle']
+    cr = db.cursor()
+    st = '''
+     SELECT a.tablespace_name ,
+             round((total - free) / total, 4) * 100 as usage_rate
+      FROM (SELECT tablespace_name, SUM(bytes) free
+      FROM dba_free_space
+      GROUP BY tablespace_name) a,
+     (SELECT tablespace_name, SUM(bytes) total
+      FROM dba_data_files 
+       where tablespace_name not in('SYSAUX')
+     GROUP BY tablespace_name)b 
+     WHERE a.tablespace_name = b.tablespace_name
+    '''
+    cr.execute(st)
+    rs = cr.fetchall()
+    for r in rs:
+        tbs_usage[r[0]]=r[1]
+    return  tbs_usage
 
 def write_disk_init_info(config):
     d_disk_io  ={}
@@ -284,22 +314,8 @@ def write_disk_init_info(config):
     d_disk_io['write_bytes'] = psutil.disk_io_counters().write_bytes
     d_disk_io['read_time']   = int(time.time())
     d_disk_io['write_time']  = int(time.time())
-    with open(config['script_path']+'/disk_io.ini', 'w') as f:
+    with open(os.getcwd()+'/disk_io.ini', 'w') as f:
         f.write(json.dumps(d_disk_io, ensure_ascii=False, indent=4, separators=(',', ':')))
-
-def get_disk_io_info(config):
-    d_disk_io  = {}
-    disk_stats = {}
-    with open(config['script_path'] + '/disk_io.ini', 'r') as f:
-        prev_disk_io = f.read()
-    d_prev_disk_io=json.loads(prev_disk_io)
-    d_disk_io['read_bytes']   = psutil.disk_io_counters().read_bytes
-    d_disk_io['write_bytes']  = psutil.disk_io_counters().write_bytes
-    d_disk_io['read_time']    = int(time.time())
-    d_disk_io['write_time']   = int(time.time())
-    disk_stats['read_bytes']  = int((d_disk_io['read_bytes']  * 1.0 - d_prev_disk_io['read_bytes']) / (d_disk_io['read_time'] - d_prev_disk_io['read_time']))
-    disk_stats['write_bytes'] = int((d_disk_io['write_bytes'] * 1.0 - d_prev_disk_io['write_bytes']) / (d_disk_io['write_time']- d_prev_disk_io['write_time']))
-    return disk_stats
 
 def write_net_init_info(config):
     d_net_io = {}
@@ -307,23 +323,52 @@ def write_net_init_info(config):
     d_net_io['recv_bytes'] = psutil.net_io_counters().bytes_recv
     d_net_io['sent_time']  = int(time.time())
     d_net_io['recv_time']  = int(time.time())
-    with open(config['script_path'] + '/net_io.ini', 'w') as f:
+    with open('net_io.ini', 'w') as f:
         f.write(json.dumps(d_net_io, ensure_ascii=False, indent=4, separators=(',', ':')))
+
+def get_disk_io_info(config):
+    d_disk_io  = {}
+    d_prev_disk_io = {}
+    disk_stats = {}
+    # with open(os.getcwd()+'/disk_io.ini', 'r') as f:
+    #     prev_disk_io = f.read()
+    # d_prev_disk_io=json.loads(prev_disk_io)
+    d_prev_disk_io['read_bytes']  = psutil.disk_io_counters().read_bytes
+    d_prev_disk_io['write_bytes'] = psutil.disk_io_counters().write_bytes
+    d_prev_disk_io['read_time']   = int(time.time())
+    d_prev_disk_io['write_time']  = int(time.time())
+    time.sleep(1)
+    d_disk_io['read_bytes']       = psutil.disk_io_counters().read_bytes
+    d_disk_io['write_bytes']      = psutil.disk_io_counters().write_bytes
+    d_disk_io['read_time']        = int(time.time())
+    d_disk_io['write_time']       = int(time.time())
+    disk_stats['read_bytes']      = int((d_disk_io['read_bytes']  * 1.0 - d_prev_disk_io['read_bytes']) / (d_disk_io['read_time'] - d_prev_disk_io['read_time']))
+    disk_stats['write_bytes']     = int((d_disk_io['write_bytes'] * 1.0 - d_prev_disk_io['write_bytes']) / (d_disk_io['write_time']- d_prev_disk_io['write_time']))
+    return disk_stats
 
 def get_net_io_info(config):
     d_net_io  = {}
     net_stats = {}
-    with open(config['script_path'] + '/net_io.ini', 'r') as f:
-        prev_net_io = f.read()
-    d_prev_disk_io=json.loads(prev_net_io)
-    d_net_io['sent_bytes']   = psutil.net_io_counters().bytes_sent
-    d_net_io['recv_bytes']   = psutil.net_io_counters().bytes_recv
-    d_net_io['sent_time']    = int(time.time())
-    d_net_io['recv_time']    = int(time.time())
-    net_stats['sent_bytes']  = int((d_net_io['sent_bytes'] - d_prev_disk_io['sent_bytes']) / (d_net_io['sent_time'] - d_prev_disk_io['sent_time']))
-    net_stats['recv_bytes']  = int((d_net_io['recv_bytes'] - d_prev_disk_io['recv_bytes']) / (d_net_io['recv_time']- d_prev_disk_io['recv_time']))
+    d_prev_disk_io = {}
+    # with open('net_io.ini', 'r') as f:
+    #     prev_net_io = f.read()
+    # d_prev_disk_io=json.loads(prev_net_io)
+    d_prev_disk_io['sent_bytes']   = psutil.net_io_counters().bytes_sent
+    d_prev_disk_io['recv_bytes']   = psutil.net_io_counters().bytes_recv
+    d_prev_disk_io['sent_time']    = int(time.time())
+    d_prev_disk_io['recv_time']    = int(time.time())
+    time.sleep(1)
+    d_net_io['sent_bytes']         = psutil.net_io_counters().bytes_sent
+    d_net_io['recv_bytes']         = psutil.net_io_counters().bytes_recv
+    d_net_io['sent_time']          = int(time.time())
+    d_net_io['recv_time']          = int(time.time())
+    net_stats['sent_bytes']        = int((d_net_io['sent_bytes'] - d_prev_disk_io['sent_bytes']) / (d_net_io['sent_time'] - d_prev_disk_io['sent_time']))
+    net_stats['recv_bytes']        = int((d_net_io['recv_bytes'] - d_prev_disk_io['recv_bytes']) / (d_net_io['recv_time']- d_prev_disk_io['recv_time']))
     return net_stats
 
+'''
+  功能: mysql 数据库监控指标
+'''
 def get_mysql_total_connect(config):
     try:
         db = config['db_mysql']
@@ -363,6 +408,122 @@ def get_mysql_available(config):
         print('get_mysql_available exceptiion:' + traceback.format_exc())
         return 0
 
+def mysql_qps(config):
+    try:
+        db_ip   = config['db_ip']
+        db_port = config['db_port']
+        db_service = ''
+        db_user = config['db_user']
+        db_pass = aes_decrypt(config['db_pass'], db_user)
+        db = get_ds_mysql_test(db_ip, db_port, db_service, db_user, db_pass)
+        cr = db.cursor()
+        cr.execute("SHOW GLOBAL STATUS LIKE 'Questions'")
+        rs=cr.fetchone()
+        questions=int(rs[1])
+        cr.execute("SHOW GLOBAL STATUS LIKE 'Uptime'")
+        rs = cr.fetchone()
+        uptime = int(rs[1])
+        qps = round(questions / uptime,2)
+        print('mysql_qps=',questions,uptime)
+        cr.close()
+        return qps
+    except Exception as e:
+        print('mysql_qps exceptiion:' + traceback.format_exc())
+        return 0
+
+def mysql_tps(config):
+    try:
+        db_ip   = config['db_ip']
+        db_port = config['db_port']
+        db_service = ''
+        db_user = config['db_user']
+        db_pass = aes_decrypt(config['db_pass'], db_user)
+        db = get_ds_mysql_test(db_ip, db_port, db_service, db_user, db_pass)
+        cr = db.cursor()
+        cr.execute("SHOW GLOBAL STATUS LIKE 'Com_commit'")
+        rs=cr.fetchone()
+        com_commit=int(rs[1])
+        cr.execute("SHOW GLOBAL STATUS LIKE 'Com_rollback'")
+        rs = cr.fetchone()
+        com_rollback = int(rs[1])
+        cr.execute("SHOW GLOBAL STATUS LIKE 'Uptime'")
+        rs = cr.fetchone()
+        uptime = int(rs[1])
+        tps = round((com_commit+com_rollback)/uptime ,2)
+        print(com_commit,com_rollback,uptime,tps)
+        cr.close()
+        return tps
+    except Exception as e:
+        print('mysql_tps exceptiion:' + traceback.format_exc())
+        return 0
+
+'''
+  功能:Oracle数据库监控指标
+'''
+def get_oracle_total_connect(config):
+    try:
+        db = config['db_oracle']
+        cr = db.cursor()
+        cr.execute("SELECT count(0) FROM v$session")
+        rs=cr.fetchone()
+        cr.close()
+        return rs[0]
+    except:
+        return 0
+
+def get_oracle_active_connect(config):
+    try:
+        db = config['db_oracle']
+        cr = db.cursor()
+        cr.execute("SELECT count(0) FROM v$session where status='ACTIVE'")
+        rs=cr.fetchone()
+        cr.close()
+        return rs[0]
+    except:
+        return 0
+
+def get_oracle_available(config):
+    try:
+        db_ip      = config['db_ip']
+        db_port    = config['db_port']
+        db_service = config['db_service']
+        db_user    = config['db_user']
+        db_pass    = aes_decrypt(config['db_pass'], db_user)
+        db         = get_ds_oracle(db_ip, db_port, db_service, db_user, db_pass)
+        cr         = db.cursor()
+        cr.execute("SELECT 1 from dual")
+        db.commit()
+        cr.close()
+        return 1
+    except Exception as e:
+        print('get_oracle_available exceptiion:' + traceback.format_exc())
+        return 0
+
+def get_oracle_qps(config):
+    try:
+        db = config['db_oracle']
+        cr = db.cursor()
+        cr.execute("select round(sum(value),2)  from gv$sysmetric where metric_name ='I/O Requests per Second'")
+        rs=cr.fetchone()
+        cr.close()
+        return rs[0]
+    except:
+        return 0
+
+def get_oracle_tps(config):
+    try:
+        db = config['db_oracle']
+        cr = db.cursor()
+        cr.execute("select round(sum(value),2)  from gv$sysmetric where metric_name = 'User Transaction Per Sec'")
+        rs=cr.fetchone()
+        cr.close()
+        return rs[0]
+    except:
+        return 0
+
+'''
+  功能:SQLServer 数据库监控指标
+'''
 def get_mssql_total_connect(config):
     try:
         db = config['db_mssql']
@@ -385,7 +546,6 @@ def get_mssql_active_connect(config):
     except:
         return 0
 
-
 def get_mssql_available(config):
     try:
         db_ip      = config['db_ip']
@@ -403,6 +563,53 @@ def get_mssql_available(config):
         print('get_mssql_available exceptiion:' + traceback.format_exc())
         return 0
 
+def get_mssql_qps(config):
+    try:
+        db_ip      = config['db_ip']
+        db_port    = config['db_port']
+        db_service = config['db_service']
+        db_user    = config['db_user']
+        db_pass    = aes_decrypt(config['db_pass'], db_user)
+        db         = get_ds_sqlserver_test(db_ip, db_port, db_service, db_user, db_pass)
+        cr         = db.cursor()
+        st         = "select cntr_value from sys.dm_os_performance_counters where counter_name = 'Lock Requests/sec' and instance_name = 'Database'"
+        cr.execute(st)
+        rs=cr.fetchone()
+        cntr_value1=rs[0]
+        time.sleep(3)
+        cr.execute(st)
+        rs = cr.fetchone()
+        cntr_value2 = rs[0]
+        db.commit()
+        cr.close()
+        return round((cntr_value2-cntr_value1)/3,2)
+    except Exception as e:
+        print('get_mssql_qps exceptiion:' + traceback.format_exc())
+        return 0
+
+def get_mssql_tps(config):
+    try:
+        db_ip      = config['db_ip']
+        db_port    = config['db_port']
+        db_service = config['db_service']
+        db_user    = config['db_user']
+        db_pass    = aes_decrypt(config['db_pass'], db_user)
+        db         = get_ds_sqlserver_test(db_ip, db_port, db_service, db_user, db_pass)
+        cr         = db.cursor()
+        st         = "select cntr_value from sys.dm_os_performance_counters where counter_name = 'Transactions/sec' and instance_name = '_Total'"
+        cr.execute(st)
+        rs=cr.fetchone()
+        cntr_value1=rs[0]
+        time.sleep(3)
+        cr.execute(st)
+        rs = cr.fetchone()
+        cntr_value2 = rs[0]
+        db.commit()
+        cr.close()
+        return round((cntr_value2-cntr_value1)/3,2)
+    except Exception as e:
+        print('get_mssql_tps exceptiion:' + traceback.format_exc())
+        return 0
 
 def getUniqueNumber():
     import datetime
@@ -415,19 +622,13 @@ def getUniqueNumber():
     uniqueNum = str(nowTime) + str(randomNum)
     return  uniqueNum
 
-
 def get_es_available(config):
-    try:
-        es= config['db_elasticsearch']
-        indx = 'dbapi_'+getUniqueNumber()
-        body = {'title': 'How do you do ?'}
-        print('get_es_available=', indx)
-        es.indices.create(index=indx,ignore=400)
-        es.indices.delete(index=indx)
-        return 1
-    except Exception as e:
-        print('get_es_available exceptiion:' + traceback.format_exc())
-        return 0
+    db = get_ds_es(config['db_ip'], config['db_port'])
+    if db :
+       return 1
+    else:
+       return 0
+
 
 def get_redis_available(config):
     try:
@@ -450,7 +651,6 @@ def get_mongo_available(config):
         print('get_mongo_available exceptiion:' + traceback.format_exc())
         return 0
 
-
 def gather(config):
     d_item = {}
     for idx in config['templete_indexes'].split(','):
@@ -459,35 +659,55 @@ def gather(config):
         elif idx == 'cpu_core_usage':
            d_item['cpu_core_usage'] = psutil.cpu_percent(interval=3, percpu=True)
         elif idx == 'mem_usage':
-           d_item['mem_usage']  = psutil.virtual_memory().percent
+           d_item['mem_usage']      = psutil.virtual_memory().percent
         elif idx == 'disk_usage':
-           d_item['disk_usage'] = json.dumps(get_disk_usage())
+           d_item['disk_usage']     = json.dumps(get_disk_usage())
         elif idx == 'disk_read':
-           d_item['disk_read']  = get_disk_io_info(config)['read_bytes']
+           d_item['disk_read']      = get_disk_io_info(config)['read_bytes']
         elif idx == 'disk_write':
-           d_item['disk_write'] = get_disk_io_info(config)['write_bytes']
+           d_item['disk_write']     = get_disk_io_info(config)['write_bytes']
         elif idx == 'net_out':
-           d_item['net_out']    = get_net_io_info(config)['sent_bytes']
+           d_item['net_out']        = get_net_io_info(config)['sent_bytes']
         elif idx == 'net_in':
-           d_item['net_in']     = get_net_io_info(config)['recv_bytes']
+           d_item['net_in']         = get_net_io_info(config)['recv_bytes']
         elif idx == 'mysql_total_connect':
-           d_item['total_connect'] = get_mysql_total_connect(config)
+           d_item['total_connect']  = get_mysql_total_connect(config)
         elif idx == 'mysql_active_connect':
            d_item['active_connect'] = get_mysql_active_connect(config)
         elif idx == 'mysql_available':
-           d_item['db_available']   =  get_mysql_available(config)
+           d_item['db_available']   = get_mysql_available(config)
+        elif idx == 'mysql_qps':
+            d_item['db_qps']        = mysql_qps(config)
+        elif idx == 'mysql_tps':
+            d_item['db_tps']        = mysql_tps(config)
         elif idx == 'mssql_total_connect':
            d_item['total_connect']  = get_mssql_total_connect(config)
         elif idx == 'mssql_active_connect':
            d_item['active_connect'] = get_mssql_active_connect(config)
         elif idx == 'mssql_available':
-           d_item['db_available'] =  get_mssql_available(config)
+           d_item['db_available']   =  get_mssql_available(config)
+        elif idx == 'mssql_qps':
+            d_item['db_qps']        = get_mssql_qps(config)
+        elif idx == 'mssql_tps':
+            d_item['db_tps']        = get_mssql_tps(config)
+        elif idx == 'oracle_total_connect':
+           d_item['total_connect']  = get_oracle_total_connect(config)
+        elif idx == 'oracle_active_connect':
+           d_item['active_connect'] = get_oracle_active_connect(config)
+        elif idx == 'oracle_available':
+           d_item['db_available']   = get_oracle_available(config)
+        elif idx == 'oracle_qps':
+            d_item['db_qps']        = get_oracle_qps(config)
+        elif idx == 'oracle_tps':
+            d_item['db_tps']        = get_oracle_tps(config)
         elif idx == 'es_available':
-           d_item['db_available'] = get_es_available(config)
+           d_item['db_available']   = get_es_available(config)
         elif idx == 'redis_available':
-           d_item['db_available'] = get_redis_available(config)
+           d_item['db_available']   = get_redis_available(config)
         elif idx == 'mongo_available':
-           d_item['db_available'] = get_mongo_available(config)
+           d_item['db_available']   = get_mongo_available(config)
+        elif idx == 'oracle_tablespace':
+            d_item['db_tbs_usage']  = json.dumps(get_tbs_usage(config))
         else:
            pass
 
@@ -515,6 +735,9 @@ def write_monitor_log(item):
         'total_connect'       : item.get('total_connect'),
         'active_connect'      : item.get('active_connect'),
         'db_available'        : item.get('db_available'),
+        'db_tbs_usage'        : item.get('db_tbs_usage',''),
+        'db_qps'              : item.get('db_qps',''),
+        'db_tps'              : item.get('db_tps',''),
         'market_id'           : item.get('market_id')
     }
     print('write_monitor_log=',v_tag)
