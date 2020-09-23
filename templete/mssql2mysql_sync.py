@@ -844,6 +844,7 @@ def get_sync_table_total_rows(config, tab, v_where):
     db_source = config['db_sqlserver']
     cr_source = db_source.cursor()
     v_sql = "select count(0) from {0} with(nolock) {1}".format(tab, v_where)
+    #print('get_sync_table_total_rows=',v_sql)
     cr_source.execute(v_sql)
     rs_source = cr_source.fetchone()
     cr_source.close()
@@ -854,6 +855,7 @@ def get_sync_table_total_rows_mysql(config, tab, v_where):
     db_desc = config['db_mysql']
     cr_desc = db_desc.cursor()
     v_sql = "select count(0) from {0} {1}".format(tab, v_where)
+    #print('get_sync_table_total_rows_mysql=',v_sql)
     cr_desc.execute(v_sql)
     rs_desc = cr_desc.fetchone()
     cr_desc.close()
@@ -1035,7 +1037,6 @@ def get_mysql_row_strings(config, tab, pkid):
     # print("get_mysql_row_strings.ins_val=",ins_val)
     return ins_val
 
-
 def get_sqlserver_row_strings_batch(config, tab, rs):
     db_source = config['db_sqlserver3']
     cr_source = db_source.cursor()
@@ -1077,7 +1078,6 @@ def get_sqlserver_row_strings_batch(config, tab, rs):
     cr_source.close()
     return v_ins_batch
 
-
 def get_mysql_row_strings_batch(config, tab, rs):
     db_source = config['db_mysql3']
     cr_source = db_source.cursor()
@@ -1110,7 +1110,6 @@ def get_mysql_row_strings_batch(config, tab, rs):
     cr_source.close()
     return v_ins_batch
 
-
 def get_sync_where(pk_cols, pk_vals):
     v_where = ''
     for i in range(len(pk_cols.split(','))):
@@ -1135,6 +1134,15 @@ def get_sync_where_incr(tab, config):
     else:
         return v
 
+def get_sync_where_day(tab,day):
+    v_rq_col   = tab.split(':')[1]
+    v_rq_rqq   = day+' 0:0:0'
+    v_rq_rqz   = day+' 23:59:59'
+    v          = "where {0} between '{1}' and '{2}'".format(v_rq_col, v_rq_rqq, v_rq_rqz)
+    if tab.split(':')[1] == '':
+        return ''
+    else:
+        return v
 
 def get_sync_where_incr_mysql(tab, config):
     v_rq_col = tab.split(':')[1]
@@ -1152,6 +1160,7 @@ def get_sync_where_incr_mysql(tab, config):
         return ''
     else:
         return v
+
 
 
 def get_sync_where_incr_rq(tab, config, currq):
@@ -1665,7 +1674,7 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
                            SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
                                doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
                              where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0] + '_$PK$')
-                print(sql)
+                #print(sql)
                 cr_desc.execute(sql)
 
             db_desc.commit()
@@ -1679,7 +1688,6 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
         print('sync_sqlserver_data_pk exceptiion:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
         exit(0)
-
 
 def sync_sqlserver_data_nopk(config, ftab, config_init):
     try:
@@ -1785,7 +1793,7 @@ def sync_sqlserver_data_nopk(config, ftab, config_init):
                             SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
                                  doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
                                where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0] + '_$PK$')
-                print(sql)
+                #print(sql)
                 cr_desc.execute(sql)
             db_desc.commit()
 
@@ -1796,6 +1804,227 @@ def sync_sqlserver_data_nopk(config, ftab, config_init):
                 write_sync_log_detail(config)
     except Exception as e:
         print('sync_sqlserver_data_nopk exceptiion:' + traceback.format_exc())
+        exception_running(config, traceback.format_exc())
+        exit(0)
+
+def get_nday_list(n):
+    before_n_days = []
+    for i in range(0, n + 1)[::-1]:
+        before_n_days.append(str(datetime.date.today() - datetime.timedelta(days=i)))
+    return before_n_days
+
+def sync_sqlserver_data_pk_7(config, ftab):
+    try:
+        for day in get_nday_list(config['sync_repair_day']):
+            tab = ftab.split(':')[0]
+            v_where            = get_sync_where_day(ftab, day)
+            i_counter          = 0
+            n_tab_total_rows   = get_sync_table_total_rows(config, tab, v_where)
+            n_tab_total_rows2  = get_sync_table_total_rows_mysql(config, get_mapping_tname(tab), v_where)
+
+            ins_sql_header     = get_tab_header(config, tab)
+            v_pk_names         = get_sync_table_pk_names(config, tab)
+            v_pk_cols          = get_sync_table_pk_vals(config, tab)
+            n_batch_size       = int(config['batch_size_incr'])
+            db_source          = config['db_sqlserver']
+            db_source2         = config['db_sqlserver2']
+            cr_source          = db_source.cursor()
+            db_desc            = config['db_mysql']
+            cr_desc            = db_desc.cursor()
+            v_sql              = """select {0} as 'pk',{1} from {2} with(nolock) {3}
+                                 """.format(v_pk_cols, get_tab_columns(config, tab), tab, v_where)
+            n_rows             = 0
+
+            if ftab.split(':')[1] == '':
+                print("Sync Table {} have no increment column ,skipping...".format(ftab.split(':')[0]))
+                continue
+
+            # 检测同一天SQLServer和MySQL表中数据量是否一致，一致则跳过本次循环，不一致则同步当天数据
+            if n_tab_total_rows == n_tab_total_rows2 :
+               print('{}：`{}`表数据相等，跳过同步({})!'.format(day,tab,n_tab_total_rows))
+               continue
+            elif n_tab_total_rows< n_tab_total_rows2:
+                print('{}:`{}`表SQLServer与MySQL数据不一致({}/{})，同步中...'.format(day, tab, n_tab_total_rows, n_tab_total_rows2))
+                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where))
+                print('DB:{0},delete {1} table {2} data ok!'.format(config['db_mysql_string'], get_mapping_tname(tab),v_where))
+            else:
+                print('{}:`{}`表SQLServer与MySQL数据不一致({}/{})，同步中...'.format(day,tab,n_tab_total_rows,n_tab_total_rows2))
+
+            cr_source.execute(v_sql)
+            rs_source  = cr_source.fetchmany(n_batch_size)
+            start_time = datetime.datetime.now()
+
+            while rs_source:
+                batch_sql = ""
+                batch_sql_del = ""
+                v_sql = ''
+                v_sql_del = ''
+                n_rows = n_rows + len(rs_source)
+                print("\r{0},Scanning table:{1},{2}/{3} rows,elapsed time:{4}s..."
+                      .format(get_time(),get_mapping_tname(tab),str(n_rows),str(n_tab_total_rows),
+                              str(get_seconds(start_time))),end='')
+                rs_source_desc = cr_source.description
+                if len(rs_source) > 0:
+                    for r in list(rs_source):
+                        ins_val = ""
+                        for j in range(1, len(r)):
+                            col_type = str(rs_source_desc[j][1])
+                            if r[j] is None:
+                                ins_val = ins_val + "null,"
+                            elif col_type == "1":  # varchar,date
+                                ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
+                            elif col_type == "5":  # int,decimal
+                                ins_val = ins_val + "'" + str(r[j]) + "',"
+                            elif col_type == "4":  # datetime
+                                ins_val = ins_val + "'" + str(r[j]).split('.')[0] + "',"
+                            elif col_type == "3":  # bit
+                                if str(r[j]) == "True":  # bit
+                                    ins_val = ins_val + "'" + "1" + "',"
+                                elif str(r[j]) == "False":  # bit
+                                    ins_val = ins_val + "'" + "0" + "',"
+                                else:  # bigint ,int
+                                    ins_val = ins_val + "'" + str(r[j]) + "',"
+                            elif col_type == "2":  # timestamp
+                                ins_val = ins_val + "null,"
+                            else:
+                                ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
+
+                        ins_val = ins_val + config['sync_col_val'].replace('$PK$',r[0].replace('^^^','_'))
+                        v_sql = v_sql + '(' + ins_val + '),'
+                        v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0]) + "$$$"
+                    batch_sql = ins_sql_header + v_sql[0:-1]
+
+                    for d in v_sql_del[0:-3].split('$$$'):
+                        cr_desc.execute('delete from {0} where {1}'.format(get_mapping_tname(tab), d))
+                    config['run_sql'] = batch_sql
+                    cr_desc.execute(batch_sql)
+                    i_counter = i_counter + len(rs_source)
+
+                    print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
+                          .format(tab, n_tab_total_rows,
+                                  i_counter, round(i_counter / n_tab_total_rows * 100, 2),
+                                  str(get_seconds(start_time))), end='')
+                    if n_tab_total_rows == 0:
+                        print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
+                              .format(tab, n_tab_total_rows, i_counter, round(i_counter / 1 * 100, 2),
+                                      str(get_seconds(start_time))), end='')
+                    else:
+                        print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
+                              .format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2),
+                                      str(get_seconds(start_time))), end='')
+                rs_source = cr_source.fetchmany(n_batch_size)
+                print('')
+
+            if tab == 'tc.recordarchive' and len(config['sync_col_val'].split(',')) > 1:
+                print('update table tc_recordarchive es_id...'.format(tab))
+                sql = """UPDATE tc_recordarchive
+                           SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
+                               doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
+                             where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0] + '_$PK$')
+                print(sql)
+                cr_desc.execute(sql)
+
+            db_desc.commit()
+
+    except Exception as e:
+        print('sync_sqlserver_data_pk exceptiion:' + traceback.format_exc())
+        exception_running(config, traceback.format_exc())
+        exit(0)
+
+def sync_sqlserver_data_pk_7_nopk(config, ftab):
+    try:
+        for day in get_nday_list(config['sync_repair_day']):
+            tab = ftab.split(':')[0]
+            i_counter = 0
+            start_time = datetime.datetime.now()
+            v_where     = get_sync_where_day(ftab, day)
+            n_tab_total_rows = get_sync_table_total_rows(config, tab, v_where)
+            n_tab_total_rows2  = get_sync_table_total_rows_mysql(config, get_mapping_tname(tab), v_where)
+
+            ins_sql_header = get_tab_header(config, tab)
+            v_tab_cols = get_tab_columns(config, tab)
+            n_batch_size = int(config['batch_size'])
+            db_source = config['db_sqlserver']
+            cr_source = db_source.cursor()
+            db_desc = config['db_mysql']
+            cr_desc = db_desc.cursor()
+
+            if ftab.split(':')[1] == '':
+                print("Sync Table {} have no increment column ,skipping...".format(ftab.split(':')[0]))
+                continue
+
+            # 检测同一天SQLServer和MySQL表中数据量是否一致，一致则跳过本次循环，不一致则同步当天数据
+            if n_tab_total_rows == n_tab_total_rows2:
+                print('{}：`{}`表数据相等，跳过同步({})!'.format(day, tab, n_tab_total_rows))
+                continue
+            else:
+                print('{}:`{}`表SQLServer与MySQL数据不一致({}/{})，同步中...'
+                      .format(day, tab, n_tab_total_rows,n_tab_total_rows2))
+                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where))
+                print('DB:{0},delete {1} table {2} data ok!'
+                        .format(config['db_mysql_string'], get_mapping_tname(tab),v_where))
+
+            v_sql = "select {0} from {1} with(nolock) {2}".format(v_tab_cols, tab,v_where)
+            #print(v_sql)
+            cr_source.execute(v_sql)
+            rs_source = cr_source.fetchmany(n_batch_size)
+            while rs_source:
+                batch_sql = ""
+                v_sql = ''
+                for i in range(len(rs_source)):
+                    rs_source_desc = cr_source.description
+                    ins_val = ""
+                    for j in range(len(rs_source[i])):
+                        col_type = str(rs_source_desc[j][1])
+                        if rs_source[i][j] is None:
+                            ins_val = ins_val + "null,"
+                        elif col_type == "1":  # varchar,date
+                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                        elif col_type == "5":  # int,decimal
+                            ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
+                        elif col_type == "4":  # datetime
+                            ins_val = ins_val + "'" + str(rs_source[i][j]).split('.')[0] + "',"
+                        elif col_type == "3":  # bit
+                            if str(rs_source[i][j]) == "True":  # bit
+                                ins_val = ins_val + "'" + "1" + "',"
+                            elif str(rs_source[i][j]) == "False":  # bit
+                                ins_val = ins_val + "'" + "0" + "',"
+                            else:  # bigint ,int
+                                ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
+                        elif col_type == "2":  # timestamp
+                            ins_val = ins_val + "null,"
+                        else:
+                            ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
+                    v_sql = v_sql + '(' + ins_val + config['sync_col_val'] + '),'
+                batch_sql = ins_sql_header + v_sql[0:-1]
+
+                config['run_sql'] = convert(batch_sql)
+                cr_desc.execute(batch_sql)
+                i_counter = i_counter + len(rs_source)
+
+                if n_tab_total_rows == 0:
+                    print("Table:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                          format(tab, n_tab_total_rows, round(i_counter / 1 * 100, 2)))
+                else:
+                    print("\rTime:{0},Table:{1},Total rec:{2},Process rec:{3},Complete:{4}%,elapsed time:{5}s"
+                          .format(get_time(), tab, n_tab_total_rows, i_counter,
+                                  round(i_counter / n_tab_total_rows * 100, 2), str(get_seconds(start_time))),
+                          end='')
+                rs_source = cr_source.fetchmany(n_batch_size)
+            print('')
+
+        if tab == 'tc.recordarchive' and len(config['sync_col_val'].split(',')) > 1:
+            print('update table tc_recordarchive es_id...'.format(tab))
+            sql = """UPDATE tc_recordarchive
+                            SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
+                                doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
+                               where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0] + '_$PK$')
+            #print(sql)
+            cr_desc.execute(sql)
+        db_desc.commit()
+
+    except Exception as e:
+        print('sync_sqlserver_data_pk_7_nopk exceptiion:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
         exit(0)
 
@@ -1813,12 +2042,22 @@ def sync_sqlserver_data(config, config_init):
             sync_sqlserver_data_pk(config, v, config_init)
 
         if config['run_mode'] == 'remote':
-            amount = amount + int(config['sync_amount'])
+           amount = amount + int(config['sync_amount'])
 
     if config['run_mode'] == 'remote':
         config['sync_amount'] = str(amount)
         config['sync_duration'] = str(get_seconds(start_time))
         write_sync_log(config)
+
+
+def check_sqlserver_data(config):
+    print('check recent 7 day data...')
+    for v in config['sync_table'].split(","):
+        tab = v.split(':')[0].lower()
+        if not check_full_sync(config, tab):
+           sync_sqlserver_data_pk_7(config, v)
+        else:
+           sync_sqlserver_data_pk_7_nopk(config, v)
 
 
 def cleaning_table(config):
@@ -2038,6 +2277,14 @@ def exception_running(config, p_error):
 
     send_mail25('190343@lifeat.cn', 'Hhc5HBtAuYTPGHQ8', '190343@lifeat.cn', v_title, v_content)
 
+def disconnect(config):
+    config['db_sqlserver'].close()
+    config['db_sqlserver2'].close()
+    config['db_sqlserver3'].close()
+    config['db_mysql'].close()
+    config['db_mysql3'].close()
+
+
 def sync(config, debug, workdir):
     # init dict
     config = get_config_from_db(config, workdir)
@@ -2057,8 +2304,13 @@ def sync(config, debug, workdir):
         # sync increment data
         sync_sqlserver_data(config, config_init)
 
+        # check  recently 7 day data
+        check_sqlserver_data(config)
+
         # clearing desc table
         cleaning_table(config)
+
+        disconnect(config)
 
         sys.exit(0)
 

@@ -19,7 +19,10 @@ import traceback
 from   crontab import CronTab
 
 def format_sql(v_sql):
-    return v_sql.replace("\\","\\\\").replace("'","\\'")
+    if v_sql is not None:
+       return v_sql.replace("\\","\\\\").replace("'","\\'")
+    else:
+       return v_sql
 
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -248,7 +251,7 @@ def get_db_sync_config(p_tag):
                           b.server_desc,
                           a.run_time,
                           a.api_server,
-                          LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,
+                          LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
                           a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
                           a.status,b.server_ip,b.server_port,b.server_user,b.server_pass                         
                 FROM t_db_sync_config a,t_server b,t_db_source c,t_db_source d
@@ -551,6 +554,8 @@ def get_slow_config(p_slow_id):
                          a.api_server,
                          a.log_file,
                          a.query_time,
+                         a.exec_time,
+                         a.run_time,
                          a.status,
                          c.server_ip   AS db_ip,
                          b.inst_port   AS db_port,
@@ -560,13 +565,15 @@ def get_slow_config(p_slow_id):
                          b.inst_type   AS db_type,
                          b.inst_name,
                          b.inst_ver,
+                         b.inst_ip_in,
+                         b.is_rds,
                          c.server_ip ,
                          c.server_port,
                          c.server_user,
                          c.server_pass,
                          c.server_desc
                 FROM t_slow_log a ,t_db_inst b,t_server c
-                 where a.inst_id = b.id and b.server_id=c.id
+                 where a.inst_id = b.id and a.server_id=c.id
                    and a.id='{0}'  ORDER BY a.id
             '''.format(p_slow_id))
     rs=cr.fetchone()
@@ -591,6 +598,57 @@ def get_slow_config(p_slow_id):
     result['msg']=rs
     cr.close()
     return result
+
+def get_minio_config(p_tag):
+    config=db_config()
+    db=config['db_mysql']
+    cr=db.cursor()
+    result = {}
+    result['code'] = 200
+    result['msg'] = ''
+
+    #检测传输服务器是否有效
+    if check_server_minio_status(p_tag)>0:
+       result['code'] = -1
+       result['msg'] = '采集服务器已禁用!'
+       return result
+
+    #检测慢日志标识是否存在
+    if check_minio_config(p_tag)==0:
+       result['code'] = -1
+       result['msg'] = '同步标识不存在!'
+       return result
+
+    cr.execute('''SELECT  
+                         a.sync_tag,
+                         a.sync_type,
+                         a.server_id,
+                         a.sync_path,
+                         a.sync_service,
+                         a.minio_server,
+                         a.minio_user,
+                         a.minio_pass,
+                         a.python3_home,
+                         a.script_path,
+                         a.script_file,
+                         a.api_server,
+                         a.run_time,
+                         a.comments,
+                         a.status,
+                         b.server_ip ,
+                         b.server_port,
+                         b.server_user,
+                         b.server_pass,
+                         b.server_desc
+                FROM t_minio_config a ,t_server b
+                 where a.server_id=b.id
+                   and a.sync_tag='{0}'  ORDER BY a.id
+            '''.format(p_tag))
+    rs=cr.fetchone()
+    result['msg']=rs
+    cr.close()
+    return result
+
 
 def get_datax_sync_config(p_tag):
     config=db_config()
@@ -710,6 +768,16 @@ def check_slow_config(p_slow_id):
     cr.close()
     return  rs['count(0)']
 
+def check_minio_config(p_tag):
+    config=db_config()
+    db=config['db_mysql']
+    cr=db.cursor()
+    cr.execute('''select count(0) from t_minio_config where sync_tag='{0}'
+               '''.format(p_tag))
+    rs=cr.fetchone()
+    cr.close()
+    return  rs['count(0)']
+
 def check_datax_sync_config(p_tag):
     config=db_config()
     db=config['db_mysql']
@@ -771,6 +839,17 @@ def check_server_slow_status(p_slow_id):
     cr.execute('''select count(0) from t_slow_log a,t_db_inst b ,t_server c
                   where a.inst_id=b.id and b.server_id=c.id  and a.id='{0}' and c.status='0'
                '''.format(p_slow_id))
+    rs=cr.fetchone()
+    cr.close()
+    return  rs['count(0)']
+
+def check_server_minio_status(p_tag):
+    config=db_config()
+    db=config['db_mysql']
+    cr=db.cursor()
+    cr.execute('''select count(0) from t_minio_config a, t_server b
+                  where a.server_id=b.id  and a.sync_tag='{0}' and a.status='0'
+               '''.format(p_tag))
     rs=cr.fetchone()
     cr.close()
     return  rs['count(0)']
@@ -1026,32 +1105,63 @@ def save_slow_log(config):
     result['code'] = 200
     result['msg'] = 'success'
     try:
+        # STR_TO_DATE('{}', '%Y%m%d %H:%i:%s')
         db = db_config()['db_mysql']
         cr = db.cursor()
         st = '''insert into t_slow_detail
                    (inst_id,sql_id,templete_id,finish_time,USER,HOST,ip,thread_id,query_time,lock_time,
                     rows_sent,rows_examined,db,sql_text,finger,bytes,cmd,pos_in_log)
-                 values('{}','{}','{}',STR_TO_DATE('{}', '%Y%m%d %H:%i:%s'),'{}','{}','{}',
+                 values('{}','{}','{}','{}','{}','{}','{}',
                         '{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')
-             '''.format(config['inst_id'],
-                        config['sql_id'],
-                        config['templete_id'],
-                        config['finish_time'],
-                        config['user'],
-                        config['host'],
-                        config['ip'],
-                        config['thread_id'],
-                        config['query_time'],
-                        config['lock_time'],
-                        config['rows_sent'],
-                        config['rows_examined'],
-                        config['db'],
-                        format_sql(config['sql_text']),
-                        format_sql(config['finger']),
-                        config['bytes'],
-                        config['cmd'],
-                        config['pos_in_log']
+             '''.format(config.get('inst_id'),
+                        config.get('sql_id'),
+                        config.get('templete_id'),
+                        config.get('finish_time'),
+                        config.get('user'),
+                        config.get('host'),
+                        config.get('ip'),
+                        config.get('thread_id'),
+                        config.get('query_time'),
+                        config.get('lock_time'),
+                        config.get('rows_sent'),
+                        config.get('rows_examined'),
+                        config.get('db'),
+                        format_sql(config.get('sql_text')),
+                        format_sql(config.get('finger')),
+                        config.get('bytes'),
+                        config.get('cmd'),
+                        config.get('pos_in_log')
                        )
+        print(st)
+        cr.execute(st)
+        db.commit()
+        cr.close()
+        return result
+    except:
+        print(traceback.print_exc())
+        result['code'] = -1
+        result['msg'] = '保存失败!'
+        return result
+
+def save_minio_log(config):
+    result = {}
+    result['code'] = 200
+    result['msg'] = 'success'
+    try:
+        # STR_TO_DATE('{}', '%Y%m%d %H:%i:%s')
+        db = db_config()['db_mysql']
+        cr = db.cursor()
+        st = '''insert into t_minio_log
+                   (sync_tag,server_id,download_time,upload_time,total_time,transfer_file,create_date)
+                 values('{}','{}','{}','{}','{}','{}',now())
+             '''.format(config.get('sync_tag'),
+                        config.get('server_id'),
+                        config.get('download_time'),
+                        config.get('upload_time'),
+                        config.get('total_time'),
+                        config.get('transfer_file')
+                       )
+        print(st)
         cr.execute(st)
         db.commit()
         cr.close()
@@ -1576,19 +1686,24 @@ def write_remote_crontab_slow(v_flow_id):
 
     v_cron0 = '''
                 crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} slow_id={2}\n{3} {4} &>/dev/null & #slow_id={5}" >> /tmp/conf  && crontab /tmp/conf
-              '''.format("slow_id="+v_flow_id,result['msg']['inst_name']+'日志切割任务',v_flow_id,'0 0 * * *',v_cmd_c,v_flow_id)
+              '''.format("slow_id="+v_flow_id,result['msg']['inst_name']+'日志切割任务',v_flow_id,result['msg']['run_time'],v_cmd_c,v_flow_id)
 
     v_cron1 = '''
                 echo  -e "\n#{} slow_id={}\n{} {} &>/dev/null & #slow_id={}" >> /tmp/conf  && crontab /tmp/conf
-              '''.format(result['msg']['inst_name']+'慢日志采集任务', v_flow_id, '*/1 * * * *', v_cmd_s, v_flow_id)
+              '''.format(result['msg']['inst_name']+'慢日志采集任务', v_flow_id, result['msg']['run_time'], v_cmd_s, v_flow_id)
+
+    v_cron2 = '''
+                crontab -l > /tmp/conf && sed -i "/{}/d" /tmp/conf && echo  -e "\n#{} slow_id={}\n{} {} &>/dev/null & #slow_id={}" >> /tmp/conf  && crontab /tmp/conf
+              '''.format("slow_id="+v_flow_id,result['msg']['inst_name'] + '慢日志采集任务', v_flow_id, result['msg']['run_time'], v_cmd_s,v_flow_id)
+
 
     v_cron_ = '''
                 crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf >> /tmp/conf && crontab /tmp/conf
               '''.format(v_flow_id)
 
-    v_cron2 = '''sed -i '/^$/{N;/\\n$/D};' /tmp/conf'''
+    v_cron3 = '''crontab -l > /tmp/conf && sed -i '/^$/{N;/\\n$/D};' /tmp/conf && crontab /tmp/conf'''
 
-    v_cron3 = '''mkdir -p {}/crontab && crontab -l >{}/crontab/crontab.{}
+    v_cron4 = '''mkdir -p {}/crontab && crontab -l >{}/crontab/crontab.{}
               '''.format(result['msg']['script_path'],result['msg']['script_path'],get_time2())
 
     # Decryption password
@@ -1606,17 +1721,71 @@ def write_remote_crontab_slow(v_flow_id):
     #exec v_cron
     if result['msg']['status'] == '0':
        ssh.exec_command(v_cron_)
-       ssh.exec_command(v_cron2)
+       ssh.exec_command(v_cron3)
 
     if result['msg']['status'] == '1':
-       ssh.exec_command(v_cron0)
-       ssh.exec_command(v_cron1)
-       ssh.exec_command(v_cron2)
-       ssh.exec_command(v_cron3)
+       if result['msg']['is_rds'] == 'N':
+          ssh.exec_command(v_cron0)
+          ssh.exec_command(v_cron1)
+          ssh.exec_command(v_cron3)
+          ssh.exec_command(v_cron4)
+       else:
+          ssh.exec_command(v_cron2)
+          ssh.exec_command(v_cron3)
+          ssh.exec_command(v_cron4)
 
     print('Remote crontab update complete!')
     ssh.close()
     return result
+
+
+def write_remote_crontab_minio(v_tag):
+    result = get_minio_config(v_tag)
+    if result['code']!=200:
+       return result
+
+    v_cmd   = '{0}/minio_sync.sh {1} {2}'.format(result['msg']['script_path'],result['msg']['script_file'], v_tag)
+
+    v_cron0 = '''
+                crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} sync_tag={2}\n{3} {4} &>/dev/null & #sync_tag={5}" >> /tmp/conf  && crontab /tmp/conf
+              '''.format("sync_tag="+v_tag,result['msg']['comments'],v_tag,result['msg']['run_time'],v_cmd,v_tag)
+
+
+    v_cron_ = '''
+                crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf >> /tmp/conf && crontab /tmp/conf
+              '''.format(v_tag)
+
+    v_cron1 = '''crontab -l > /tmp/conf && sed -i '/^$/{N;/\\n$/D};' /tmp/conf && crontab /tmp/conf'''
+
+    v_cron2 = '''mkdir -p {}/crontab && crontab -l >{}/crontab/crontab.{}
+              '''.format(result['msg']['script_path'],result['msg']['script_path'],get_time2())
+
+    # Decryption password
+    config = db_config()
+    print('config[db_mysql=', config['db_mysql'])
+    print(result['msg']['server_pass'], result['msg']['server_user'])
+    v_password = aes_decrypt(config['db_mysql'], result['msg']['server_pass'], result['msg']['server_user'])
+    print('write_remote_crontab_slow ->v_password=', v_password)
+
+    #connect server
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname=result['msg']['server_ip']  , port=int(result['msg']['server_port']),
+                username=result['msg']['server_user'], password=v_password)
+    #exec v_cron
+    if result['msg']['status'] == '0':
+       ssh.exec_command(v_cron2)
+       ssh.exec_command(v_cron_)
+
+    if result['msg']['status'] == '1':
+       ssh.exec_command(v_cron2)
+       ssh.exec_command(v_cron0)
+       ssh.exec_command(v_cron1)
+
+    print('Remote crontab update complete!')
+    ssh.close()
+    return result
+
 
 def write_datax_remote_crontab_sync(v_tag):
     result = get_datax_sync_config(v_tag)
@@ -2109,6 +2278,70 @@ def transfer_remote_file_slow(v_tag):
     transport.close()
     ssh.close()
     return result
+
+
+def transfer_remote_file_minio(v_tag):
+    print('transfer_remote_file_minio!')
+    result = {}
+    result['code'] = 200
+    result['msg']  = ''
+    result = get_minio_config(v_tag)
+    print('transfer_remote_file_minio=',result)
+    if result['code']!=200:
+       return result
+
+    #Decryption password
+    config = db_config()
+    print('config[db_mysql=', config['db_mysql'])
+    print(result['msg']['server_pass'], result['msg']['server_user'])
+    v_password = aes_decrypt(config['db_mysql'], result['msg']['server_pass'], result['msg']['server_user'])
+    print('transfer_remote_file_slow ->v_password=', v_password)
+
+    transport = paramiko.Transport((result['msg']['server_ip'], int(result['msg']['server_port'])))
+    transport.connect(username=result['msg']['server_user'], password=v_password)
+    sftp = paramiko.SFTPClient.from_transport(transport)
+
+    #replace script file
+    templete_file = './templete/{0}'.format(result['msg']['script_file'])
+    local_file    = './script/{0}'.format(result['msg']['script_file'])
+    os.system('cp -f {0} {1}'.format(templete_file, local_file))
+    with open(local_file, 'w') as obj_file:
+        obj_file.write(get_file_contents(templete_file).
+                       replace('$$API_SERVER$$', result['msg']['api_server']))
+
+    #create sync directory
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname=result['msg']['server_ip'], port=int(result['msg']['server_port']),
+                username=result['msg']['server_user'], password=v_password)
+    ssh.exec_command('mkdir -p {0}'.format(result['msg']['script_path']))
+    print("remote sync directory '{0}' created!".format(result['msg']['script_path']))
+
+    #send .py file
+    local_file  = './script/{0}'.format(result['msg']['script_file'])
+    remote_file = '{0}/{1}'.format(result['msg']['script_path'],result['msg']['script_file'])
+    print('transfer_remote_file_minio'+'$'+local_file+'$'+remote_file)
+    sftp.put(localpath=local_file, remotepath=remote_file)
+    print('Script:{0} send to {1} ok.'.format(local_file, remote_file))
+
+    #send mysql_transfer.sh file
+    templete_file = './templete/minio_sync.sh'
+    local_file    = './script/minio_sync.sh'
+    remote_file   = '{0}/minio_sync.sh'.format(result['msg']['script_path'])
+    os.system('cp -f {0} {1}'.format(templete_file, local_file))
+    print('templete_file=',templete_file)
+    print('local_file=',local_file)
+    print('remote_file=',remote_file)
+    with open(local_file, 'w') as obj_file:
+        obj_file.write(get_file_contents(templete_file).
+                       replace('$$PYTHON3_HOME$$', result['msg']['python3_home']).
+                       replace('$$SCRIPT_PATH$$' , result['msg']['script_path']))
+    sftp.put(localpath=local_file, remotepath=remote_file)
+    write_log('Script:{0} send to {1} ok.'.format(local_file, remote_file))
+    transport.close()
+    ssh.close()
+    return result
+
 
 def query_datax_by_id(sync_id):
     db  = db_config()['db_mysql']
@@ -2637,6 +2870,35 @@ def run_remote_cmd_slow(v_tag):
     ssh.close()
     return result
 
+
+def run_remote_cmd_minio(v_tag):
+    # Init dict
+    result = {}
+    result['code'] = 200
+    result['msg'] = ''
+    result = get_minio_config(v_tag)
+    if result['code'] != 200:
+        return result
+
+    # Decryption password
+    config = db_config()
+    print('config[db_mysql=', config['db_mysql'])
+    print(result['msg']['server_pass'], result['msg']['server_user'])
+    v_password = aes_decrypt(config['db_mysql'], result['msg']['server_pass'], result['msg']['server_user'])
+    print('run_remote_cmd_monitor ->v_password=', v_password)
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname=result['msg']['server_ip'] ,port=int(result['msg']['server_port']),
+                username=result['msg']['server_user'],password=v_password)
+    print('run_remote_cmd_archive! connect!')
+    remote_file1 = '{0}/{1}'.format(result['msg']['script_path'], result['msg']['script_file'])
+    remote_file2 = '{0}/{1}'.format(result['msg']['script_path'], 'minio_sync.sh')
+    ssh.exec_command('chmod +x {0}'.format(remote_file1))
+    ssh.exec_command('chmod +x {0}'.format(remote_file2))
+    ssh.close()
+    return result
+
 def run_datax_remote_cmd_sync(v_tag):
     # Init dict
     result = {}
@@ -2771,6 +3033,17 @@ class write_slow_log(tornado.web.RequestHandler):
         v_json  = json.dumps(result)
         self.write(v_json)
 
+class write_minio_log(tornado.web.RequestHandler):
+    def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        v_tag   = self.get_argument("tag")
+        print(v_tag)
+        config  = json.loads(v_tag)
+        result  = save_minio_log(config)
+        v_json  = json.dumps(result)
+        self.write(v_json)
+
+
 class update_db_inst_status(tornado.web.RequestHandler):
     def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
@@ -2899,13 +3172,31 @@ class read_slow_config(tornado.web.RequestHandler):
             result['msg'] = str(e)
             self.write(v_json)
 
+
+class read_minio_config(tornado.web.RequestHandler):
+    def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            v_tag  = self.get_argument("tag")
+            result = get_minio_config(v_tag)
+            v_json = json.dumps(result)
+            write_log("{0} dbops api interface /read_minio_config success!".format(get_time()))
+            if result['code'] == 200:
+                print_dict(result['msg'])
+            self.write(v_json)
+        except Exception as e:
+            print(traceback.print_exc())
+            result['code'] = -1
+            result['msg'] = str(e)
+            self.write(v_json)
+
 class read_config_db(tornado.web.RequestHandler):
     def post(self):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             result = {}
             result['code'] = 200
-            result['msg'] = db_config_info()
+            result['msg']  = db_config_info()
             v_json = json.dumps(result)
             self.write(v_json)
         except Exception as e:
@@ -3448,6 +3739,39 @@ class push_script_slow_remote(tornado.web.RequestHandler):
             print(traceback.format_exc())
 
 
+class push_script_minio_remote(tornado.web.RequestHandler):
+    def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            v_tag     = self.get_argument("tag")
+            result    = transfer_remote_file_minio(v_tag)
+            if result['code'] != 200:
+                v_json = json.dumps(result)
+                print('v_json=', v_json)
+                self.write(v_json)
+                return
+
+            result = write_remote_crontab_minio(v_tag)
+            if result['code'] != 200:
+                v_json = json.dumps(result)
+                print(v_json)
+                self.write(v_json)
+                return
+
+            result = run_remote_cmd_minio(v_tag)
+            if result['code'] != 200:
+                v_json = json.dumps(result)
+                print(v_json)
+                self.write(v_json)
+                return
+
+            v_json = json.dumps(result)
+            print("{0} dbops api interface /push_script_minio_remote success!".format(get_time()))
+            self.write(v_json)
+        except Exception as e:
+            print(traceback.format_exc())
+
+
 class push_datax_remote_sync(tornado.web.RequestHandler):
     def post(self):
         try:
@@ -3621,6 +3945,11 @@ class Application(tornado.web.Application):
             (r"/read_slow_config",             read_slow_config),
             (r"/push_slow_remote",             push_script_slow_remote),
             (r"/write_slow_log",               write_slow_log),
+
+            # MinIOAPI接口
+            (r"/read_minio_config", read_minio_config),
+            (r"/push_minio_remote", push_script_minio_remote),
+            (r"/write_minio_log"  , write_minio_log),
         ]
         tornado.web.Application.__init__(self, handlers)
 

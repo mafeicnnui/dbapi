@@ -47,11 +47,43 @@ def get_md5(url):
     md.update(url)
     return md.hexdigest()
 
-def get_log(parameter):
+def get_log_ecs(parameter):
     cmd = "pt-query-digest {} --no-report --filter 'print Dumper $event'  --sample 1 > {} "\
           .format(parameter['slow_query_log_file'], parameter['slow_query_log_file']+'.pt')
+    print(cmd)
     os.system(cmd)
     with open(parameter['slow_query_log_file']+'.pt', 'r') as f:
+        r = f.read()
+    return r
+
+def check_process_status(p_inst_id):
+    try:
+      r=os.popen('ps -ef|grep -v grep | grep pt-query-digest | grep {} | wc -l'.format(p_inst_id)).read()
+      return int(r.split('\n')[0])
+    except:
+      return 0
+
+
+def get_log_rds(config):
+    dir = os.path.join(config['script_path'],'slowlog')
+    log = os.path.join(dir,'slow_query_log_{}_{}.log'.format(get_day(),config['inst_id']))
+    cmd = "mkdir -p {}".format(dir)
+    os.system(cmd)
+    print('directory {} created!'.format(dir))
+    print('ps -ef | grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
+    os.system('ps -ef|grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
+    if check_process_status(config['inst_id']) == 0:
+       print('starting slow log stats task...')
+       cmd = "nohup pt-query-digest --processlist h={},u={},p={} --interval {} --output slowlog --run-time {} >>{} &"\
+              .format(config['db_ip'],config['db_user'],config['db_pass'],
+                      config['query_time'],config['exec_time'],log)
+       print(cmd)
+       os.system(cmd)
+    else:
+       print('pt-query-digest --processlist task is running...')
+
+    print('Reading slow log :{}'.format(log))
+    with open(log, 'r', encoding='utf-8') as f:
         r = f.read()
     return r
 
@@ -108,7 +140,7 @@ def write_db(p_cfg,d_log):
     p_cfg['row'] = p_cfg['row']+1
     print('\rinsert {} rows!'.format(p_cfg['row']),end='')
 
-def parse_log(p_log,p_cfg):
+def parse_ecs_log(p_log,p_cfg):
     d_log = {}
     rows  = p_log.split('\n')[1:-1]
     d_log['lock_time']     = rows[0].split('=>')[1].replace("'",'').replace(',','').replace(' ','')
@@ -131,6 +163,40 @@ def parse_log(p_log,p_cfg):
     d_log['user']          = re.sub(' +', ' ',''.join(rows[5:]).split(',  user')[1]).split(',')[0].replace(' => ', '').replace("'","").replace('};','')
     d_log['inst_id']       = p_cfg['inst_id']
     write_slow_log(d_log)
+
+'''
+  说明：
+    1. 完善 从数据库中获取最取上次最大时间，本次只插入这个时间后的数据
+    2. 慢日志解析出错问题继续排查    
+'''
+def parse_log_rds(p_log,p_cfg):
+    d_log = {}
+    rows  = p_log.split('\n')
+    # first row get Time
+    print('finish_time=',rows[0][1:])
+    v_finish_time = datetime.datetime.strptime(rows[0][1:-1],"%Y-%m-%dT%H:%M:%S") #+datetime.timedelta(hours=8)
+    d_log['finish_time']      =  datetime.datetime.strftime(v_finish_time, '%Y-%m-%d %H:%M:%S')
+
+    # second row get User and Host
+    d_log['user']             = rows[1].split('# User@Host:')[1].split('@')[0].split('[')[0][1:]
+    d_log['host']             = rows[1].split('# User@Host:')[1].split('@')[1].split('[')[0][1:-1]
+
+    # fourth row get Query_time,Lock_time,Rows_sent,Rows_examined
+    d_log['query_time']       = rows[2].split('# Query_time:')[1].split(' ')[1]
+    d_log['lock_time']        = rows[2].split('Lock_time:')[1].split(' ')[1]
+    d_log['rows_sent']        = rows[2].split('Rows_sent:')[1].split(' ')[1]
+    d_log['rows_examined']    = rows[2].split('Rows_examined:')[1][1:]
+
+    # fifth row get db
+    d_log['db']               = rows[3].split('use ')[1][0:-1]
+
+    # sixth row get sql,bytes
+    d_log['sql_text']         =  re.sub(' +', ' ', ''.join(rows[4:]).replace('\n',''))
+    d_log['bytes']            =  len(re.sub(' +', ' ', ''.join(rows[4:]).replace('\n', '')).encode())
+    d_log['sql_id']           =  get_md5(d_log['sql_text'])
+    d_log['inst_id']          = p_cfg['inst_id']
+    write_slow_log(d_log)
+
 
 def get_ds_mysql(ip,port,service ,user,password):
     try:
@@ -212,13 +278,18 @@ def write_config(config):
             pass
     config_file = config_mysqld+'\n'+config_mysql+'\n'+config_client
     print(config_file)
-    filename    = 'mysql_{}.cnf'.format(config['db_port'])
-    fullname    = '/tmp/{}'.format(filename)
-    with open(fullname, 'w') as f:
-       f.write(config_file)
-    os.system('sudo cp {} /etc/'.format(fullname))
-    config['cfile']  = '/etc/'+filename
+
+    if config['is_rds'] == 'N':
+       filename    = 'mysql_{}.cnf'.format(config['db_port'])
+       fullname    = '/tmp/{}'.format(filename)
+       with open(fullname, 'w') as f:
+          f.write(config_file)
+       os.system('sudo cp {} /etc/'.format(fullname))
+       config['cfile']  = '/etc/'+filename
+
+    print_dict(parameter)
     return parameter
+
 
 def get_config_from_db(slow_id):
     values = {
@@ -240,7 +311,9 @@ def get_config_from_db(slow_id):
         config['dfile']    = config['dpath'].split('/')[-1]
         config['dver']     = config['dfile'].split('-')[1]
         config['lpath']    = config['dfile'].replace('.tar.gz', '')
-        # config['db_ip']    = '127.0.0.1'
+        if config['is_rds'] == 'Y':
+           config['db_ip'] = config['inst_ip_in']
+
         config['db_pass']  = aes_decrypt(config['db_pass'],
                                          config['db_user'])
         config['db_mysql'] = get_ds_mysql(config['db_ip'],
@@ -318,35 +391,30 @@ def upd_var(config):
     print('updating mysql slo query....ok!')
     write_inst_log(config, '慢日志配置已更新!')
 
-# def upd_var(config,parameter):
-#     cr = config['db_mysql'].cursor()
-#     v1 = 'set global slow_query_log={}'.format(parameter['slow_query_log'],'ON' if config['status'] == '1' else 'OFF')
-#     v2 = 'set global slow_query_log_file={}'.format(parameter['slow_query_log_file'].replace('YYYYMMDD',get_day()))
-#     v3 = 'set global long_query_time={}'.format(config['query_time'])
-#     cr.execute(v1)
-#     cr.execute(v2)
-#     cr.execute(v3)
-#     print(v1)
-#     print(v2)
-#     print(v3)
-#     cr.close()
 
 def cut(config):
     parameter = write_config(config)
     print_dict(config)
-    print_dict(parameter)
+
     print('生成mysql配置文件:/etc/{}'.format(config['cfile']))
-    upd_var(config,parameter)
+    upd_var(config)
     print('mysql慢日志参数已更新!')
     write_inst_log(config, '慢日志配置已更新!')
     write_inst_log(config, '慢日志切割已完成!')
 
 
 def stats(config):
-    parameter = write_config(config)
-    for log in get_log(parameter).split('$VAR1 =')[1:]:
-        print('log=',log)
-        parse_log(log,config)
+    if config['is_rds'] == 'N':
+        parameter = write_config(config)
+        for log in get_log_ecs(parameter).split('$VAR1 =')[1:]:
+            print('log=',log)
+            parse_ecs_log(log,config)
+
+    if config['is_rds'] == 'Y':
+        for log in get_log_rds(config).split('# Time:')[1:]:
+            print('log=',log)
+            parse_log_rds(log,config)
+
     print('慢日志采集已完成!')
 
 if __name__ == "__main__":

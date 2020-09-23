@@ -876,11 +876,129 @@ def sync_mysql_data(config,config_init):
        write_sync_log(config)
 
 
+def get_nday_list(n):
+    before_n_days = []
+    for i in range(0, n + 1)[::-1]:
+        before_n_days.append(str(datetime.date.today() - datetime.timedelta(days=i)))
+    return before_n_days
+
+def get_sync_where_day(tab,day):
+    v_rq_col   = tab.split(':')[1]
+    v_rq_rqq   = day+' 0:0:0'
+    v_rq_rqz   = day+' 23:59:59'
+    v          = "where {0} between '{1}' and '{2}'".format(v_rq_col, v_rq_rqq, v_rq_rqz)
+    if tab.split(':')[1] == '':
+        return ''
+    else:
+        return v
+
+
+def check_mysql_data(config):
+    print('check recent 7 day data...')
+    for v in config['sync_table'].split(","):
+        tab = v.split(':')[0].lower()
+        if not check_full_sync(config, tab):
+           sync_mysql_data_no_pkid_7(config, v)
+
+
+def sync_mysql_data_no_pkid_7(config, ftab):
+    try:
+        for day in get_nday_list(config['sync_repair_day']):
+            i_counter         = 0
+            tab               = ftab.split(':')[0]
+            db_desc3          = config['db_mysql_desc3']
+            v_where           = get_sync_where_day(ftab, day)
+            ins_sql_header    = get_tab_header(config, tab)
+            n_batch_size      = int(config['batch_size_incr'])
+            db_source         = config['db_mysql_sour']
+            cr_source         = db_source.cursor()
+            db_desc           = config['db_mysql_desc']
+            v_pk_names        = get_sync_table_pk_names(db_source, tab)
+            v_pk_cols         = get_sync_table_pk_vals(db_source, tab)
+            cr_desc           = db_desc.cursor()
+            n_tab_total_rows  = get_sync_table_total_rows(db_source, tab, v_where)
+            n_tab_total_rows2 = get_sync_table_total_rows(db_desc, tab, v_where)
+
+            v_sql            = """select {0} as 'pk',{1} from {2} {3}""".format(v_pk_cols, get_sync_table_cols(db_source, tab), tab, v_where)
+
+            if ftab.split(':')[1] == '':
+                print("Sync Table {} have no increment column ,skipping...".format(ftab.split(':')[0]))
+                continue
+
+            if n_tab_total_rows == n_tab_total_rows2 :
+               print('{}：`{}`表数据相等，跳过同步({})!'.format(day,tab,n_tab_total_rows))
+               continue
+            # elif n_tab_total_rows< n_tab_total_rows2:
+            else:
+                print('{}:`{}`表源MySQL与目标MySQL数据不一致({}/{})，同步中...'.format(day, tab, n_tab_total_rows, n_tab_total_rows2))
+                print('delete from {0} {1}'.format(tab, v_where))
+                cr_desc.execute('delete from {0} {1}'.format(tab, v_where))
+                print('DB:{0},delete {1} table {2} data ok!'.format(config['db_mysql_desc_string'], tab,v_where))
+            # else:
+            #     print('{}:`{}`表源MySQL与目标MySQL数据不一致({}/{})，同步中...'.format(day,tab,n_tab_total_rows,n_tab_total_rows2))
+
+
+            cr_source.execute(v_sql)
+            rs_source  = cr_source.fetchmany(n_batch_size)
+
+            while rs_source:
+                batch_sql = ""
+                batch_sql_del=""
+                v_sql = ''
+                v_sql_del = ''
+                for r in list(rs_source):
+                    rs_source_desc = cr_source.description
+                    ins_val = ""
+                    for j in range(1,len(r)):
+                        col_type = str(rs_source_desc[j][1])
+                        if r[j] is None:
+                            ins_val = ins_val + "null,"
+                        elif col_type == '253':  # varchar,date
+                            ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
+                        elif col_type in ('1', '3', '8', '246'):  # int,decimal
+                            ins_val = ins_val + "'" + str(r[j]) + "',"
+                        elif col_type == '12':  # datetime
+                            ins_val = ins_val + "'" + str(r[j]).split('.')[0] + "',"
+                        else:
+                            ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
+                    v_sql = v_sql + '(' + ins_val[0:-1] + '),'
+                    v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
+                batch_sql = ins_sql_header + v_sql[0:-1]
+
+                if ftab.split(':')[1] == '':
+                    config['run_sql'] =batch_sql
+                    cr_desc.execute(batch_sql)
+                else:
+                    for d in v_sql_del[0:-1].split(','):
+                        config['run_sql'] = 'delete from {0} where {1}'.format(tab, d)
+                        cr_desc.execute('delete from {0} where {1}'.format(tab, d))
+                    config['run_sql'] = batch_sql
+                    cr_desc.execute(batch_sql)
+                i_counter = i_counter + len(rs_source)
+
+
+                print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%"
+                      .format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2)), end='')
+                if n_tab_total_rows == 0:
+                    print( "\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%"
+                          .format(tab, n_tab_total_rows, i_counter, round(i_counter / 1 * 100, 2)), end='')
+                else:
+                    print( "\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%"
+                           .format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2)), end='')
+                rs_source = cr_source.fetchmany(n_batch_size)
+            print('')
+            db_desc.commit()
+
+    except Exception as e:
+        print('sync_sqlserver_data_pk exceptiion:' + traceback.format_exc())
+        exception_running(config, traceback.format_exc())
+        exit(0)
+
 def sync_mysql_data_no_pkid(config, ftab,config_init):
     try:
         #start sync dml data
         config['sync_amount'] = 0
-        if not check_full_sync(config, ftab.split(':')[0],config_init):
+        if not check_full_sync(config, ftab.split(':')[0]):
             i_counter        = 0
             i_counter_upd    = 0
             tab              = ftab.split(':')[0]
@@ -983,7 +1101,7 @@ def sync_mysql_data_pkid(config, ftab,config_init):
     try:
         #start sync dml
         config['sync_amount'] = 0
-        if not check_full_sync(config, ftab.split(':')[0],config_init):
+        if not check_full_sync(config, ftab.split(':')[0]):
             i_counter        = 0
             tab              = ftab.split(':')[0]
             db_source3       = config['db_mysql_sour3']
@@ -1064,7 +1182,7 @@ def sync_mysql_data_pkid(config, ftab,config_init):
         exit(0)
 
 
-def check_full_sync(config,tab,config_init):
+def check_full_sync(config,tab):
     #if check_mysql_tab_exists_pk(config, tab) == 0 or config_init[tab]:
     if check_mysql_tab_exists_pk(config,tab)==0 :
        return True
@@ -1129,11 +1247,14 @@ def cleaning_park(config):
     #调用过程进行数据清洗
     if config['sync_table'].count('tc_record')>0 and config['sync_table'].count('tc_recordarchive'):
         print("cleaning park data please wait...")
-        cr.callproc('proc_park_cleaning')
-        print("cleaning park data...ok".format(str(get_seconds(start_time))))
-        db.commit()
-        cr.close()
-        print('complete cleaning_park data complete,elaspse:{0}s'.format(str(get_seconds(start_time))))
+        if config['sync_tag'].find('stage')==-1:
+            cr.callproc('proc_park_cleaning')
+            print("cleaning park data...ok".format(str(get_seconds(start_time))))
+            db.commit()
+            cr.close()
+            print('complete cleaning_park data complete,elaspse:{0}s'.format(str(get_seconds(start_time))))
+        else:
+            print('Sync Stage database,skipping cleaning park data!')
 
 def write_local_config_file(config):
     sync_db_sour=config['db_mysql_sour_ip']+':'+\
@@ -1300,6 +1421,13 @@ def exception_running(config,p_error):
 
     send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
 
+def disconnect(config):
+    config['db_mysql_sour']
+    config['db_mysql_sour2']
+    config['db_mysql_sour3']
+    config['db_mysql_desc']
+    config['db_mysql_desc3']
+
 
 def sync(config,debug):
 
@@ -1314,8 +1442,13 @@ def sync(config,debug):
       #sync increment data
       sync_mysql_data(config,config_init)
 
+      # check  recently n day data
+      check_mysql_data(config)
+
       #clearing desc table
       cleaning_park(config)
+
+      disconnect(config)
 
       sys.exit(0)
 

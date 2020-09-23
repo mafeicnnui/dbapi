@@ -291,6 +291,94 @@ def db_backup(config):
     print(v_del)
     os.system(v_del)
 
+def db_backup_mydumper(config):
+    print_dict(config)
+    db=config['db_mysql']
+    cr=db.cursor()
+    if config['backup_databases'] is not None :
+        if ',' in config['backup_databases']:
+            v_sql = '''SELECT schema_name 
+                          FROM information_schema.schemata 
+                         WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')
+                          and instr('{0}',schema_name)>0
+                    '''.format(config['backup_databases'])
+        else:
+            v_sql = '''SELECT schema_name 
+                                      FROM information_schema.schemata 
+                                     WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')
+                                      and instr(schema_name,'{0}')>0
+                    '''.format(config['backup_databases'])
+    else:
+        v_sql = '''SELECT schema_name 
+                     FROM information_schema.schemata 
+                    WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')                            
+                '''
+    cr.execute(v_sql)
+    rs=cr.fetchall()
+    print('rs=',rs)
+
+    bk_begin_time=get_now()
+    n_elaspsed_backup_total=0
+    n_elaspsed_gzip_total=0
+    g_status='0'
+    for db in list(rs):
+        error  = ''
+        status = '0'
+        os.system('mkdir -p {0}'.format(config['bk_path']))
+        print('Performing backup database {0}...'.format(db[0]))
+        start_time     = get_now()
+        dir_name       = config['bk_path']+'/'+db[0]
+        os.system('mkdir -p {0}'.format(dir_name))
+        err_name       = '/tmp/'+db[0]+'_'+get_date()+'.err'
+        bk_cmd         = '{0} -u {1} -p {2} -h {3} -P {4} -R -E -B -k -c -t 4 -B {5} -o {6} &>{7}'\
+                         .format(config['bk_cmd'],config['db_user'],config['newpass'],
+                               config['db_ip'] ,config['db_port'],db[0],dir_name,err_name)
+        print(bk_cmd)
+        try:
+          r=os.system(bk_cmd)
+          if r!=0:
+             error  = format_sql(get_file_contents(err_name))
+             status = '1'
+             os.system('rm {0}'.format(err_name))
+
+          end_time = get_now()
+        except Exception as e:
+            r = -1
+            error = format_sql(str(e))
+            status = '1'
+            end_time = get_now()
+
+        config['db_name']         = db[0]
+        config['create_date']     = get_date2()
+        config['file_name']       = dir_name
+        config['db_size']         = get_path_size(dir_name)
+        config['start_time']      = get_time2(start_time)
+        config['end_time']        = get_time2(end_time)
+        config['elaspsed_backup'] = get_seconds(end_time, start_time)
+        config['elaspsed_gzip']   = 0
+        config['status']          = status
+        config['error']           = error
+        if status=='1':
+           g_status='1'
+        write_backup_detail(config)
+        n_elaspsed_backup_total=n_elaspsed_backup_total+config['elaspsed_backup']
+        n_elaspsed_gzip_total=n_elaspsed_gzip_total+config['elaspsed_gzip']
+        os.system('rm -f {0}'.format(err_name))
+
+    bk_end_time = get_now()
+    config['create_date']     = get_date2()
+    config['start_time']      = get_time2(bk_begin_time)
+    config['end_time']        = get_time2(bk_end_time)
+    config['total_size']      = get_path_size(config['bk_path'])
+    config['elaspsed_backup'] = n_elaspsed_backup_total
+    config['elaspsed_gzip']   = n_elaspsed_gzip_total
+    config['status']          = g_status
+    write_backup_total(config)
+
+    #delete recent 7 day data
+    v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
+    print(v_del)
+    os.system(v_del)
 
 def main():
     warnings.filterwarnings("ignore")
@@ -304,7 +392,12 @@ def main():
        sys.exit(0)
 
     config=read_config(tag)
-    db_backup(config)
+
+    if config['bk_cmd'].find('mysqldump')>0:
+       db_backup(config)
+
+    if config['bk_cmd'].find('mydumper')>=0:
+        db_backup_mydumper(config)
 
 if __name__ == "__main__":
      main()
