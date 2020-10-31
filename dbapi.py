@@ -635,6 +635,9 @@ def get_minio_config(p_tag):
                          a.run_time,
                          a.comments,
                          a.status,
+                         a.minio_bucket,
+                         a.minio_dpath,
+                         a.minio_incr,
                          b.server_ip ,
                          b.server_port,
                          b.server_user,
@@ -1152,14 +1155,15 @@ def save_minio_log(config):
         db = db_config()['db_mysql']
         cr = db.cursor()
         st = '''insert into t_minio_log
-                   (sync_tag,server_id,download_time,upload_time,total_time,transfer_file,create_date)
-                 values('{}','{}','{}','{}','{}','{}',now())
+                   (sync_tag,server_id,download_time,upload_time,total_time,transfer_file,sync_day,create_date)
+                 values('{}','{}','{}','{}','{}','{}','{}',now())
              '''.format(config.get('sync_tag'),
                         config.get('server_id'),
                         config.get('download_time'),
                         config.get('upload_time'),
                         config.get('total_time'),
-                        config.get('transfer_file')
+                        config.get('transfer_file'),
+                        config.get('sync_day'),
                        )
         print(st)
         cr.execute(st)
@@ -1681,12 +1685,12 @@ def write_remote_crontab_slow(v_flow_id):
     if result['code']!=200:
        return result
 
-    v_cmd_c = '{0}/gather_slow.sh cut '.format(result['msg']['script_path'])
-    v_cmd_s = '{0}/gather_slow.sh stats '.format(result['msg']['script_path'])
+    v_cmd_c = '{0}/gather_slow.sh cut {1}'.format(result['msg']['script_path'],v_flow_id)
+    v_cmd_s = '{0}/gather_slow.sh stats {1}'.format(result['msg']['script_path'],v_flow_id)
 
     v_cron0 = '''
                 crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} slow_id={2}\n{3} {4} &>/dev/null & #slow_id={5}" >> /tmp/conf  && crontab /tmp/conf
-              '''.format("slow_id="+v_flow_id,result['msg']['inst_name']+'日志切割任务',v_flow_id,result['msg']['run_time'],v_cmd_c,v_flow_id)
+              '''.format("slow_id="+v_flow_id,result['msg']['inst_name']+'日志切割任务',v_flow_id,'0 0 * * *',v_cmd_c,v_flow_id)
 
     v_cron1 = '''
                 echo  -e "\n#{} slow_id={}\n{} {} &>/dev/null & #slow_id={}" >> /tmp/conf  && crontab /tmp/conf
@@ -2271,8 +2275,7 @@ def transfer_remote_file_slow(v_tag):
         obj_file.write(get_file_contents(templete_file).
                        replace('$$PYTHON3_HOME$$', result['msg']['python3_home']).
                        replace('$$SCRIPT_PATH$$' , result['msg']['script_path']).
-                       replace('$$SCRIPT_FILE$$' , result['msg']['script_file']).
-                       replace('$$SLOW_ID$$',      str(result['msg']['slow_id'])))
+                       replace('$$SCRIPT_FILE$$' , result['msg']['script_file']))
     sftp.put(localpath=local_file, remotepath=remote_file)
     write_log('Script:{0} send to {1} ok.'.format(local_file, remote_file))
     transport.close()
@@ -3941,15 +3944,15 @@ class Application(tornado.web.Application):
             (r"/update_db_inst_reboot_status", update_db_inst_reboot_status),
             (r"/manager_db_inst",              manager_remote_inst),
 
-            # 慢日志API接口
+            # 慢日志 API接口
             (r"/read_slow_config",             read_slow_config),
             (r"/push_slow_remote",             push_script_slow_remote),
             (r"/write_slow_log",               write_slow_log),
 
-            # MinIOAPI接口
-            (r"/read_minio_config", read_minio_config),
-            (r"/push_minio_remote", push_script_minio_remote),
-            (r"/write_minio_log"  , write_minio_log),
+            # MinIO API接口
+            (r"/read_minio_config",            read_minio_config),
+            (r"/push_minio_remote",            push_script_minio_remote),
+            (r"/write_minio_log"  ,            write_minio_log),
         ]
         tornado.web.Application.__init__(self, handlers)
 
