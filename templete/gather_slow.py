@@ -18,6 +18,18 @@ import ssl
 import os
 import datetime
 
+
+def get_hour():
+    now_time = datetime.datetime.now()
+    time1_str = datetime.datetime.strftime(now_time, '%H')
+    return time1_str
+
+def get_min():
+    now_time = datetime.datetime.now()
+    time1_str = datetime.datetime.strftime(now_time, '%M')
+    return time1_str
+
+
 def get_day():
     return datetime.datetime.now().strftime("%Y%m%d")
 
@@ -36,11 +48,6 @@ def get_db(ip,port,service ,user,password):
         return None
 
 def get_md5(url):
-    """
-    由于hash不处理unicode编码的字符串（python3默认字符串是unicode）
-        所以这里判断是否字符串，如果是则进行转码
-        初始化md5、将url进行加密、然后返回加密字串
-    """
     if isinstance(url, str):
         url = url.encode("utf-8")
     md = hashlib.md5()
@@ -56,25 +63,39 @@ def get_log_ecs(parameter):
         r = f.read()
     return r
 
-def check_process_status(p_inst_id):
+def check_process_status(p_db_ip):
     try:
-      r=os.popen('ps -ef|grep -v grep | grep pt-query-digest | grep {} | wc -l'.format(p_inst_id)).read()
+      r=os.popen('ps -ef|grep -v grep | grep pt-query-digest | grep {} | wc -l'.format(p_db_ip)).read()
       return int(r.split('\n')[0])
     except:
       return 0
 
+def gen_log_file(config):
+    dir = os.path.join(config['script_path'], 'slowlog')
+    log = os.path.join(dir,'slow_query_log_{}_{}_{}.log'.format(get_day(),config['slow_id'],get_hour()))
+    print('Generate log file :{}'.format(log))
+    with open(log, 'w', encoding='utf-8') as f:
+        f.write('初始化日志格式为UTF-8格式。。。')
 
 def get_log_rds(config):
     dir = os.path.join(config['script_path'],'slowlog')
-    log = os.path.join(dir,'slow_query_log_{}_{}.log'.format(get_day(),config['inst_id']))
+    log = os.path.join(dir,'slow_query_log_{}_{}_{}.log'.format(get_day(),config['slow_id'],get_hour()))
     cmd = "mkdir -p {}".format(dir)
     os.system(cmd)
     print('directory {} created!'.format(dir))
+
+    print('current miniute:{}'.format(int(get_min())))
+    if int(get_min()) == 0:
+       print('Switch log file success!')
+       print('slow log file:{}'.format(log))
+       os.system("ps -ef |grep pt-query-digest | awk '{print $2}' |xargs kill -9")
+
     print('ps -ef | grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
     os.system('ps -ef|grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
-    if check_process_status(config['inst_id']) == 0:
+    if check_process_status(config['db_ip']) == 0:
+       gen_log_file(config)
        print('starting slow log stats task...')
-       cmd = "nohup pt-query-digest --processlist h={},u={},p={} --interval {} --output slowlog --run-time {} >>{} &"\
+       cmd = "nohup pt-query-digest --processlist h={},u={},p='{}' --charset=utf8 --interval {} --output slowlog --run-time {} >>{} &"\
               .format(config['db_ip'],config['db_user'],config['db_pass'],
                       config['query_time'],config['exec_time'],log)
        print(cmd)
@@ -83,7 +104,7 @@ def get_log_rds(config):
        print('pt-query-digest --processlist task is running...')
 
     print('Reading slow log :{}'.format(log))
-    with open(log, 'r', encoding='utf-8') as f:
+    with open(log, 'r') as f:
         r = f.read()
     return r
 
@@ -91,54 +112,24 @@ def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
 
 def write_slow_log(d_log):
-    v_tag =d_log
-    print('write_slow_log=',v_tag)
-    v_msg = json.dumps(v_tag)
-    values = {
-        'tag': v_msg
-    }
-    url     = 'http://$$API_SERVER$$/write_slow_log'
-    context = ssl._create_unverified_context()
-    data    = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req     = urllib.request.Request(url, data=data)
-    res     = urllib.request.urlopen(req, context=context)
-    res     = json.loads(res.read())
-    print(res, res['code'])
-    if res['code'] != 200:
-        print('Interface write_slow_log call failed!')
-
-def write_db(p_cfg,d_log):
-    db = p_cfg['db']
-    cr = db.cursor()
-    st = '''
-           insert into t_slow_detail
-               (sql_id,templete_id,finish_time,USER,HOST,ip,thread_id,query_time,lock_time,
-                rows_sent,rows_examined,db,sql_text,finger,bytes,cmd,pos_in_log)
-          values('{}','{}',STR_TO_DATE('{}', '%Y%m%d %H:%i:%s'),'{}','{}','{}','{}','{}','{}',
-                 '{}','{}','{}','{}','{}','{}','{}','{}')
-         '''.format(d_log['sql_id'],
-                    d_log['templete_id'],
-                    d_log['finish_time'],
-                    d_log['user'],
-                    d_log['host'],
-                    d_log['ip'],
-                    d_log['thread_id'],
-                    d_log['query_time'],
-                    d_log['lock_time'],
-                    d_log['rows_sent'],
-                    d_log['rows_examined'],
-                    d_log['db'],
-                    format_sql(d_log['sql_text']),
-                    format_sql(d_log['finger']),
-                    d_log['bytes'],
-                    d_log['cmd'],
-                    d_log['pos_in_log']
-                    )
-    #print(st)
-    cr.execute(st)
-    db.commit()
-    p_cfg['row'] = p_cfg['row']+1
-    print('\rinsert {} rows!'.format(p_cfg['row']),end='')
+    try:
+        v_tag =d_log
+        #print('write_slow_log=',v_tag)
+        v_msg = json.dumps(v_tag)
+        values = {
+            'tag': v_msg
+        }
+        url     = 'http://$$API_SERVER$$/write_slow_log'
+        context = ssl._create_unverified_context()
+        data    = urllib.parse.urlencode(values).encode(encoding='UTF-8')
+        req     = urllib.request.Request(url, data=data)
+        res     = urllib.request.urlopen(req, context=context)
+        res     = json.loads(res.read())
+        print(res, res['code'])
+        if res['code'] != 200:
+            print('Interface write_slow_log call failed!')
+    except:
+        print(traceback.print_exc())
 
 def parse_ecs_log(p_log,p_cfg):
     d_log = {}
@@ -160,42 +151,80 @@ def parse_ecs_log(p_log,p_cfg):
     d_log['ip']            = re.sub(' +', ' ',''.join(rows[5:]).split(',  ip')[1]).split(',')[0].replace(' => ','').replace("'","")
     d_log['pos_in_log']    = re.sub(' +', ' ',''.join(rows[5:]).split(',  pos_in_log')[1]).split(',')[0].replace(' => ', '')
     d_log['finish_time']   = '20'+re.sub(' +', ' ',''.join(rows[5:]).split(',  ts')[1]).split(',')[0].replace(' => ', '').replace("'","")
+    d_log['finish_time']   = datetime.datetime.strptime(d_log['finish_time'], "%Y%m%d %H:%M:%S")
+    d_log['finish_time']   = datetime.datetime.strftime(d_log['finish_time'], '%Y-%m-%d %H:%M:%S')
     d_log['user']          = re.sub(' +', ' ',''.join(rows[5:]).split(',  user')[1]).split(',')[0].replace(' => ', '').replace("'","").replace('};','')
     d_log['inst_id']       = p_cfg['inst_id']
-    write_slow_log(d_log)
+    p_cfg['sync_time']     = d_log['finish_time']
 
-'''
-  说明：
-    1. 完善 从数据库中获取最取上次最大时间，本次只插入这个时间后的数据
-    2. 慢日志解析出错问题继续排查    
-'''
+    if datetime.datetime.strptime(d_log['finish_time'], "%Y-%m-%d %H:%M:%S") > datetime.datetime.strptime(p_cfg['last_sync_time'], "%Y-%m-%d %H:%M:%S"):
+       write_slow_log(d_log)
+       print('slow log parse success! {}'.format(d_log['finish_time']))
+
+def write_sync_time(p_cfg):
+    d_rq  ={}
+    dir   = os.path.join(p_cfg['script_path'], 'slowlog')
+    d_rq['finish_time']  = p_cfg['sync_time']
+    with open(dir+'/slow_sync_{}.ini'.format(p_cfg['inst_id']), 'w') as f:
+        f.write(json.dumps(d_rq, ensure_ascii=False, indent=4, separators=(',', ':')))
+
+def read_sync_time(p_cfg):
+    try:
+        d_rq = {}
+        dir  = os.path.join(p_cfg['script_path'],'slowlog')
+        with open(dir+'/slow_sync_{}.ini'.format(p_cfg['inst_id']), 'r') as f:
+            d_rq=json.loads(f.read())
+        return d_rq['finish_time']
+    except:
+        return get_time()
+
+
+def write_sync_time_ecs(p_config,p_parameter):
+    d_rq  ={}
+    d_rq['finish_time']  = p_config['sync_time']
+    with open(p_parameter['datadir']+'/slow_sync_{}.ini'.format(p_config['inst_id']), 'w') as f:
+        f.write(json.dumps(d_rq, ensure_ascii=False, indent=4, separators=(',', ':')))
+
+def read_sync_time_ecs(p_config,p_parameter):
+    try:
+        with open(p_parameter['datadir']+'/slow_sync_{}.ini'.format(p_config['inst_id']), 'r') as f:
+            d_rq=json.loads(f.read())
+        return d_rq['finish_time']
+    except:
+        return get_time()
+
+
 def parse_log_rds(p_log,p_cfg):
     d_log = {}
     rows  = p_log.split('\n')
     # first row get Time
-    print('finish_time=',rows[0][1:])
-    v_finish_time = datetime.datetime.strptime(rows[0][1:-1],"%Y-%m-%dT%H:%M:%S") #+datetime.timedelta(hours=8)
-    d_log['finish_time']      =  datetime.datetime.strftime(v_finish_time, '%Y-%m-%d %H:%M:%S')
+    v_finish_time                 =  datetime.datetime.strptime(rows[0][1:-1],"%Y-%m-%dT%H:%M:%S")
+    d_log['finish_time']          =  datetime.datetime.strftime(v_finish_time, '%Y-%m-%d %H:%M:%S')
+    p_cfg['sync_time']            = d_log['finish_time']
+    d_finish_time                 =  datetime.datetime.strptime(d_log['finish_time'] ,"%Y-%m-%d %H:%M:%S")
+    if  d_finish_time > datetime.datetime.strptime(config['last_sync_time'] ,"%Y-%m-%d %H:%M:%S") :
+        # second row get User and Host
+        d_log['user']             = rows[1].split('# User@Host:')[1].split('@')[0].split('[')[0][1:]
+        d_log['host']             = rows[1].split('# User@Host:')[1].split('@')[1].split('[')[0][1:-1].split(':')[0]
 
-    # second row get User and Host
-    d_log['user']             = rows[1].split('# User@Host:')[1].split('@')[0].split('[')[0][1:]
-    d_log['host']             = rows[1].split('# User@Host:')[1].split('@')[1].split('[')[0][1:-1]
+        # fourth row get Query_time,Lock_time,Rows_sent,Rows_examined
+        d_log['query_time']       = rows[2].split('# Query_time:')[1].split(' ')[1]
+        d_log['lock_time']        = rows[2].split('Lock_time:')[1].split(' ')[1]
+        d_log['rows_sent']        = rows[2].split('Rows_sent:')[1].split(' ')[1]
+        d_log['rows_examined']    = rows[2].split('Rows_examined:')[1][1:]
 
-    # fourth row get Query_time,Lock_time,Rows_sent,Rows_examined
-    d_log['query_time']       = rows[2].split('# Query_time:')[1].split(' ')[1]
-    d_log['lock_time']        = rows[2].split('Lock_time:')[1].split(' ')[1]
-    d_log['rows_sent']        = rows[2].split('Rows_sent:')[1].split(' ')[1]
-    d_log['rows_examined']    = rows[2].split('Rows_examined:')[1][1:]
+        # fifth row get db
+        d_log['db']               = rows[3].split('use ')[1][0:-1]
 
-    # fifth row get db
-    d_log['db']               = rows[3].split('use ')[1][0:-1]
+        # sixth row get sql,bytes
+        d_log['sql_text']         =  re.sub(' +', ' ', ''.join(rows[4:]).replace('\n',''))
+        d_log['bytes']            =  len(re.sub(' +', ' ', ''.join(rows[4:]).replace('\n', '')).encode())
+        d_log['sql_id']           =  get_md5(d_log['sql_text'])
+        d_log['inst_id']          = p_cfg['inst_id']
+        if d_log['sql_text'] != '':
+            write_slow_log(d_log)
+            print('slow log parse success! {}'.format(d_log['finish_time']))
 
-    # sixth row get sql,bytes
-    d_log['sql_text']         =  re.sub(' +', ' ', ''.join(rows[4:]).replace('\n',''))
-    d_log['bytes']            =  len(re.sub(' +', ' ', ''.join(rows[4:]).replace('\n', '')).encode())
-    d_log['sql_id']           =  get_md5(d_log['sql_text'])
-    d_log['inst_id']          = p_cfg['inst_id']
-    write_slow_log(d_log)
 
 
 def get_ds_mysql(ip,port,service ,user,password):
@@ -316,11 +345,26 @@ def get_config_from_db(slow_id):
 
         config['db_pass']  = aes_decrypt(config['db_pass'],
                                          config['db_user'])
-        config['db_mysql'] = get_ds_mysql(config['db_ip'],
-                                          config['db_port'],
-                                          config['db_service'],
-                                          config['db_user'],
-                                          config['db_pass'])
+        # if config['is_rds'] == 'Y':
+        #     config['db_mysql'] = get_ds_mysql(config['inst_ip_in'],
+        #                                       config['db_port'],
+        #                                       config['db_service'],
+        #                                       config['db_user'],
+        #                                       config['db_pass'])
+        #
+        # else:
+        #     try:
+        #         config['db_mysql'] = get_ds_mysql(config['db_ip'],
+        #                                           config['db_port'],
+        #                                           config['db_service'],
+        #                                           config['db_user'],
+        #                                           config['db_pass'])
+        #     except:
+        #         config['db_mysql'] = get_ds_mysql(config['inst_ip_in'],
+        #                                           config['db_port'],
+        #                                           config['db_service'],
+        #                                           config['db_user'],
+        #                                           config['db_pass'])
         return config
     else:
         print('接口调用失败!,{0}'.format(res['msg']))
@@ -391,31 +435,37 @@ def upd_var(config):
     print('updating mysql slo query....ok!')
     write_inst_log(config, '慢日志配置已更新!')
 
-
 def cut(config):
-    parameter = write_config(config)
+    write_config(config)
     print_dict(config)
-
     print('生成mysql配置文件:/etc/{}'.format(config['cfile']))
     upd_var(config)
     print('mysql慢日志参数已更新!')
     write_inst_log(config, '慢日志配置已更新!')
-    write_inst_log(config, '慢日志切割已完成!')
 
 
 def stats(config):
     if config['is_rds'] == 'N':
         parameter = write_config(config)
+        i_counter = 0
+        config['last_sync_time'] = read_sync_time_ecs(config,parameter)
+        print('last_sync_time=',config['last_sync_time'])
         for log in get_log_ecs(parameter).split('$VAR1 =')[1:]:
-            print('log=',log)
             parse_ecs_log(log,config)
+            i_counter = 1
+        if i_counter == 1:
+           write_sync_time_ecs(config,parameter)
 
     if config['is_rds'] == 'Y':
+        i_counter = 0
+        config['last_sync_time'] = read_sync_time(config)
+        print('last_sync_time=', config['last_sync_time'])
         for log in get_log_rds(config).split('# Time:')[1:]:
-            print('log=',log)
-            parse_log_rds(log,config)
+            parse_log_rds(log, config)
+            i_counter = 1
+        if i_counter == 1:
+            write_sync_time(config)
 
-    print('慢日志采集已完成!')
 
 if __name__ == "__main__":
     config = ""
