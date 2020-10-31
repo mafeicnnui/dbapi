@@ -5,10 +5,18 @@
 # @File : analysis_slowlog_detail_ecs.py.py
 # @Software: PyCharm
 
+'''
+export PYTHON3_HOME=/home/hopson/apps/usr/webserver/python3.6.0
+export LD_LIBRARY_PATH=$PYTHON3_HOME/lib
+./pip3 install BeautifulSoup4==4.9.1
+./pip3 install html5lib
+./pip3 install requests
+./pip3 install minio
+
+'''
+
 import json
-import re
-import hashlib
-import pymysql
+from urllib import parse
 import traceback
 import warnings
 import sys
@@ -30,6 +38,22 @@ def get_time():
     time1_str = datetime.datetime.strftime(now_time, '%Y-%m-%d %H:%M:%S')
     return time1_str
 
+def get_nday_list(n):
+    before_n_days = []
+    for i in range(0, n + 1)[::-1]:
+        rq = datetime.date.today() - datetime.timedelta(days=i)
+        vrq = datetime.datetime.strftime(rq,'%Y')+'/'+str(int(datetime.datetime.strftime(rq,'%m')))+'/'+str(int(datetime.datetime.strftime(rq,'%d')))
+        before_n_days.append(vrq)
+    return before_n_days
+
+def get_nday_list2(n):
+    before_n_days = []
+    for i in range(0, n + 1)[::-1]:
+        rq = datetime.date.today() - datetime.timedelta(days=i)
+        vrq = datetime.datetime.strftime(rq,'%Y%m%d')
+        before_n_days.append(vrq)
+    return before_n_days
+
 def get_config_from_db(p_tag):
     values = {
         'tag': p_tag
@@ -46,12 +70,10 @@ def get_config_from_db(p_tag):
     if res['code'] == 200:
         print('接口调用成功!')
         config = res['msg']
-        config['download_rq']   = '2020/9/23'
-        config['download_url']  = "{}Upload/Images/{}/".format(config['sync_service'],config['download_rq'])
-        config['download_dir']  = "/tmp/downloads"
-        config['upload_root']   = '{}/Upload/Images/'.format(config['download_dir'])
-        config['upload_path']   = '{}/Upload/Images/{}/'.format(config['download_dir'],config['download_rq'] )
-        config['bucket_name']   = '999'
+        config['download_rq']   = get_nday_list(config['minio_incr']-1) if config['sync_type']=='2' else get_nday_list2(config['minio_incr']-1)
+        config['download_dir']  =  config['minio_dpath'] if config['sync_type']=='2' else config['sync_path']
+        config['upload_root']   = '{}/Upload/Images/'.format(config['download_dir']) if config['sync_type']=='2' else config['sync_path']+'/'
+        config['bucket_name']   = config['minio_bucket']
         config['minio_client']  = Minio(config['minio_server'],
                                         access_key=config['minio_user'],
                                         secret_key=config['minio_pass'],secure=False)
@@ -73,12 +95,16 @@ def init(config):
     print_dict(config)
     return config
 
-def write_minio_log(item,msg):
+def write_minio_log(config):
     try:
         v_tag = {
-            'inst_id'    : item.get('inst_id'),
-            'message'    : msg,
-            'type'       : item.get('mode')
+            'sync_tag'     : config.get('sync_tag'),
+            'server_id'    : config.get('server_id'),
+            'download_time': config.get('download_time',0),
+            'upload_time'  : config.get('upload_time',0),
+            'sync_day'     : config.get('minio_incr',0),
+            'total_time'   : config.get('download_time',0)+config.get('upload_time',0),
+            'transfer_file': config.get('images_amount',0),
         }
         v_msg = json.dumps(v_tag)
         values = {
@@ -107,7 +133,7 @@ def get_url(p_root, p_url, p_img):
         n_url = p_root + k['href'][1:]
         if len(n_url) > len(p_url):
             if n_url.find('.jpg') > 0 or n_url.find('.png') > 0:
-                p_img.append(n_url)
+                p_img.append(parse.unquote(n_url))
             else:
                 get_url(p_root, n_url, p_img)
 
@@ -130,7 +156,7 @@ def request_download(p_root,p_dir,p_url):
     p = '/'.join(p_url.split('/')[0:-1]).replace(p_root,'')
     if not os.path.isdir(os.path.join(p_dir,p)):
        os.makedirs(os.path.join(p_dir,p))
-       print('create directory {} ok'.format(os.path.join(p_dir,p)))
+       print('\ncreate directory {} ok'.format(os.path.join(p_dir,p)))
     with open(os.path.join(p_dir,p,f), 'wb') as f:
         f.write(r.content)
 
@@ -139,6 +165,7 @@ def downloads_image(config):
     url  = config['download_url']
     dir  = config['download_dir']
     img  = []
+    start_time = datetime.datetime.now()
     print('Requesting remote image ...')
     get_url(root, url, img)
 
@@ -153,6 +180,17 @@ def downloads_image(config):
         request_download(root, dir, p)
     print('')
     print('Downloading image amount :{}'.format(config['images_amount']), end='\n')
+    config['download_time'] = get_seconds(start_time)
+
+
+def get_upload_image_amount(config):
+    i_counter = 0
+    for root, dirs, files in os.walk(config['upload_path']):
+        if len(files) > 0:
+            for file in files:
+                i_counter = i_counter + 1
+    return i_counter
+
 
 
 def upload_imags(config):
@@ -167,31 +205,31 @@ def upload_imags(config):
     except ResponseError as err:
         pass
 
+    if config['sync_type'] == '1':
+        config['images_amount'] = get_upload_image_amount(config)
+
     i_counter  = 0
     start_time = datetime.datetime.now()
+    print('From {} Uploading...'.format(config['upload_path']))
     for root, dirs, files in os.walk(config['upload_path']):
         if len(files) > 0:
             for file in files:
                 try:
                     full_name = root + '/' + file
                     obj_name  = full_name.replace(config['upload_root'], '')
-
+                    i_counter = i_counter + 1
                     if not check_exists(config,obj_name):
-                        i_counter = i_counter+1
-                        print('\rUploading obj:{},Time:{}s,progress:({}/{}){}%'.
-                               format(obj_name,
-                                      get_seconds(start_time),
-                                      config['images_amount'],
-                                      i_counter,
-                                      round(i_counter / config['images_amount'] * 100, 2)
-                                      ), end='')
+                        print('\rUploading Time:{}s,progress:[{}/{}]/{}%'.
+                              format(get_seconds(start_time), config['images_amount'], i_counter,
+                                     round(i_counter / config['images_amount'] * 100, 2)), end='')
                         minioClient.fput_object(config['bucket_name'],obj_name,full_name,'image/jpeg')
                     else:
-                        print('\rUploading obj: {0} already exists bucket {1},skipping..'.
-                              format(obj_name, config['bucket_name']), end='\n')
-
+                        print('\rUploading Time:{}s,progress:[{}/{}]/{}%,file already exists skip...'.
+                              format(get_seconds(start_time), config['images_amount'], i_counter,
+                                     round(i_counter / config['images_amount'] * 100, 2)), end='')
                 except ResponseError as err:
                     print(err)
+    config['upload_time'] = get_seconds(start_time)
 
 
 '''
@@ -205,9 +243,12 @@ def sync(config):
        downloads_image(config)
        print('Uploading Images to MiniIO Server:{} =>bucket:{}'.format(config['minio_server'],config['bucket_name']))
        upload_imags(config)
+       write_minio_log(config)
 
     if config['sync_type'] == '1':
-        pass
+       print('Uploading Images to MiniIO Server:{} =>bucket:{}'.format(config['minio_server'], config['bucket_name']))
+       upload_imags(config)
+       write_minio_log(config)
 
 
 if __name__ == "__main__":
@@ -221,7 +262,13 @@ if __name__ == "__main__":
             pass
     # init
     config = init(config)
+    print_dict(config)
 
     # sync
-    sync(config)
-
+    for rq in config['download_rq']:
+        config['download_url'] = "{}Upload/Images/{}/".format(config['sync_service'], rq)
+        if config['sync_type'] == '2':
+           config['upload_path'] = '{}/Upload/Images/{}/'.format(config['download_dir'], rq)
+        else:
+           config['upload_path'] = '{}/{}/'.format(config['download_dir'], rq)
+        sync(config)
