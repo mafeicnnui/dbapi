@@ -115,7 +115,7 @@ def aes_decrypt(p_password,p_key):
         print('接口read_db_decrypt 调用失败!,{0}'.format(res['msg']))
         sys.exit(0)
 
-def get_archive_rq(config):
+def  get_archive_rq(config):
     db = config['db_mysql_sour']
     cr = db.cursor()
     sql = """select date_format(min({0}),'%Y-%m-%d %H:%i:%S'),
@@ -128,15 +128,18 @@ def get_archive_rq(config):
     cr.execute(sql)
     rs = cr.fetchone()
     cr.close()
-    print('get_archive_rq=',rs)
     return rs[0],rs[1]
 
+def  get_archive_rq_del(config):
+     vv = """where {}< date_sub(NOW(),INTERVAL {} {})""".\
+            format(config['archive_time_col'],config['rentition_time'],config['rentition_time_type_cn'].upper())
+     print('get_archive_rq_del=',get_archive_rq_del)
+     return vv
 
 def get_archive_where(config):
     v = ''
     v_rqq,v_rqz = get_archive_rq(config)
     v = """where {0} between '{1}' and '{2}'""".format(config['archive_time_col'], v_rqq, v_rqz)
-    print('get_archive_where=',v)
     return v
 
 def get_config_from_db(tag):
@@ -162,25 +165,28 @@ def get_config_from_db(tag):
             db_sour_service                 = config['archive_db_sour'].split(':')[2]
             db_sour_user                    = config['archive_db_sour'].split(':')[3]
             db_sour_pass                    = aes_decrypt(config['archive_db_sour'].split(':')[4],db_sour_user)
-            db_dest_ip                      = config['archive_db_dest'].split(':')[0]
-            db_dest_port                    = config['archive_db_dest'].split(':')[1]
-            db_dest_service                 = config['archive_db_dest'].split(':')[2]
-            db_dest_user                    = config['archive_db_dest'].split(':')[3]
-            db_dest_pass                    = aes_decrypt(config['archive_db_dest'].split(':')[4],db_dest_user)
             config['db_mysql_sour_ip']      = db_sour_ip
             config['db_mysql_sour_port']    = db_sour_port
             config['db_mysql_sour_service'] = db_sour_service
             config['db_mysql_sour_user']    = db_sour_user
             config['db_mysql_sour_pass']    = db_sour_pass
-            config['db_mysql_desc_ip']      = db_dest_ip
-            config['db_mysql_desc_port']    = db_dest_port
-            config['db_mysql_desc_service'] = db_dest_service
-            config['db_mysql_desc_user']    = db_dest_user
-            config['db_mysql_desc_pass']    = db_dest_pass
             config['db_mysql_sour_string']  = db_sour_ip + ':' + db_sour_port + '/' + db_sour_service
-            config['db_mysql_desc_string']  = db_dest_ip + ':' + db_dest_port + '/' + db_dest_service
             config['db_mysql_sour']         = get_ds_mysql(db_sour_ip, db_sour_port, db_sour_service, db_sour_user, db_sour_pass)
-            config['db_mysql_desc']         = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
+
+            if config['dest_db_id'] != '' :
+                db_dest_ip      = config['archive_db_dest'].split(':')[0]
+                db_dest_port    = config['archive_db_dest'].split(':')[1]
+                db_dest_service = config['archive_db_dest'].split(':')[2]
+                db_dest_user    = config['archive_db_dest'].split(':')[3]
+                db_dest_pass    = aes_decrypt(config['archive_db_dest'].split(':')[4], db_dest_user)
+                config['db_mysql_desc_ip']      = db_dest_ip
+                config['db_mysql_desc_port']    = db_dest_port
+                config['db_mysql_desc_service'] = db_dest_service
+                config['db_mysql_desc_user']    = db_dest_user
+                config['db_mysql_desc_pass']    = db_dest_pass
+                config['db_mysql_desc_string']  = db_dest_ip + ':' + db_dest_port + '/' + db_dest_service
+                config['db_mysql_desc']         = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
+
             return config
         except Exception as e:
             v_error = '从接口配置获取数据库连接对象时出现异常:{0}'.format(traceback.format_exc())
@@ -372,6 +378,7 @@ def archive_mysql_ddl(config,debug):
 def get_sync_table_rows(db,tab,v_where):
     cr_source = db.cursor()
     v_sql="select count(0) from {0} {1}".format(tab,v_where)
+    print('get_sync_table_rows=',v_sql)
     cr_source.execute(v_sql)
     rs_source=cr_source.fetchone()
     cr_source.close()
@@ -483,12 +490,25 @@ def check_tab_index(db,tab,col):
 
 def archive_check(config):
     db_sour = config['db_mysql_sour']
-    db_desc = config['db_mysql_desc']
     v_tab   = config['sour_table']
     v_col   = config['archive_time_col']
     v_where = get_archive_where(config)
 
-    # 1.检测源库是归档列上是否存在索引
+    # 1.检测源库是否存在主键
+    if check_mysql_tab_exists_pk(config,v_tab) ==0:
+        config['table_name'] = v_tab
+        config['create_date'] = get_time()
+        config['start_time'] = get_time()
+        config['end_time'] = get_time()
+        config['duration'] = 0
+        config['amount']  = 0
+        config['percent'] = 0
+        config['message'] = "源库表 {0} 无主键!".format(v_tab)
+        write_archive_log(config)
+        print(config['message'])
+        return False
+
+    # 2.检测源库是归档列上是否存在索引
     if not check_tab_index(db_sour,v_tab,v_col):
         config['table_name']  = v_tab
         config['create_date'] = get_time()
@@ -502,7 +522,7 @@ def archive_check(config):
         print(config['message'])
         return False
 
-    # 2.检测源库是否存在数据
+    # 3.检测源库是否存在数据
     if get_mysql_tab_rows_where(db_sour,v_tab,v_where)==0:
         config['table_name']  = v_tab
         config['create_date'] = get_time()
@@ -516,8 +536,9 @@ def archive_check(config):
         print(config['message'])
         return False
 
-    # 3.检测目标库中是否已经有数据
-    if config['if_cover'] == '0':
+    # 4.检测目标库中是否已经有数据
+    if config['if_cover'] == '0' and config['dest_db_id'] !='':
+        db_desc = config['db_mysql_desc']
         if get_mysql_tab_rows_where(db_desc, v_tab, v_where) > 0:
             config['table_name']  = v_tab
             config['create_date'] = get_time()
@@ -533,7 +554,7 @@ def archive_check(config):
 
     return True
 
-def archive_mysql_init(config,debug):
+def archive_mysql_move(config,debug):
     try:
         for i in config['sour_table'].split(","):
             tab=i.split(':')[0]
@@ -554,16 +575,13 @@ def archive_mysql_init(config,debug):
 
                 print("Archiving table '{0}' rentition recent {1} {2}...".format(tab,str(config['rentition_time']),config['rentition_time_type_cn']))
                 n_tab_total_rows = get_sync_table_rows(db_source, tab, v_where)
-                v_sql = """select {0} as 'pk',{1} from {2} {3}""".format(v_pk_cols, get_sync_table_cols(db_source, tab),
-                                                                         tab, v_where)
-                print('Execute Query:{0},Total rows:{1}'.format(v_sql,n_tab_total_rows))
-
+                v_sql = """select {0} as 'pk',{1} from {2} {3}
+                        """.format(v_pk_cols, get_sync_table_cols(db_source, tab),tab, v_where)
+                print('Execute Query,Total rows:{}'.format(n_tab_total_rows))
                 cr_source.execute(v_sql)
                 rs_source = cr_source.fetchmany(n_batch_size)
 
                 while rs_source:
-                    batch_sql =''
-                    batch_sql_del = ""
                     v_sql = ''
                     v_sql_del = ''
                     for r in list(rs_source):
@@ -639,6 +657,30 @@ def archive_mysql_init(config,debug):
 
     except Exception as e:
         print('archive_mysql_init exceptiion:' + traceback.format_exc())
+        exception_running(config, traceback.format_exc())
+        exit(0)
+
+def archive_mysql_delete(config,debug):
+    try:
+        for i in config['sour_table'].split(","):
+            tab=i.split(':')[0]
+            db_source        = config['db_mysql_sour']
+            cr_source        = db_source.cursor()
+            v_where          = get_archive_rq_del(config)
+            print("Archiving table '{0}' rentition recent {1} {2}...".format(tab,str(config['rentition_time']),config['rentition_time_type_cn']))
+            n_tab_total_rows = get_sync_table_rows(db_source, tab, v_where)
+            if n_tab_total_rows == 0:
+               print('Archived rows is 0,Exit!')
+               sys.exit(0)
+
+            v_sql = """delete from {} {}""".format(tab, v_where)
+            print('Execute Query:{0},Total rows:{1}'.format(v_sql,n_tab_total_rows))
+            cr_source.execute(v_sql)
+            db_source.commit()
+            print('Table {},archived complete,total rows:{}.'.format(tab,n_tab_total_rows))
+
+    except Exception as e:
+        print('archive_mysql_delete exceptiion:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
         exit(0)
 
@@ -759,8 +801,12 @@ def exception_running(config,p_error):
     send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
 
 def archive(config,debug):
-    #init sync table
-    archive_mysql_init(config, debug)
+    if config['archive_rentition'] == '1':
+       archive_mysql_delete(config, debug)
+
+    if config['archive_rentition'] == '2':
+       archive_mysql_move(config, debug)
+
 
 def main():
     #init variable
@@ -779,7 +825,8 @@ def main():
     config=init(config,debug)
 
     # 建表
-    archive_mysql_ddl(config, debug)
+    if config['dest_db_id'] !='':
+       archive_mysql_ddl(config, debug)
 
     # 归档检测
     if archive_check(config):

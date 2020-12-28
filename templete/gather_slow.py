@@ -409,7 +409,7 @@ def write_inst_log(item,msg):
 
 def upd_var(config):
     parameter = write_config(config)
-    print('updating mysql slo query....')
+    print('updating mysql slow query....')
     for s in config['step_slow']:
         if s['id'] in (71,):
            s['cmd'] = s['cmd'].format(parameter['basedir'],
@@ -432,7 +432,7 @@ def upd_var(config):
 
         print('{} Execute:{}'.format(get_time(),s['cmd']))
         os.system(s['cmd'])
-    print('updating mysql slo query....ok!')
+    print('updating mysql slow query....ok!')
     write_inst_log(config, '慢日志配置已更新!')
 
 def cut(config):

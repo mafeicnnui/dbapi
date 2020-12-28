@@ -19,7 +19,8 @@ import json
 import urllib.parse
 import urllib.request
 import ssl
-
+import requests
+import os
 
 def send_mail465(p_from_user, p_from_pass, p_to_user, p_title, p_content):
     to_user = p_to_user.split(",")
@@ -101,16 +102,25 @@ def get_sync_time_type_name(sync_time_type):
         return ''
 
 
-def aes_decrypt(p_password, p_key):
+def aes_decrypt(p_cfg,p_password, p_key):
     values = {
         'password': p_password,
         'key': p_key
     }
+
     url = 'http://$$API_SERVER$$/read_db_decrypt'
     context = ssl._create_unverified_context()
     data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
+    try:
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
+    except:
+        api = query_health_api(p_cfg)
+        url = 'http://{}/read_db_decrypt'.format(api)
+        print('aes_decrypt=>query_health_api=', url)
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
+
     res = json.loads(res.read())
     if res['code'] == 200:
         print('接口read_db_decrypt 调用成功!')
@@ -120,100 +130,202 @@ def aes_decrypt(p_password, p_key):
         print('接口read_db_decrypt 调用失败!,{0}'.format(res['msg']))
         sys.exit(0)
 
+def get_local_config_json(fname):
+    with open(fname, 'r') as f:
+         cfg = json.loads(f.read())
+    return cfg
+
+def write_local_config_file_json(config):
+    file_name = config['script_path'] + '/config/' + config['sync_tag'] + '.json'
+    with open(file_name, 'w') as f:
+        f.write(json.dumps(config, ensure_ascii=False, indent=4, separators=(',', ':')))
+
+
+def get_config_json(fname):
+    with open(fname, 'r') as f:
+         cfg = json.loads(f.read())
+
+    cfg['run_mode']     = 'local'
+    cfg['counter']      = cfg['counter'] + 1
+    write_local_config_file_json(cfg)
+
+
+    cfg['db_sqlserver'] = get_ds_sqlserver(cfg['db_sqlserver_ip'],
+                                           cfg['db_sqlserver_port'],
+                                           cfg['db_sqlserver_service'],
+                                           cfg['db_sqlserver_user'],
+                                           cfg['db_sqlserver_pass'])
+
+    cfg['db_sqlserver2'] = get_ds_sqlserver(cfg['db_sqlserver_ip'],
+                                            cfg['db_sqlserver_port'],
+                                            cfg['db_sqlserver_service'],
+                                            cfg['db_sqlserver_user'],
+                                            cfg['db_sqlserver_pass'])
+
+    cfg['db_sqlserver3'] = get_ds_sqlserver(cfg['db_sqlserver_ip'],
+                                            cfg['db_sqlserver_port'],
+                                            cfg['db_sqlserver_service'],
+                                            cfg['db_sqlserver_user'],
+                                            cfg['db_sqlserver_pass'])
+
+    cfg['db_mysql']     = get_ds_mysql(cfg['db_mysql_ip'],
+                                       cfg['db_mysql_port'],
+                                       cfg['db_mysql_service'],
+                                       cfg['db_mysql_user'],
+                                       cfg['db_mysql_pass'])
+
+    cfg['db_mysql3']   = get_ds_mysql(cfg['db_mysql_ip'],
+                                       cfg['db_mysql_port'],
+                                       cfg['db_mysql_service'],
+                                       cfg['db_mysql_user'],
+                                       cfg['db_mysql_pass'])
+    return cfg
+
+
+def check_api_server_status(cfg):
+    print('check_api_server_status=',cfg['api_server'])
+    api_status  = {}
+    for api in cfg['api_server'].split(','):
+        req = 'http://{}/health'.format(api)
+        try:
+          res = requests.head(req)
+          api_status[api] = res.status_code
+        except:
+          api_status[api] = 500
+    cfg['api_status'] = api_status
+    print(cfg['api_status'])
+    return  cfg
+
+def query_health_api(cfg):
+    apis = cfg['api_status']
+    for key in apis:
+        if apis[key] == 200:
+           return  key
+
 
 def get_config_from_db(tag, workdir):
+    file_name = workdir + '/config/' + tag + '.json'
+    if os.path.exists(file_name):
+        cfg = get_local_config_json(file_name)
+        check_api_server_status(cfg)
+        write_local_config_file_json(cfg)
+        print('api server status update!')
+    else:
+        cfg = {}
+        cfg['api_status'] = {'$$API_SERVER$$': 200}
+        print('File:{} not exist ,skip api server check!'.format(file_name))
+
     try:
-        values = {'tag': tag}
-        print('values=', values)
-        url = 'http://$$API_SERVER$$/read_config_sync'
+        values  = {'tag': tag}
+        url     = 'http://$$API_SERVER$$/read_config_sync'
         context = ssl._create_unverified_context()
-        data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-        print('data=', data)
-        req = urllib.request.Request(url, data=data)
-        res = urllib.request.urlopen(req, context=context)
+        data    = urllib.parse.urlencode(values).encode(encoding='UTF-8')
+        try:
+            req = urllib.request.Request(url, data=data)
+            res = urllib.request.urlopen(req, context=context)
+        except:
+            api = query_health_api(cfg)
+            url = 'http://{}/read_config_sync'.format(api)
+            print('query_health_api=',url)
+            req = urllib.request.Request(url, data=data)
+            res = urllib.request.urlopen(req, context=context)
+
+
         res = json.loads(res.read())
         print(res, res['code'])
         if res['code'] == 200:
             print('接口调用成功!')
+
             try:
-                config = res['msg']
-                config['sync_time_type_name'] = get_sync_time_type_name(config['sync_time_type'])
-                db_sour_ip = config['sync_db_sour'].split(':')[0]
-                db_sour_port = config['sync_db_sour'].split(':')[1]
-                db_sour_service = config['sync_db_sour'].split(':')[2]
-                db_sour_user = config['sync_db_sour'].split(':')[3]
-                db_sour_pass = aes_decrypt(config['sync_db_sour'].split(':')[4], db_sour_user)
-                db_dest_ip = config['sync_db_dest'].split(':')[0]
-                db_dest_port = config['sync_db_dest'].split(':')[1]
-                db_dest_service = config['sync_db_dest'].split(':')[2]
-                db_dest_user = config['sync_db_dest'].split(':')[3]
-                db_dest_pass = aes_decrypt(config['sync_db_dest'].split(':')[4], db_dest_user)
-                config['db_sqlserver_ip'] = db_sour_ip
-                config['db_sqlserver_port'] = db_sour_port
+                tmp = get_local_config_json(file_name)
+                if tmp.get('counter') is None or tmp.get('counter') >0 :
+                    recover_running(tmp)
+            except:
+                pass
+
+            try:
+                config                         = res['msg']
+                config['sync_time_type_name']  = get_sync_time_type_name(config['sync_time_type'])
+                db_sour_ip                     = config['sync_db_sour'].split(':')[0]
+                db_sour_port                   = config['sync_db_sour'].split(':')[1]
+                db_sour_service                = config['sync_db_sour'].split(':')[2]
+                db_sour_user                   = config['sync_db_sour'].split(':')[3]
+                db_sour_pass                   = aes_decrypt(cfg,config['sync_db_sour'].split(':')[4], db_sour_user)
+                db_dest_ip                     = config['sync_db_dest'].split(':')[0]
+                db_dest_port                   = config['sync_db_dest'].split(':')[1]
+                db_dest_service                = config['sync_db_dest'].split(':')[2]
+                db_dest_user                   = config['sync_db_dest'].split(':')[3]
+                db_dest_pass                   = aes_decrypt(cfg,config['sync_db_dest'].split(':')[4], db_dest_user)
+                config['db_sqlserver_ip']      = db_sour_ip
+                config['db_sqlserver_port']    = db_sour_port
                 config['db_sqlserver_service'] = db_sour_service
-                config['db_sqlserver_user'] = db_sour_user
-                config['db_sqlserver_pass'] = db_sour_pass
-                config['db_mysql_ip'] = db_dest_ip
-                config['db_mysql_port'] = db_dest_port
-                config['db_mysql_service'] = db_dest_service
-                config['db_mysql_user'] = db_dest_user
-                config['db_mysql_pass'] = db_dest_pass
-                config['db_sqlserver_string'] = db_sour_ip + ':' + db_sour_port + '/' + db_sour_service
-                config['db_mysql_string'] = db_dest_ip + ':' + db_dest_port + '/' + db_dest_service
-                config['db_sqlserver'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
-                                                          db_sour_pass)
+                config['db_sqlserver_user']    = db_sour_user
+                config['db_sqlserver_pass']    = db_sour_pass
+                config['db_mysql_ip']          = db_dest_ip
+                config['db_mysql_port']        = db_dest_port
+                config['db_mysql_service']     = db_dest_service
+                config['db_mysql_user']        = db_dest_user
+                config['db_mysql_pass']        = db_dest_pass
+                config['db_sqlserver_string']  = db_sour_ip + ':' + db_sour_port + '/' + db_sour_service
+                config['db_mysql_string']      = db_dest_ip + ':' + db_dest_port + '/' + db_dest_service
+                config['run_mode']             = 'remote'
+                config['counter']              = 0
+                config['api_status']           = cfg['api_status']
+
+                write_local_config_file_json(config)
+
+                config['db_sqlserver']  = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
+                                                           db_sour_pass)
                 config['db_sqlserver2'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
                                                            db_sour_pass)
-                config['db_mysql'] = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
                 config['db_sqlserver3'] = get_ds_sqlserver(db_sour_ip, db_sour_port, db_sour_service, db_sour_user,
                                                            db_sour_pass)
-                config['db_mysql3'] = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user,
-                                                   db_dest_pass)
-                config['run_mode'] = 'remote'
-                # write local config file
-                write_local_config_file(config)
+                config['db_mysql']      = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user, db_dest_pass)
+                config['db_mysql3']     = get_ds_mysql(db_dest_ip, db_dest_port, db_dest_service, db_dest_user,db_dest_pass)
                 return config
             except Exception as e:
-                v_error = '从接口配置获取数据库连接对象时出现异常:{0}'.format(traceback.format_exc())
+                v_error = '从接口配置数据库连接对象异常:{0}'.format(traceback.format_exc())
                 print(v_error)
                 exception_connect_db(config, v_error)
-                exit(0)
+                return None
         else:
-            print('接口调用失败!,{0}'.format(res['msg']))  # 发异常邮件
-            v_title = '数据同步接口异常[★]'
-            v_content = '''<table class='xwtable'>
-                               <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
-                               <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
-                               <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr>            
-                           </table>'''
-            v_content = v_content.replace('$$interface$$', url)
-            v_content = v_content.replace('$$parameter$$', json.dumps(values))
-            v_content = v_content.replace('$$error$$', res['msg'])
-            if res['code'] != -3:
-                exception_interface(v_title, v_content)
-                sys.exit(0)
-            else:
-                print(res['msg'])
-                sys.exit(0)
+            file_name = workdir + '/config/' + tag + '.json'
+            config = get_config_json(file_name)
+            if config['counter'] <= 3:
+                print('DBAPI接口调用失败!,{0}'.format(res['msg']))
+                v_title = '数据同步接口异常[★]'
+                v_content = '''<table class='xwtable'>
+                                   <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
+                                   <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
+                                   <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr>            
+                               </table>'''
+                v_content = v_content.replace('$$interface$$', url)
+                v_content = v_content.replace('$$parameter$$', json.dumps(values))
+                v_content = v_content.replace('$$error$$', res['msg'])
+                if res['code'] != -3:
+                    exception_interface(v_title, v_content)
+                else:
+                    print(res['msg'])
+                return None
 
-    except Exception as e:
-        file_name = workdir + '/config/' + tag + '.ini'
-        print('接口调用失败:{0}'.format(str(e)))
-        print('从本地读取最近一次配置文件1：{0}'.format(file_name))
-        v_title = '数据同步接口异常[★★]'
-        v_desc = '同步任务运行于本地配置文件模式中，请尽快处理! 自动从本地读取最近一次配置文件进行同步：{0}'.format(file_name)
-        v_content = '''<table class='xwtable'>
-                           <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
-                           <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
-                           <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr> 
-                           <tr><td  width="30%">说明信息</td><td  width="70%">$$desc$$</td></tr>               
-                       </table>'''
-        v_content = v_content.replace('$$interface$$', url)
-        v_content = v_content.replace('$$parameter$$', json.dumps(values))
-        v_content = v_content.replace('$$error$$', traceback.format_exc())
-        v_content = v_content.replace('$$desc$$', v_desc)
-        exception_interface(v_title, v_content)
-        config = get_config(file_name, tag)
+    except :
+        file_name = workdir + '/config/' + tag + '.json'
+        config    = get_config_json(file_name)
+        if config['counter']<=3:
+           print('接口调用失败,从本地读取最近一次配置文件：{0}'.format(file_name))
+           v_title   = '{}任务切换为本地模式[★★]'.format(config['comments'])
+           v_desc    = '同步任务运行于本地配置文件模式中，请尽快处理! 自动从本地读取最近一次配置文件进行同步：{0}'.format(file_name)
+           v_content = '''<table class='xwtable'>
+                             <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
+                             <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
+                             <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr> 
+                             <tr><td  width="30%">说明信息</td><td  width="70%">$$desc$$</td></tr>               
+                          </table>'''
+           v_content = v_content.replace('$$interface$$', url)
+           v_content = v_content.replace('$$parameter$$', json.dumps(values))
+           v_content = v_content.replace('$$error$$', traceback.format_exc())
+           v_content = v_content.replace('$$desc$$', v_desc)
+           exception_interface(v_title, v_content)
         return config
 
 
@@ -236,12 +348,18 @@ def write_sync_log(config):
         'tag': v_msg
     }
     print(values)
-    # write_log('values='+json.dump(values))
     url = 'http://$$API_SERVER$$/write_sync_log'
     context = ssl._create_unverified_context()
     data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
+    try:
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
+    except:
+        api = query_health_api(config)
+        url = 'http://{}/write_sync_log'.format(api)
+        print('query_health_api=', url)
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
     res = json.loads(res.read())
     print(res, res['code'])
     if res['code'] == 200:
@@ -249,26 +367,67 @@ def write_sync_log(config):
     else:
         write_log('Interface write_sync_log call failed!')
 
+def gather_sync_table_cols(config, tab):
+    cr_source = get_db_sqlserver(config).cursor()
+    v_col = ''
+    v_sql = """select '`'+col.name+'`'
+               from syscolumns col, sysobjects obj
+               where col.id = obj.id 
+                 and obj.id = object_id('{0}')
+               order by isnull((SELECT  'Y'
+                                FROM  dbo.sysindexes si
+                                INNER JOIN dbo.sysindexkeys sik ON si.id = sik.id AND si.indid = sik.indid
+                                inner join dbo.sysobjects so ON so.name = si.name AND so.xtype = 'PK'
+                                where sik.id=obj.id and sik.colid=col.colid),'N') desc,col.colid
+         """.format(tab)
+    cr_source.execute(v_sql)
+    rs_source = cr_source.fetchall()
+    for i in list(rs_source):
+        v_col = v_col + i[0] + ','
+    cr_source.close()
+    return v_col[0:-1]
 
-def write_sync_log_detail(config):
+def get_sync_cols(config,tab):
+    for dic in config['cols']:
+        if dic['sync_tag'] == config['sync_tag']  \
+             and dic['db_name'] == config['db_sqlserver_service'].lower() \
+               and dic['schema_name'] == tab.split('.')[0].lower() \
+                 and dic['tab_name'] == tab.split('.')[1].lower() :
+                    return dic['sync_cols'].split('#')
+    return None
+
+
+def write_sync_log_detail(config,ftab):
     v_tag = {
-        'sync_tag': config['sync_tag'],
-        'create_date': get_time(),
-        'sync_table': config['sync_table_inteface'],
-        'sync_amount': config['sync_amount'],
-        'duration': config['sync_duration']
+        'sync_tag'     : config['sync_tag'],
+        'create_date'  : get_time(),
+        'sync_table'   : config['sync_table_inteface'],
+        'sync_amount'  : config['sync_amount'],
+        'duration'     : config['sync_duration'],
+        'db_name'      : config['db_sqlserver_service'].lower(),
+        'schema_name'  : ftab.split(':')[0].split('.')[0].lower(),
+        'tab_name'     : ftab.split(':')[0].split('.')[1].lower(),
+        'sync_cols'    : gather_sync_table_cols(config,ftab.split(':')[0]).replace('`','').replace(',','#').lower(),
+        'sync_incr_col': ftab.split(':')[1].lower(),
+        'sync_time'    : ftab.split(':')[2]
     }
     v_msg = json.dumps(v_tag)
     values = {
         'tag': v_msg
     }
     print('write_sync_log_detail=', values)
-    # write_log('values='+json.dump(values))
     url = 'http://$$API_SERVER$$/write_sync_log_detail'
     context = ssl._create_unverified_context()
     data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
+    try:
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
+    except:
+        api = query_health_api(config)
+        url = 'http://{}/write_sync_log_detail'.format(api)
+        print('write_sync_log_detail=>query_health_api=', url)
+        req = urllib.request.Request(url, data=data)
+        res = urllib.request.urlopen(req, context=context)
     res = json.loads(res.read())
     print(res, res['code'])
     if res['code'] == 200:
@@ -1258,9 +1417,61 @@ def exception_running(config, p_error):
 
     send_mail25('190343@lifeat.cn', 'Hhc5HBtAuYTPGHQ8', '190343@lifeat.cn', v_title, v_content)
 
+def recover_running(config):
+    v_templete = '''
+     <html>
+        <head>
+           <style type="text/css">
+               .xwtable {width: 100%;border-collapse: collapse;border: 1px solid #ccc;}
+               .xwtable thead td {font-size: 12px;color: #333333;
+                                  text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                  border: 1px solid #ccc; font-weight:bold;}
+               .xwtable thead th {font-size: 12px;color: #333333;
+                                  text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                  border: 1px solid #ccc; font-weight:bold;}
+               .xwtable tbody tr {background: #fff;font-size: 12px;color: #666666;}
+               .xwtable tbody tr.alt-row {background: #f2f7fc;}
+               .xwtable td{line-height:20px;text-align: left;padding:4px 10px 3px 10px;height: 18px;border: 1px solid #ccc;}
+           </style>
+        </head>
+        <body>             
+           <table class='xwtable'>
+               <tr><td  width="30%">任务描述</td><td  width="70%">$$task_desc$$</td></tr>
+               <tr><td>任务标识</td><td>$$sync_tag$$</td></tr>
+               <tr><td>业务类型</td><td>$$sync_ywlx$$</td></tr>
+               <tr><td>同步方向</td><td>$$sync_type$$</td></tr>
+               <tr><td>同步服务器</td><td>$$server_id$$</td></tr>
+               <tr><td>源数据源</td><td>$$sync_db_sour$$</td></tr>
+               <tr><td>目标数据源</td><td>$$sync_db_dest$$</td></tr>
+               <tr><td>同步表名</td><td>$$sync_table$$</td></tr>
+               <tr><td>时间类型</td><td>$$sync_time_type$$</td></tr>
+               <tr><td>同步脚本</td><td>$$script_file$$</td></tr>
+               <tr><td>运行时间</td><td>$$run_time$$</td></tr>
+           </table>                
+        </body>
+     </html>
+    '''
+
+    v_title = config.get('comments') + '任务恢复为远程模式[★]'
+    v_content = v_templete.replace('$$task_desc$$', config.get('comments'))
+    v_content = v_content.replace('$$sync_tag$$', config.get('sync_tag'))
+    v_content = v_content.replace('$$sync_ywlx$$', config.get('sync_ywlx_name'))
+    v_content = v_content.replace('$$sync_type$$', config.get('sync_type_name'))
+    v_content = v_content.replace('$$server_id$$', str(config.get('server_desc')))
+    v_content = v_content.replace('$$sync_db_sour$$', config.get('sync_db_sour'))
+    v_content = v_content.replace('$$sync_db_dest$$', config.get('sync_db_dest'))
+    v_content = v_content.replace('$$sync_table$$', config.get('sync_table').replace(',','<br>'))
+    v_content = v_content.replace('$$sync_time_type$$', config.get('sync_time_type_name'))
+    v_content = v_content.replace('$$script_file$$', config.get('script_file'))
+    v_content = v_content.replace('$$run_time$$', config.get('run_time'))
+    send_mail25('190343@lifeat.cn', 'Hhc5HBtAuYTPGHQ8', '190343@lifeat.cn', v_title, v_content)
+
 def sync(config, debug, workdir):
     # init dict
     config = get_config_from_db(config, workdir)
+
+    if config is None:
+       exit(0)
 
     # print dict
     if debug:

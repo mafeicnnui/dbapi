@@ -8,10 +8,11 @@
 '''
 export PYTHON3_HOME=/home/hopson/apps/usr/webserver/python3.6.0
 export LD_LIBRARY_PATH=$PYTHON3_HOME/lib
+cd /home/hopson/apps/usr/webserver/python3.6.0/bin
 ./pip3 install BeautifulSoup4==4.9.1
 ./pip3 install html5lib
 ./pip3 install requests
-./pip3 install minio
+./pip3 install minio==6.0
 
 '''
 
@@ -160,6 +161,30 @@ def request_download(p_root,p_dir,p_url):
     with open(os.path.join(p_dir,p,f), 'wb') as f:
         f.write(r.content)
 
+def dif_time(p_tm,p_cfg):
+    now_time = datetime.datetime.now()
+    now_time = now_time.strftime('%Y%m%d%H%M%S')
+    d1       = datetime.datetime.strptime(p_tm, '%Y%m%d%H%M%S')
+    d2       = datetime.datetime.strptime(now_time,'%Y%m%d%H%M%S')
+    sec      = (d2 - d1).seconds
+    if p_cfg['minio_incr_type'] == 'hour':
+       return round(sec/3600,2)
+
+    if p_cfg['minio_incr_type'] == 'min':
+       return round(sec/3600*60,2)
+
+
+def fitler_img(img,cfg):
+    filter = []
+    if cfg['minio_incr_type'] in('hour','min'):
+        for p in img:
+            tm = p.split('/')[-1].split('_')[-1].split('.')[0][0:14]
+            if dif_time(tm,cfg)<=int(cfg['minio_incr']):
+               filter.append(p)
+        return filter
+    else:
+        return img
+
 def downloads_image(config):
     root = config['sync_service']
     url  = config['download_url']
@@ -168,6 +193,7 @@ def downloads_image(config):
     start_time = datetime.datetime.now()
     print('Requesting remote image ...')
     get_url(root, url, img)
+    img = fitler_img(img,config)
 
     if len(img) == 0:
         print('Downloading Images amount=0,sync abort!')
@@ -250,6 +276,10 @@ def sync(config):
        upload_imags(config)
        write_minio_log(config)
 
+    # delete temp file
+    os.system('rm -rf  /tmp/downloads/Upload/Images/*')
+    print('delete temp file ok!')
+
 
 if __name__ == "__main__":
     config = ""
@@ -262,6 +292,14 @@ if __name__ == "__main__":
             pass
     # init
     config = init(config)
+
+    # ping
+    ip = 'ping -w 10 {}'.format(config['sync_service'].split('//')[1].split(':')[0])
+    print(ip)
+    r = os.popen(ip)
+    for i in r:
+        print(i)
+
     print_dict(config)
 
     # sync

@@ -330,7 +330,7 @@ def db_backup_mydumper(config):
         dir_name       = config['bk_path']+'/'+db[0]
         os.system('mkdir -p {0}'.format(dir_name))
         err_name       = '/tmp/'+db[0]+'_'+get_date()+'.err'
-        bk_cmd         = '{0} -u {1} -p {2} -h {3} -P {4} -R -E -B -k -c -t 4 -B {5} -o {6} &>{7}'\
+        bk_cmd         = "{0} -u {1} -p '{2}' -h {3} -P {4} -R -E -B -k -c -t 4 -B {5} -o {6} &>{7}"\
                          .format(config['bk_cmd'],config['db_user'],config['newpass'],
                                config['db_ip'] ,config['db_port'],db[0],dir_name,err_name)
         print(bk_cmd)

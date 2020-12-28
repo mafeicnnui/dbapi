@@ -755,6 +755,17 @@ def write_monitor_log(item):
     if res['code'] != 200:
         print('Interface write_monitor_log call failed!')
 
+def ping(cfg):
+    ip = 'ping -w 10 {}'.format(cfg['server_ip'])
+    print(ip)
+    r = os.popen(ip)
+    for i in r:
+        print(i)
+        if i.count('icmp_seq=10') > 0:
+            return True
+    return False
+
+
 def main():
     config = ""
     warnings.filterwarnings("ignore")
@@ -767,7 +778,12 @@ def main():
     config=init(config)
 
     #数据同步
-    gather(config)
+    if ping(config):
+       print('ping is ok!')
+       gather(config)
+    else:
+       print('ping is not ok,exit!')
+
 
 if __name__ == "__main__":
      main()

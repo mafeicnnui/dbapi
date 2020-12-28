@@ -201,8 +201,18 @@ BACKUP DATABASE [{}] TO  DISK = N'{}.bak' WITH CHECKSUM,COMPRESSION,BUFFERCOUNT 
 '''.format(db,file_name,file_name)
         f.write(sql)
 
+def get_filename_linux(db,config):
+    return '{}/{}_backup_{}'.format(config['bk_base'], db, get_backup_time())
 
-def db_backup(config):
+def gen_sql_file_linux(db,config):
+    file_name = get_filename_linux(db, config)
+    with open(config['script_path']+'/db_backup.sql', 'w') as f:
+        sql='''
+BACKUP DATABASE [{}] TO  DISK = N'{}.bak' WITH CHECKSUM,COMPRESSION,BUFFERCOUNT = 50, MAXTRANSFERSIZE = 4194304,NAME = N'{}', SKIP, REWIND, NOUNLOAD,  STATS = 10 
+'''.format(db,file_name,file_name)
+        f.write(sql)
+
+def db_backup_windows(config):
     print_dict(config)
     bk_begin_time=get_now()
     n_elaspsed_backup_total=0
@@ -270,6 +280,69 @@ def db_backup(config):
     print(v_remote)
     os.system(v_remote)
 
+def db_backup_linux(config):
+    print_dict(config)
+    bk_begin_time=get_now()
+    n_elaspsed_backup_total=0
+    n_total_size=0
+    g_status='0'
+    for db in config['backup_databases'].split(','):
+        status = '0'
+        print('Performing backup database {0}...'.format(db))
+        start_time        = get_now()
+        file_name         = get_filename_linux(db,config)
+        config['newpass'] = aes_decrypt(config['db_pass'], config['db_user'])
+        gen_sql_file_linux(db,config)
+        bk_cmd         = '''
+{} -S {} -U {} -P {} -d {} -i {}/db_backup.sql -o {}.log
+'''.format(config['bk_cmd'],
+           config['db_ip'],
+           config['db_user'],
+           config['newpass'],
+           db,
+           config['script_path'],
+           file_name,
+          )
+
+        print(bk_cmd)
+        try:
+          os.system(bk_cmd)
+        except:
+          status='1'
+
+        end_time                  = get_now()
+        file_size                 = get_file_size(file_name+'.bak')
+        config['db_name']         = db
+        config['create_date']     = get_date()
+        config['file_name']       = file_name+'.bak'
+        config['db_size']         = format_file_size(file_size)
+        config['start_time']      = get_time2(start_time)
+        config['end_time']        = get_time2(end_time)
+        config['elaspsed_backup'] = get_seconds(end_time, start_time)
+        config['status']          = status
+        config['error']           = 'success' if status=='1' else 'failure'
+
+        if status=='1':
+           g_status='1'
+        write_backup_detail(config)
+        n_elaspsed_backup_total=n_elaspsed_backup_total+config['elaspsed_backup']
+        n_total_size=n_total_size+config['elaspsed_backup']+file_size
+
+    bk_end_time = get_now()
+    config['create_date']     = get_date()
+    config['start_time']      = get_time2(bk_begin_time)
+    config['end_time']        = get_time2(bk_end_time)
+    config['total_size']      = format_file_size(n_total_size)
+    config['elaspsed_backup'] = n_elaspsed_backup_total
+    config['elaspsed_gzip']   = 0
+    config['status']          = g_status
+    write_backup_total(config)
+
+    print('delete recent {} day backup...'.format(config['expire']))
+    v_del = '''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf'''.format(config['bk_base'], config['year'],config['expire']) + '''{} \; -prune'''
+    print(v_del)
+    os.system(v_del)
+
 
 def main():
     warnings.filterwarnings("ignore")
@@ -283,7 +356,11 @@ def main():
        sys.exit(0)
 
     config=read_config(tag)
-    db_backup(config)
+    if config['server_os'] == 'CentOS':
+        db_backup_linux(config)
+    else:
+        db_backup_windows(config)
+
 
 if __name__ == "__main__":
      main()

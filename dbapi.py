@@ -193,7 +193,7 @@ def get_db_config(p_tag):
                           c.password AS db_pass,
                           a.expire,
                           a.bk_base,a.script_path,a.script_file,a.bk_cmd,a.run_time,
-                          b.server_ip,b.server_port,b.server_user,b.server_pass,
+                          b.server_ip,b.server_port,b.server_user,b.server_pass,b.server_os,
                           a.comments,a.python3_home,a.backup_databases,a.api_server,a.status
                 FROM t_db_config a,t_server b,t_db_source c
                 WHERE a.server_id=b.id 
@@ -253,7 +253,9 @@ def get_db_sync_config(p_tag):
                           a.api_server,
                           LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
                           a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
-                          a.status,b.server_ip,b.server_port,b.server_user,b.server_pass                         
+                          a.status,b.server_ip,b.server_port,b.server_user,b.server_pass,
+                          c.proxy_server,
+                          (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port
                 FROM t_db_sync_config a,t_server b,t_db_source c,t_db_source d
                 WHERE a.server_id=b.id 
                   AND a.sour_db_id=c.id
@@ -262,9 +264,13 @@ def get_db_sync_config(p_tag):
                   ORDER BY a.id,a.sync_ywlx
                '''.format(p_tag))
     rs=cr.fetchone()
+    cr.execute('''SELECT sync_tag,db_name,schema_name,tab_name,sync_cols,sync_incr_col
+                  FROM `t_db_sync_tab_config` WHERE sync_tag='{}' and status='1' ORDER BY id'''.format(p_tag))
+    rs['cols'] = cr.fetchall()
+    result['msg'] = rs
     cr.close()
-    result['msg']=rs
     return result
+
 
 def get_db_transfer_config(p_tag):
     config=db_config()
@@ -331,7 +337,7 @@ def get_db_archive_config(p_tag):
        return result
 
     #检测同步标识是否存在
-    if check_db_monitor_config(p_tag)==0:
+    if check_db_archive_config(p_tag)==0:
        result['code'] = -1
        result['msg'] = '归档标识不存在!'
        return result
@@ -347,7 +353,7 @@ def get_db_archive_config(p_tag):
                       a.archive_rentition,
                       a.rentition_time,
                       a.rentition_time_type,
-                      e.dmmc as rentition_time_type_cn,
+                      e.dmmc AS rentition_time_type_cn,
                       a.if_cover,
                       a.script_path,
                       a.script_file,
@@ -359,14 +365,13 @@ def get_db_archive_config(p_tag):
                       b.server_ip,
                       b.server_port,
                       b.server_user,
-                      b.server_pass                         
-                FROM t_db_archive_config a,t_server b,t_db_source c,t_db_source d,t_dmmx e
-                WHERE a.server_id=b.id 
-                AND a.sour_db_id=c.id
-                AND a.dest_db_id=d.id
-                and a.rentition_time_type=e.dmm
-                and e.dm='20'
-                AND a.archive_tag ='{0}' 
+                      b.server_pass,
+                      a.dest_db_id                  
+                FROM t_db_archive_config a JOIN t_server b ON a.server_id=b.id 
+                JOIN t_db_source c ON a.sour_db_id=c.id
+                LEFT JOIN t_db_source d ON a.dest_db_id=d.id
+                JOIN t_dmmx e ON a.rentition_time_type=e.dmm AND  e.dm='20'
+                WHERE a.archive_tag ='{}' 
                 ORDER BY a.id
             '''.format(p_tag))
     rs=cr.fetchone()
@@ -638,6 +643,7 @@ def get_minio_config(p_tag):
                          a.minio_bucket,
                          a.minio_dpath,
                          a.minio_incr,
+                         a.minio_incr_type,
                          b.server_ip ,
                          b.server_port,
                          b.server_user,
@@ -1040,10 +1046,23 @@ def save_sync_log_detail(config):
     v_sql='''insert into t_db_sync_tasks_log_detail(sync_tag,create_date,sync_table,sync_amount,duration) 
               values('{0}','{1}','{2}','{3}','{4}')
           '''.format(config['sync_tag'],config['create_date'],config['sync_table'],config['sync_amount'],config['duration'])
-
-    write_log(get_time())
-    write_log(v_sql)
     cr.execute(v_sql)
+
+    v_where = " where sync_tag='{0}' and tab_name='{1}'".format(config['sync_tag'],config['tab_name'])
+    if check_tab_exists('t_db_sync_tab_config', v_where) == 0:
+        v_sql = '''insert into t_db_sync_tab_config
+                        (sync_tag,db_name,schema_name,tab_name,sync_cols,sync_incr_col,sync_time,status,create_date)
+                     values('{}','{}','{}','{}','{}','{}','{}','1',now())
+                '''.format(config['sync_tag'],
+                           config['db_name'],
+                           config['schema_name'],
+                           config['tab_name'],
+                           config['sync_cols'],
+                           config['sync_incr_col'],
+                           config['sync_time']
+                            )
+        cr.execute(v_sql)
+
     db.commit()
     cr.close()
     return result
@@ -1065,18 +1084,17 @@ def save_backup_total(config):
 
     else:
         v_sql='''update t_db_backup_total
-                    set create_date = '{0}',
-                        bk_base     = '{1}',
-                        total_size  = '{2}',
-                        start_time  = '{3}',
-                        end_time    = '{4}',
-                        elaspsed_backup = '{5}',
-                        elaspsed_gzip = '{6}',
-                        status = '{7}'
-                  where db_tag = '{8}'
-              '''.format(config['create_date'], config['bk_base'], config['total_size'],config['start_time'],
-    config['end_time'], config['elaspsed_backup'],config['elaspsed_gzip'],
-    config['status'],config['db_tag'])
+                    set bk_base     = '{}',
+                        total_size  = '{}',
+                        start_time  = '{}',
+                        end_time    = '{}',
+                        elaspsed_backup = '{}',
+                        elaspsed_gzip = '{}',
+                        status = '{}'
+                  where db_tag = '{}' and create_date='{}'
+              '''.format(config['bk_base'], config['total_size'],config['start_time'],
+                         config['end_time'], config['elaspsed_backup'],config['elaspsed_gzip'],
+                         config['status'],config['db_tag'],config['create_date'])
     write_log(get_time())
     write_log(v_sql)
     cr.execute(v_sql)
@@ -1293,8 +1311,13 @@ def write_remote_crontab(v_tag):
 
     ssh.exec_command(v_cron2)
     ssh.exec_command(v_cron3)
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
     print('Remote crontab update complete!')
     ssh.close()
+    result['msg']['crontab'] = ret
     return result
 
 def run_remote_backup_task(v_tag):
@@ -1323,6 +1346,7 @@ def run_remote_sync_task(v_tag):
        return result
 
     v_cmd   = 'nohup {0}/db_sync.sh {1} {2} &>/dev/null &'.format(result['msg']['script_path'], result['msg']['script_file'], v_tag)
+    v_cmd2  = '{0}/db_agent.sh'.format(result['msg']['script_path'])
     print(v_cmd)
     ssh = paramiko.SSHClient()
     print('Remote crontab update ....1')
@@ -1333,6 +1357,7 @@ def run_remote_sync_task(v_tag):
     ssh.connect(hostname=result['msg']['server_ip']  , port=int(result['msg']['server_port']),
                 username=result['msg']['server_user'], password=v_password)
     ssh.exec_command(v_cmd)
+    ssh.exec_command(v_cmd2)
     print('Remote backup_task is running !')
     ssh.close()
     return result
@@ -1539,7 +1564,9 @@ def write_remote_crontab_sync(v_tag):
     if result['code']!=200:
        return result
 
-    v_cmd = '{0}/db_sync.sh {1} {2}'.format(result['msg']['script_path'],result['msg']['script_file'], v_tag)
+    v_cmd  = '{0}/db_sync.sh {1} {2}'.format(result['msg']['script_path'],result['msg']['script_file'], v_tag)
+
+    v_cmd_agent = '{0}/db_agent.sh '.format(result['msg']['script_path'])
 
     v_cron = '''
                crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/conf
@@ -1547,7 +1574,15 @@ def write_remote_crontab_sync(v_tag):
 
     v_cron_ = '''
                 crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/conf
-             '''.format(v_tag, result['msg']['comments'], v_tag, result['msg']['run_time'], v_cmd)
+              '''.format(v_tag, result['msg']['comments'], v_tag, result['msg']['run_time'], v_cmd)
+
+    v_cron_agent = '''
+                sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/conf
+              '''.format('db_agent', '数据库代理服务', 'db_agent.py', '*/1 * * * *', v_cmd_agent)
+
+    v_cron_agent_ = '''
+                sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/conf
+                  '''.format('db_agent', '数据库代理服务', 'db_agent.py', '*/1 * * * *', v_cmd_agent)
 
 
     v_cron2 ='''sed -i '/^$/{N;/\\n$/D};' /tmp/conf'''
@@ -1571,13 +1606,24 @@ def write_remote_crontab_sync(v_tag):
                 username=result['msg']['server_user'], password=v_password)
     #exec v_cron
     if result['msg']['status']=='1':
+       print(v_cron)
+       print(v_cron_agent)
        ssh.exec_command(v_cron)
+       ssh.exec_command(v_cron_agent)
     else:
        ssh.exec_command(v_cron_)
+       ssh.exec_command(v_cron_agent_)
 
     ssh.exec_command(v_cron2)
     ssh.exec_command(v_cron3)
     ssh.exec_command(v_cron4)
+
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
+    result['msg']['crontab'] = ret
+
     print('Remote crontab update complete!')
     ssh.close()
     return result
@@ -1596,7 +1642,6 @@ def write_remote_crontab_monitor(v_tag):
     v_cron_ = '''
                 crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/conf
               '''.format(v_tag, result['msg']['comments'], v_tag, result['msg']['run_time'], v_cmd)
-
 
     v_cron2 ='''sed -i '/^$/{N;/\\n$/D};' /tmp/conf'''
 
@@ -1831,6 +1876,13 @@ def write_datax_remote_crontab_sync(v_tag):
     ssh.exec_command(v_cron2)
     ssh.exec_command(v_cron3)
     print('Remote write_datax_remote_crontab_sync update complete!')
+
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
+    result['msg']['crontab'] = ret
+
     ssh.close()
     return result
 
@@ -1887,6 +1939,22 @@ def transfer_remote_file(v_tag):
         sftp.put(localpath=local_file, remotepath=remote_file)
         print('Script:{0} send to {1} ok.'.format(local_file, remote_file))
 
+        # send .sh file
+        templete_file = './templete/db_backup.sh'
+        local_file = './script/db_backup.sh'
+        remote_file = '{0}/db_backup.sh'.format(result['msg']['script_path'])
+
+        os.system('cp -f {0} {1}'.format(templete_file, local_file))
+        print('templete_file=', templete_file)
+        print('local_file=', local_file)
+        print('remote_file=', remote_file)
+        with open(local_file, 'w') as obj_file:
+            obj_file.write(get_file_contents(templete_file).
+                           replace('$$PYTHON3_HOME$$', result['msg']['python3_home']).
+                           replace('$$SCRIPT_PATH$$', result['msg']['script_path']))
+        sftp.put(localpath=local_file, remotepath=remote_file)
+        print('Script:{0} send to {1} ok.'.format(local_file, remote_file))
+
     else:
         #send .sh file
         templete_file = './templete/db_backup.sh'
@@ -1919,7 +1987,7 @@ def transfer_remote_file_sync(v_tag):
 
     #Decryption password
     config = db_config()
-    print('config[db_mysql=', config['db_mysql'])
+    print('config[db_mysql]=', config['db_mysql'])
     print(result['msg']['server_pass'], result['msg']['server_user'])
     v_password = aes_decrypt(config['db_mysql'], result['msg']['server_pass'], result['msg']['server_user'])
     print('transfer_remote_file_sync ->v_password=', v_password)
@@ -1935,7 +2003,7 @@ def transfer_remote_file_sync(v_tag):
     os.system('cp -f {0} {1}'.format(templete_file, local_file))
     with open(local_file, 'w') as obj_file:
         obj_file.write(get_file_contents(templete_file).
-                       replace('$$API_SERVER$$', result['msg']['api_server']))
+                       replace('$$API_SERVER$$', (result['msg']['api_server'].split(',')[0])))
 
     #create sync directory
     ssh = paramiko.SSHClient()
@@ -1966,6 +2034,28 @@ def transfer_remote_file_sync(v_tag):
                        replace('$$SCRIPT_PATH$$' , result['msg']['script_path']))
     sftp.put(localpath=local_file, remotepath=remote_file)
     write_log('Script:{0} send to {1} ok.'.format(local_file, remote_file))
+
+    # add send db_agent.sh
+    templete_file = './templete/db_agent.sh'
+    local_file    = './script/db_agent.sh'
+    remote_file   = '{0}/db_agent.sh'.format(result['msg']['script_path'])
+    os.system('cp -f {0} {1}'.format(templete_file, local_file))
+    with open(local_file, 'w') as obj_file:
+        obj_file.write(get_file_contents(templete_file).
+                       replace('$$PYTHON3_HOME$$', result['msg']['python3_home']).
+                       replace('$$SCRIPT_PATH$$', result['msg']['script_path']).
+                       replace('$$PORT$$', result['msg']['proxy_local_port']))
+    sftp.put(localpath=local_file, remotepath=remote_file)
+    print('Script:{0} send to {1} ok.'.format(local_file, remote_file))
+
+    # send db_agent.py file
+    templete_file = './templete/db_agent.py'
+    local_file    = './script/db_agent.py'
+    remote_file   = '{0}/db_agent.py'.format(result['msg']['script_path'])
+    os.system('cp -f {0} {1}'.format(templete_file, local_file))
+    sftp.put(localpath=local_file, remotepath=remote_file)
+    write_log('Script:{0} send to {1} ok.'.format(local_file, remote_file))
+
     transport.close()
     ssh.close()
     return result
@@ -2615,9 +2705,11 @@ def run_remote_cmd_sync(v_tag):
     print('run_remote_cmd_sync! connect!')
     remote_file1 = '{0}/{1}'.format(result['msg']['script_path'], result['msg']['script_file'])
     remote_file2 = '{0}/{1}'.format(result['msg']['script_path'], 'db_sync.sh')
+    remote_file3 = '{0}/{1}'.format(result['msg']['script_path'], 'db_agent.sh')
     remote_cmd1  = 'mkdir -p {0}'.format(result['msg']['script_path'] + '/config')
     ssh.exec_command('chmod +x {0}'.format(remote_file1))
     ssh.exec_command('chmod +x {0}'.format(remote_file2))
+    ssh.exec_command('chmod +x {0}'.format(remote_file3))
     ssh.exec_command(remote_cmd1)
     print('run_remote_cmd_sync! exec_command!')
     ssh.close()
@@ -2681,6 +2773,57 @@ def run_remote_cmd_archive(v_tag):
     print('run_remote_cmd_archive! exec_command!')
     ssh.close()
     return result
+
+def write_remote_crontab_archive(v_tag):
+    result = get_db_archive_config(v_tag)
+    if result['code']!=200:
+       return result
+    v_cmd   = '{0}/db_archive.sh {1} {2}'.format(result['msg']['script_path'],result['msg']['script_file'],v_tag)
+    v_cron0 = '''echo -e "#{0}" >/tmp/conf'''.format(v_tag)
+    v_cron1 = '''
+                 crontab -l >> /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/conf && crontab /tmp/conf       
+              '''.format(v_tag,result['msg']['comments'],v_tag,result['msg']['run_time'],v_cmd)
+
+    v_cron1_= '''
+                 crontab -l > /tmp/conf && sed -i "/{0}/d" /tmp/conf && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/conf
+              '''.format(v_tag, result['msg']['comments'], v_tag, result['msg']['run_time'], v_cmd)
+
+
+    v_cron2 = '''sed -i '/^$/{N;/\\n$/D};' /tmp/conf'''
+    v_cron3 = '''crontab /tmp/conf'''
+
+    print(v_cron0)
+    print(v_cron1)
+    print(v_cron2)
+    print(v_cron3)
+
+    ssh = paramiko.SSHClient()
+    print('Remote crontab update ....1')
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    print('Remote crontab update ....2')
+    config = db_config()
+    v_password = aes_decrypt(config['db_mysql'], result['msg']['server_pass'], result['msg']['server_user'])
+    ssh.connect(hostname=result['msg']['server_ip']  , port=int(result['msg']['server_port']),
+                username=result['msg']['server_user'], password=v_password)
+    print('Remote crontab update ....')
+    ssh.exec_command(v_cron0)
+
+    if result['msg']['status'] == '1':
+        ssh.exec_command(v_cron1)
+    else:
+        ssh.exec_command(v_cron1_)
+
+    ssh.exec_command(v_cron2)
+    ssh.exec_command(v_cron3)
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
+    print('Remote crontab update complete!')
+    ssh.close()
+    result['msg']['crontab'] = ret
+    return result
+
 
 def run_remote_cmd_inst(v_inst_id):
     # Init dict
@@ -2833,6 +2976,13 @@ def run_remote_cmd_monitor(v_tag):
     ssh.exec_command('chmod +x {0}'.format(remote_file1))
     ssh.exec_command('chmod +x {0}'.format(remote_file2))
     print('run_remote_cmd_monitor! exec_command!')
+
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
+    result['msg']['crontab'] = ret
+
     ssh.close()
     return result
 
@@ -2866,10 +3016,18 @@ def run_remote_cmd_slow(v_tag):
     v_cmd = 'nohup {0}/gather_slow.sh update &>/tmp/gather_slow.log &'.format(result['msg']['script_path'])
     print(v_cmd)
     ssh.exec_command(v_cmd)
-    print('run_remote_cmd_inst! gather_slow.sh success!')
+    print('run gather_slow.sh update success!')
 
-    ssh.exec_command('')
-    print('run_remote_cmd_monitor! exec_command!')
+    v_cmd= 'nohup  {0}/gather_slow.sh cut {1} &>>/tmp/gather_slow.log &'.format(result['msg']['script_path'], v_tag)
+    ssh.exec_command(v_cmd)
+    print('run gather_slow.sh cut success!')
+
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
+    result['msg']['crontab'] = ret
+
     ssh.close()
     return result
 
@@ -2899,6 +3057,12 @@ def run_remote_cmd_minio(v_tag):
     remote_file2 = '{0}/{1}'.format(result['msg']['script_path'], 'minio_sync.sh')
     ssh.exec_command('chmod +x {0}'.format(remote_file1))
     ssh.exec_command('chmod +x {0}'.format(remote_file2))
+
+    stdin, stdout, stderr = ssh.exec_command('crontab -l')
+    ret = stdout.read()
+    ret = str(ret, encoding='utf-8')
+    print('remote crontab query =', ret, type(ret))
+    result['msg']['crontab'] = ret
     ssh.close()
     return result
 
@@ -3083,6 +3247,7 @@ class read_config_sync(tornado.web.RequestHandler):
             result['code'] = -1
             result['msg'] = str(e)
             self.write(v_json)
+
 
 class read_config_transfer(tornado.web.RequestHandler):
     def post(self):
@@ -3567,6 +3732,13 @@ class push_script_remote_archive(tornado.web.RequestHandler):
                 self.write(v_json)
                 return
 
+            result = write_remote_crontab_archive(v_tag)
+            if result['code'] != 200:
+                v_json = json.dumps(result)
+                print(v_json)
+                self.write(v_json)
+                return
+
             v_json = json.dumps(result)
             write_log("{0} dbops api interface /push_script_remote_transfer success!".format(get_time()))
             write_log("入口参数：\n\t{0}".format(v_tag))
@@ -3882,6 +4054,13 @@ class write_sync_log_detail(tornado.web.RequestHandler):
         print_dict(result)
         self.write(v_json)
 
+
+class health(tornado.web.RequestHandler):
+    def head(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        print('health check success!')
+
+
 define("port", default=sys.argv[1], help="run on the given port", type=int)
 
 class Application(tornado.web.Application):
@@ -3944,7 +4123,7 @@ class Application(tornado.web.Application):
             (r"/update_db_inst_reboot_status", update_db_inst_reboot_status),
             (r"/manager_db_inst",              manager_remote_inst),
 
-            # 慢日志 API接口
+            # 慢日志API接口
             (r"/read_slow_config",             read_slow_config),
             (r"/push_slow_remote",             push_script_slow_remote),
             (r"/write_slow_log",               write_slow_log),
@@ -3953,6 +4132,9 @@ class Application(tornado.web.Application):
             (r"/read_minio_config",            read_minio_config),
             (r"/push_minio_remote",            push_script_minio_remote),
             (r"/write_minio_log"  ,            write_minio_log),
+
+            # Health Check API接口
+            (r"/health", health),
         ]
         tornado.web.Application.__init__(self, handlers)
 
