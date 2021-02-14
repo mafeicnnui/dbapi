@@ -2,10 +2,7 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <orderEntry type="jdk" jdkName="Remote Python 3.6.0 (sftp://hopson@10.2.39.18:65508/usr/local/python3.6/bin/python3) (1)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Remote Python 3.6.0 (sftp://hopson@10.2.39.18:65508/usr/local/python3.6/bin/python3)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="TestRunnerService">
-    <option name="PROJECT_TEST_RUNNER" value="Unittests" />
   </component>
 </module>

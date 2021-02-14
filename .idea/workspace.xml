@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="workspace update">
+      <change afterPath="$PROJECT_DIR$/templete/db_agent_sync.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dbapi.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dbapi.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbapi.py" beforeDir="false" afterPath="$PROJECT_DIR$/dbapi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/db_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/db_agent.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,40 +42,6 @@
       </list>
     </option>
   </component>
-  <component name="FindInProjectRecents">
-    <findStrings>
-      <find>dumps</find>
-      <find>cols</find>
-      <find>counter</find>
-      <find>get_html_contents</find>
-      <find>sync_sqlserver_data_pk exceptiion</find>
-      <find>get_config_json</find>
-      <find>read_datax_templete</find>
-      <find>write_sync_log</find>
-      <find>write_local_config_file_json</find>
-      <find>read_config_sync</find>
-      <find>gather_sync_table_cols</find>
-      <find>def write</find>
-      <find>get_local_config_json</find>
-      <find>send_mail</find>
-      <find>year</find>
-      <find>read_config_backup</find>
-      <find>trace</find>
-      <find>push_script_remote</find>
-      <find>ResponseError</find>
-      <find>with</find>
-      <find>cr_desc</find>
-      <find>Execute Query:</find>
-      <find>db_config_info</find>
-      <find>write_sync_log_detail</find>
-      <find>db_config2</find>
-      <find>read_db_decrypt</find>
-      <find>read_config_db</find>
-      <find>get_config_from_db</find>
-      <find>get_ds_mysql_dict</find>
-      <find>torna</find>
-    </findStrings>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -92,20 +64,21 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../dbops2.0" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/templete" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\dbapi\config" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete" />
       <recent name="D:\work\dbapi" />
       <recent name="C:\dbapi" />
       <recent name="C:\dbapi\templete" />
       <recent name="C:\dbapi\datax" />
-    </key>
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\dbapi\config" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -231,6 +204,14 @@
       <updated>1571542960604</updated>
       <workItem from="1612867935314" duration="4000" />
       <workItem from="1612868492326" duration="627000" />
+      <workItem from="1612869800458" duration="67000" />
+      <workItem from="1612869883216" duration="39000" />
+      <workItem from="1612921627199" duration="1227000" />
+      <workItem from="1613097049796" duration="535000" />
+      <workItem from="1613097592605" duration="199000" />
+      <workItem from="1613098546952" duration="4339000" />
+      <workItem from="1613260782029" duration="701000" />
+      <workItem from="1613266552675" duration="652000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -260,7 +241,14 @@
       <option name="project" value="LOCAL" />
       <updated>1612866749561</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="workspace update">
+      <created>1612869828781</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1612869828782</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TodoView">
@@ -279,9 +267,22 @@
     <MESSAGE value="数据库自动化平台API-Server" />
     <MESSAGE value="add requirements.txt" />
     <MESSAGE value="add README.md" />
-    <option name="LAST_COMMIT_MESSAGE" value="add README.md" />
+    <MESSAGE value="workspace update" />
+    <option name="LAST_COMMIT_MESSAGE" value="workspace update" />
   </component>
   <component name="WindowStateProjectService">
+    <state x="552" y="178" key="#Deployment" timestamp="1613097573674">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="552" y="178" key="#Deployment/0.0.1920.1040@0.0.1920.1040" timestamp="1613097573674" />
+    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1613097206683">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1613097206683" />
+    <state x="558" y="86" key="CommitChangelistDialog2" timestamp="1612869826670">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="558" y="86" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1612869826670" />
     <state x="740" y="274" key="FileChooserDialogImpl" timestamp="1612868972861">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -290,6 +291,30 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="744" y="386" key="Github.CreatePullRequestDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1612868952239" />
+    <state width="1877" height="281" key="GridCell.Tab.0.bottom" timestamp="1613097584331">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="281" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1613097584331" />
+    <state width="1877" height="281" key="GridCell.Tab.0.center" timestamp="1613097584331">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="281" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1613097584331" />
+    <state width="1877" height="281" key="GridCell.Tab.0.left" timestamp="1613097584331">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="281" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1613097584331" />
+    <state width="1877" height="281" key="GridCell.Tab.0.right" timestamp="1613097584331">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="281" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1613097584331" />
+    <state x="571" y="200" key="SettingsEditor" timestamp="1613098840234">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="571" y="200" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1613098840234" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1612869834883">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040@0.0.1920.1040" timestamp="1612869834883" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -301,5 +326,8 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1613097280492" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
