@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Time : 2019/9/16 9:32
-# @Author : 马飞
+# @Author : ma.fei
 # @File : dbapi.py
-# @Func : dbops_api Server 提供数据库备份、同步API。
+# @Func : dbops_api Server
 # @Software: PyCharm
+
 import tornado.ioloop
 import tornado.web
 import tornado.options
