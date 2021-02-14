@@ -1,21 +1,65 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Time : 2020/10/29
-# @Author : 马飞
+# @Author : ma.fei
 # @File : db_agent.py
 # @Software: PyCharm
 
+import sys
+import pymysql
+import pymssql
+import datetime
 import tornado.ioloop
 import tornado.web
 import tornado.options
 import tornado.httpserver
 import tornado.locale
-from   tornado.options  import define, options
-import datetime,json
-import pymysql
-import pymssql
-import os,sys
 import traceback
+
+from   tornado.options  import define
+from   aiomysql import create_pool,DictCursor
+
+class async_processer:
+    async def query_list_by_ds(p_ds, p_sql):
+        async with create_pool(host=p_ds['ip'], port=int(p_ds['port']), user=p_ds['user'], password=p_ds['password'],
+                               db=p_ds['service'], autocommit=True) as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(p_sql)
+                    v_list = []
+                    rs = await cur.fetchall()
+                    dc = cur.description
+                    for r in rs:
+                        v_list.append(list(r))
+        return v_list,dc
+
+    async def query_one_by_ds(p_ds, p_sql):
+        async with create_pool(host=p_ds['ip'], port=int(p_ds['port']), user=p_ds['user'], password=p_ds['password'],
+                               db=p_ds['service'], autocommit=True) as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(p_sql)
+                    rs = await cur.fetchone()
+        return rs
+
+    async def exec_sql_by_ds(p_ds,p_sql):
+        async with create_pool(host=p_ds['ip'], port=int(p_ds['port']), user=p_ds['user'], password=p_ds['password'],
+                               db=p_ds['service'], autocommit=True) as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(p_sql)
+
+    async def query_dict_list_by_ds(p_ds, p_sql):
+        async with create_pool(host=p_ds['ip'], port=int(p_ds['port']), user=p_ds['user'], password=p_ds['password'],
+                               db=p_ds['service'], autocommit=True) as pool:
+            async with pool.acquire() as conn:
+                async with conn.cursor(DictCursor) as cur:
+                    await cur.execute(p_sql)
+                    v_list = []
+                    rs = await cur.fetchall()
+                    for r in rs:
+                        v_list.append(r)
+        return v_list
 
 def format_sql(v_sql):
     if v_sql is not None:
@@ -51,16 +95,20 @@ def get_ds_sqlserver(ip, port, service, user, password):
     conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8',timeout=3)
     return conn
 
-def aes_decrypt(db,p_password,p_key):
-    cr = db.cursor()
+async def aes_decrypt(db,p_password,p_key):
     sql="""select aes_decrypt(unhex('{0}'),'{1}') as password """.format(p_password,p_key[::-1])
-    cr.execute(sql)
-    rs=cr.fetchone()
-    db.commit()
-    cr.close()
-    db.close()
+    rs = await async_processer.query_one(sql)
     print('aes_decrypt=',str(rs['password'],encoding = "utf-8"))
     return str(rs['password'],encoding = "utf-8")
+
+def get_ds(db_ip,db_port,db_service,db_user,db_pass):
+    ds = {}
+    ds['ip']       = db_ip
+    ds['port']     = db_port
+    ds['user']     = db_user
+    ds['password'] = db_pass
+    ds['service']  = db_service
+    return ds
 
 class get_mssql_tables(tornado.web.RequestHandler):
     def post(self):
@@ -75,9 +123,8 @@ class get_mssql_tables(tornado.web.RequestHandler):
         db_service = self.get_argument("db_service")
         db_user    = self.get_argument("db_user")
         db_pass    = self.get_argument("db_pass")
-
+        db = get_ds_sqlserver(db_ip, db_port, db_service, db_user, db_pass)
         try:
-            db   = get_ds_sqlserver(db_ip,db_port,db_service,db_user,db_pass)
             cr   = db.cursor(as_dict=False)
             st   = '''select
                             lower(DB_NAME()) as db_name,
@@ -232,7 +279,6 @@ class get_mssql_query(tornado.web.RequestHandler):
         finally:
             db.close()
 
-
 class get_mssql_query_dict(tornado.web.RequestHandler):
     def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
@@ -267,60 +313,48 @@ class get_mssql_query_dict(tornado.web.RequestHandler):
             db.close()
 
 class get_mysql_tables(tornado.web.RequestHandler):
-    def post(self):
+    async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.set_header("Access-Control-Allow-Origin", '*')
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         result     = {}
-        v_list     = []
         db_ip      = self.get_argument("db_ip")
         db_port    = self.get_argument("db_port")
         db_service = self.get_argument("db_service")
         db_user    = self.get_argument("db_user")
         db_pass    = self.get_argument("db_pass")
-        db         = get_ds_mysql(db_ip,db_port,db_service,db_user,db_pass)
-        cr         = db.cursor()
+        ds         = get_ds(db_ip,db_port,db_service,db_user,db_pass)
         st         = '''select
                             lower(DATABASE()) as db_name,
                             '' as schema_name,    
                             lower(table_name) as table_name
                         from information_schema.tables  where table_schema='{}' order by 3'''.format(db_service)
         try:
-            cr.execute(st)
-            for r in cr.fetchall():
-                v_list.append(list(r))
-            cr.close()
-            db.commit()
+            rs, _ = await async_processer.query_list_by_ds(ds, st)
             result['code'] = 200
-            result['msg'] = v_list
+            result['msg']  = rs
             self.write(result)
         except:
             result['code'] = -1
             result['msg']  = traceback.format_exc()
             self.write(result)
-        finally:
-            db.close()
+
 
 class get_mysql_columns(tornado.web.RequestHandler):
-    def post(self):
+    async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.set_header("Access-Control-Allow-Origin", '*')
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         result     = {}
-        v_list     = []
         db_ip      = self.get_argument("db_ip")
         db_port    = self.get_argument("db_port")
         db_service = self.get_argument("db_service")
         db_user    = self.get_argument("db_user")
         db_pass    = self.get_argument("db_pass")
         db_tab     = self.get_argument("db_tab").split('.')[2]
-        #db_tab     = self.get_argument("db_tab")
-        print('db_tab=',db_tab)
-        #.split('.')[2]
-        db         = get_ds_mysql(db_ip,db_port,db_service,db_user,db_pass)
-        cr         = db.cursor()
+        ds         = get_ds(db_ip,db_port,db_service,db_user,db_pass)
         st         = '''SELECT
                              column_name AS NAME,
                              data_type  AS TYPE
@@ -329,36 +363,30 @@ class get_mysql_columns(tornado.web.RequestHandler):
                           AND table_name='{}'	
                         ORDER BY ordinal_position'''.format(db_service,db_tab)
         try:
-            cr.execute(st)
-            for r in cr.fetchall():
-                v_list.append(list(r))
+            rs,_ = await async_processer.query_list_by_ds(ds,st)
             result['code'] = 200
-            result['msg']  = v_list
+            result['msg']  = rs
             self.write(result)
         except:
             result['code'] = -1
             result['msg']  = traceback.format_exc()
             self.write(result)
-        finally:
-            db.close()
+
 
 class get_mysql_incr_columns(tornado.web.RequestHandler):
-    def post(self):
+    async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.set_header("Access-Control-Allow-Origin", '*')
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         result     = {}
-        v_list     = []
         db_ip      = self.get_argument("db_ip")
         db_port    = self.get_argument("db_port")
         db_service = self.get_argument("db_service")
         db_user    = self.get_argument("db_user")
         db_pass    = self.get_argument("db_pass")
         db_tab     = self.get_argument("db_tab").split('.')[2]
-        #db_tab     = self.get_argument("db_tab")
-        db         = get_ds_mysql(db_ip, db_port, db_service, db_user, db_pass)
-        cr         = db.cursor()
+        ds         = get_ds(db_ip, db_port, db_service, db_user, db_pass)
         st = '''SELECT
                      column_name AS NAME,
                      data_type  AS TYPE
@@ -367,23 +395,19 @@ class get_mysql_incr_columns(tornado.web.RequestHandler):
                   AND table_name='{}'	
                   AND data_type in('datetime','date','timestamp')
                 ORDER BY ordinal_position'''.format(db_service, db_tab)
-
         try:
-            cr.execute(st)
-            for r in cr.fetchall():
-                v_list.append(list(r))
+            rs, _ = await async_processer.query_list_by_ds(ds, st)
             result['code'] = 200
-            result['msg'] = v_list
+            result['msg']  = rs
             self.write(result)
         except:
             result['code'] = -1
             result['msg'] = traceback.format_exc()
             self.write(result)
-        finally:
-            db.close()
+
 
 class get_mysql_query(tornado.web.RequestHandler):
-    def post(self):
+    async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.set_header("Access-Control-Allow-Origin", '*')
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
@@ -398,13 +422,8 @@ class get_mysql_query(tornado.web.RequestHandler):
         columns    = []
         data       = []
         try:
-            db = get_ds_mysql(db_ip, db_port, db_service, db_user, db_pass)
-            cr = db.cursor()
-            cr.execute(db_sql)
-            rs = cr.fetchall()
-
-            # process desc
-            desc = cr.description
+            ds = get_ds(db_ip, db_port, db_service, db_user, db_pass)
+            rs,desc  = await async_processer.query_list_by_ds(ds,db_sql)
             for i in range(len(desc)):
                 columns.append({"title": desc[i][0]})
 
@@ -430,11 +449,9 @@ class get_mysql_query(tornado.web.RequestHandler):
             result['data'] = ''
             result['column'] = ''
             self.write(result)
-        finally:
-            db.close()
 
 class get_mysql_query_dict(tornado.web.RequestHandler):
-    def post(self):
+    async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.set_header("Access-Control-Allow-Origin", '*')
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
@@ -447,13 +464,10 @@ class get_mysql_query_dict(tornado.web.RequestHandler):
         db_pass    = self.get_argument("db_pass")
         db_sql     = self.get_argument("db_sql")
         try:
-            db = get_ds_mysql_dict(db_ip, db_port, db_service, db_user, db_pass)
-            cr = db.cursor()
-            cr.execute(db_sql)
-            rs = cr.fetchall()
+            ds = get_ds(db_ip, db_port, db_service, db_user, db_pass)
             result['code'] = 200
             result['msg'] = ''
-            result['data'] = rs
+            result['data'] = await async_processer.query_dict_list_by_ds(ds,db_sql)
             result['column'] = ''
             print('get_mysql_query_dict=',result)
             self.write(result)
@@ -463,11 +477,8 @@ class get_mysql_query_dict(tornado.web.RequestHandler):
             result['data'] = ''
             result['column'] = ''
             self.write(result)
-        finally:
-            db.close()
 
 define("port", default=sys.argv[1], help="run on the given port", type=int)
-
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
@@ -477,9 +488,8 @@ class Application(tornado.web.Application):
             (r"/get_mssql_incr_columns", get_mssql_incr_columns),
             (r"/get_mssql_query",        get_mssql_query),
             (r"/get_mssql_query_dict",   get_mssql_query_dict),
-            (r"/get_mssql_table_df", ''),
-            (r"/get_mssql_index_df", ''),
-
+            # (r"/get_mssql_table_df", ''),
+            # (r"/get_mssql_index_df", ''),
 
             # mysql 数据库查询接口
             (r"/get_mysql_tables",       get_mysql_tables),
@@ -487,8 +497,8 @@ class Application(tornado.web.Application):
             (r"/get_mysql_incr_columns", get_mysql_incr_columns),
             (r"/get_mysql_query",        get_mysql_query),
             (r"/get_mysql_query_dict",   get_mysql_query_dict),
-            (r"/get_mysql_table_df",     ''),
-            (r"/get_mysql_index_df",     ''),
+            # (r"/get_mysql_table_df",     ''),
+            # (r"/get_mysql_index_df",     ''),
 
         ]
         tornado.web.Application.__init__(self, handlers)
