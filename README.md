@@ -17,16 +17,45 @@
 
 3.1 启动服务  
 
-    cd dbapi
-    ./start.sh
+    start.sh
 
 3.2 重启服务  
 
-    cd dbapi
-    ./restart.sh  
+   restart.sh  
 
 3.3 停止服务  
 
-    cd dbapi
-    ./stop.sh  
+    stop.sh  
 
+三、docker部署 
+
+3.1 获取镜像
+
+    docker pull mafeicnnui/dbapi:2.0
+
+3.2 配置数据源
+
+    mkdir /home/dbops
+    vi config.json 
+    {
+        "db_ip"        : "192.168.1.100”,
+        "db_port"      : "3306",
+        "db_user"      : "puppet",
+        "db_pass"      : "Abcd@1234",
+        "db_service"   : "puppet",
+        "db_charset"   : "utf8"
+    }
+
+
+3.3 运行容器
+
+    docker run \
+       --name dbapi \
+       -p 8081:8081 \
+       -v /home/dbapi/config.json:/opt/dbapi/config/config.json:ro \
+       -d mafeicnnui/dbapi:2.0
+    
+3.4 测试 dbapi
+    
+    curl --head http://ip:8081/health
+    
