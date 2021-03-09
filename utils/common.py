@@ -33,22 +33,6 @@ class read_db_decrypt(tornado.web.RequestHandler):
             res = {'code': -1, 'msg': str(e)}
             self.write(json.dumps(res))
 
-def get_itmes_from_templete_ids(p_templete):
-    config = db_config()
-    db  = config['db_mysql']
-    cr  = db.cursor()
-    sql = '''SELECT index_code FROM t_monitor_index
-              WHERE id IN(SELECT index_id FROM `t_monitor_templete_index` 
-                           WHERE INSTR('{0}',templete_id)>0) 
-                 AND STATUS='1'
-          '''.format(p_templete)
-    cr.execute(sql)
-    rs=cr.fetchall()
-    t=''
-    for i in rs:
-       t=t+i['index_code']+','
-    cr.close()
-    return t[0:-1]
 
 def format_sql(v_sql):
     if v_sql is not None:
@@ -163,12 +147,13 @@ def gen_transfer_file(p_cfg,p_flag,p_templete):
     os.system('cp -f {0} {1}'.format(f_templete, f_local))
     with open(f_local, 'w') as f:
         f.write(get_file_contents(f_templete).
-                    replace('$$API_SERVER$$', p_cfg['msg']['api_server']).
+                    replace('$$API_SERVER$$',   p_cfg['msg']['api_server']).
                     replace('$$PYTHON3_HOME$$', p_cfg['msg']['python3_home']).
-                    replace('$$SCRIPT_PATH$$', p_cfg['msg']['script_path']).
-                    replace('$$SCRIPT_FILE$$', p_cfg['msg']['script_file']).
-                    replace('$$PORT$$', p_cfg['msg']['proxy_local_port']).
-                    replace('$$DB_TAG$$', p_cfg['msg']['db_tag']))
+                    replace('$$SCRIPT_PATH$$',  p_cfg['msg']['script_path']).
+                    replace('$$SCRIPT_FILE$$',  p_cfg['msg']['script_file']).
+                    replace('$$PORT$$',         p_cfg['msg'].get('proxy_local_port') if p_cfg['msg'].get('proxy_local_port') is not None else '').
+                    replace('$$DB_TAG$$',       p_cfg['msg'].get('db_tag')  if p_cfg['msg'].get('db_tag') is not None else '').
+                    replace('$$INST_ID$$',      p_cfg['msg'].get('inst_id') if p_cfg['msg'].get('inst_id') is not None else ''))
     return f_local,f_remote
 
 def ftp_transfer_file(p_cfg,p_local,p_remote):

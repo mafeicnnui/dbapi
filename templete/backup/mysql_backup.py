@@ -12,9 +12,7 @@ import warnings
 import pymysql
 import datetime
 import json
-import urllib.parse
-import urllib.request
-import ssl
+import requests
 
 def get_now():
     return datetime.datetime.now()
@@ -39,7 +37,7 @@ def exception_info():
     return e_str[e_str.find("pymysql.err."):]
 
 def get_ds_mysql(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8')
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8',autocommit=True)
     return conn
 
 def get_db_mysql(config):
@@ -63,49 +61,41 @@ def print_dict(config):
     print('-'.ljust(85,'-'))
 
 def aes_decrypt(p_password,p_key):
-    values = {
+    data = {
         'password': p_password,
         'key':p_key
     }
     url = 'http://$$API_SERVER$$/read_db_decrypt'
-    context = ssl._create_unverified_context()
-    data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
+    res = requests.post(url, data=data).json()
+
     if res['code'] == 200:
-        print('接口read_db_decrypt 调用成功!')
-        config = res['msg']
-        return config
+        print('call interface aes_decrypt success!')
+        return res['msg']
     else:
-        print('接口read_db_decrypt 调用失败!,{0}'.format(res['msg']))
+        print('call interface aes_decrypt error:{}'.format(res['msg']))
         sys.exit(0)
 
 def read_config(tag):
-    values = {
+    data = {
         'tag': tag
     }
     url = 'http://$$API_SERVER$$/read_config_backup'
-    context = ssl._create_unverified_context()
-    data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
-    #write_log(res+','+str(res['code']))
+    res = requests.post(url, data=data).json()
+
     if res['code'] == 200:
-        print('接口调用成功!')
-        config=res['msg']
+        print('read_config is success!')
+        config = res['msg']
         config['year'] = get_year()
         config['day']  = get_date()
         config['bk_path']=config['bk_base']+'/'+get_date()
         config['db_mysql'] = get_db_mysql(config)
         return config
     else:
-        print('接口调用失败!,{0}'.format(res['msg']))
+        print('call interface read_config error:{}'.format(res['msg']))
         sys.exit(0)
 
 def write_backup_total(config):
-    v_tag = {
+    data = {
         'db_tag'          : config['db_tag'],
         'create_date'     : config['create_date'],
         'total_size'      : config['total_size'],
@@ -116,25 +106,16 @@ def write_backup_total(config):
         'bk_base'         : config['bk_base'],
         'status'          : config['status']
     }
-    v_msg = json.dumps(v_tag)
-    values = {
-        'tag': v_msg
-    }
-    print('values=',values)
     url = 'http://$$API_SERVER$$/write_backup_total'
-    context = ssl._create_unverified_context()
-    data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
-    print(res, res['code'])
+    res = requests.post(url, data={'tag':json.dumps(data)}).json()
+
     if res['code'] == 200:
-        write_log('接口调用成功!')
+        print('call interface write_backup_total is success!')
     else:
-        write_log('接口调用失败!')
+        print('call interface write_backup_total error:{}'.format(res['msg']))
 
 def write_backup_detail(config):
-    v_tag = {
+    data = {
         'db_tag'          : config['db_tag'],
         'db_name'         : config['db_name'],
         'create_date'     : config['create_date'],
@@ -148,22 +129,27 @@ def write_backup_detail(config):
         'status'          : config['status'],
         'error'           : config['error']
     }
-    v_msg = json.dumps(v_tag)
-    values = {
-        'tag': v_msg
-    }
-    print('values=',values)
     url = 'http://$$API_SERVER$$/write_backup_detail'
-    context = ssl._create_unverified_context()
-    data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-    req = urllib.request.Request(url, data=data)
-    res = urllib.request.urlopen(req, context=context)
-    res = json.loads(res.read())
-    #write_log(res+','+str(res['code']))
+    res = requests.post(url, data={'tag':json.dumps(data)}).json()
+
     if res['code'] == 200:
-        write_log('接口调用成功!')
+       print('call interface write_backup_detail is success!')
     else:
-        write_log('接口调用失败!')
+       print('call interface write_backup_detail error:{}'.format(res['msg']))
+
+def update_backup_status(db_tag,status):
+    data = {
+        'tag'    : db_tag,
+        'status' : status
+    }
+    url = 'http://$$API_SERVER$$/update_backup_status'
+    res = requests.post(url, data=data).json()
+
+    if res['code'] == 200:
+       print('call interface update_backup_status :{}!'.format('running' if status =='1' else 'complete'))
+    else:
+       print('call interface update_backup_status error :{}'.format(res['msg']))
+       sys.exit(0)
 
 def get_file_contents(filename):
     file_handle = open(filename, 'r')
@@ -218,10 +204,10 @@ def db_backup(config):
                      FROM information_schema.schemata 
                     WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')                            
                 '''
+    print('update_backup_status is running!')
+    update_backup_status(config['db_tag'],'1')
     cr.execute(v_sql)
     rs=cr.fetchall()
-    print('rs=',rs)
-
     bk_begin_time=get_now()
     n_elaspsed_backup_total=0
     n_elaspsed_gzip_total=0
@@ -285,7 +271,8 @@ def db_backup(config):
     config['elaspsed_gzip']   = n_elaspsed_gzip_total
     config['status']          = g_status
     write_backup_total(config)
-
+    print('update_backup_status is complete!')
+    update_backup_status(config['db_tag'],'0')
     #delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
     print(v_del)
@@ -313,6 +300,8 @@ def db_backup_mydumper(config):
                      FROM information_schema.schemata 
                     WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')                            
                 '''
+    print('update_backup_status is running!')
+    update_backup_status(config['db_tag'], '1')
     cr.execute(v_sql)
     rs=cr.fetchall()
     print('rs=',rs)
@@ -374,6 +363,8 @@ def db_backup_mydumper(config):
     config['elaspsed_gzip']   = n_elaspsed_gzip_total
     config['status']          = g_status
     write_backup_total(config)
+    print('update_backup_status is complete!')
+    update_backup_status(config['db_tag'], '0')
 
     #delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
@@ -382,16 +373,16 @@ def db_backup_mydumper(config):
 
 def main():
     warnings.filterwarnings("ignore")
-    tag=''
+    tag =''
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
            tag = sys.argv[p + 1]
 
-    if tag=='':
+    if tag == '':
        print('Please input tag value!')
        sys.exit(0)
 
-    config=read_config(tag)
+    config = read_config(tag)
 
     if config['bk_cmd'].find('mysqldump')>0:
        db_backup(config)

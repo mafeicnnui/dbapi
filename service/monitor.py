@@ -35,14 +35,17 @@ class push_script_remote_monitor(tornado.web.RequestHandler):
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('transfer_remote_file_monitor error!')
-            res = await write_remote_crontab_monitor(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('write_remote_crontab_monitor error!')
+
             res = await run_remote_cmd_monitor(tag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('run_remote_cmd_monitor error!')
+
+            res = await write_remote_crontab_monitor(tag)
+            if res['code'] != 200:
+                self.write(json.dumps(res))
+                raise Exception('write_remote_crontab_monitor error!')
+
             self.write({'code': 200, 'msg': 'success'})
         except Exception as e:
             traceback.print_stack()

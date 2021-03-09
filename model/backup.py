@@ -30,7 +30,7 @@ async def get_db_config(p_tag):
        return {'code': -1, 'msg': '服务器已禁用!'}
 
     if await check_db_config(p_tag) == 0:
-       return {'code': -1, 'msg': '备份标识不存在!'}
+       return {'code': -1, 'msg': '备份标识:`{}`不存在!'.format(p_tag)}
 
     if await check_backup_task_status(p_tag) > 0:
        return {'code': -1, 'msg': '备份任务已禁用!'}
@@ -50,9 +50,6 @@ async def get_db_config(p_tag):
     rs = await async_processer.query_dict_one(st)
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
     return {'code': 200, 'msg': rs}
-
-async def get_task_tags():
-    return await async_processer.query_dict_list("SELECT  a.db_tag FROM t_db_config a  WHERE a.status='1'")
 
 async def save_backup_total(config):
     vv = " where db_tag='{0}' and create_date='{1}'".format(config['db_tag'], config['create_date'])
@@ -78,9 +75,9 @@ async def save_backup_total(config):
     try:
        await async_processer.exec_sql(st)
        return {'code':200,'msg':'success'}
-    except:
+    except Exception as e:
        traceback.print_exc()
-       return {'code': -1, 'msg': 'failure'}
+       return {'code': -1, 'msg': str(e)}
 
 async def save_backup_detail(config):
     vv = " where db_tag='{}' and db_name='{}' and create_date='{}'".format(config['db_tag'] ,config['db_name'],config['create_date'])
@@ -111,26 +108,20 @@ async def save_backup_detail(config):
     try:
         await async_processer.exec_sql(st)
         return {'code': 200, 'msg': 'success'}
-    except:
+    except Exception as e:
         traceback.print_exc()
-        return {'code': -1, 'msg': 'failure'}
+        return {'code': -1, 'msg': str(e)}
 
-async def update_backup_status(p_tag):
+async def update_backup_status(p_tag,p_status):
     cfg = await get_db_config(p_tag)
     if cfg['code']!=200:
        return cfg
-    cmd = 'ps -ef |grep {0} | grep -v grep |wc -l'.format(p_tag)
-    res = exec_ssh_cmd(cfg,cmd)
-    if res['status']:
-       out = res['stdout'].decode().replace('\n','')
-       if out == '0':
-           await async_processer.exec_sql("update t_db_config set task_status={} where db_tag='{0}'".format(p_tag))
-           return {'code':0,'msg':'已停止!' if out=='0' else '运行中!'}
-       if out == '1':
-           await async_processer.exec_sql("update t_db_config set task_status=1 where db_tag='{0}'".format(p_tag))
-           return {'code': 1, 'msg': '运行中!'}
-    else:
-        return res
+    try:
+        await async_processer.exec_sql("update t_db_config set task_status={} where db_tag='{}'".format(p_status,p_tag))
+        return {'code': 200, 'msg': 'success'}
+    except:
+        traceback.print_exc()
+        return {'code': -1, 'msg': 'failure'}
 
 async def write_remote_crontab(v_tag):
     cfg = await get_db_config(v_tag)
@@ -148,13 +139,20 @@ async def write_remote_crontab(v_tag):
     v_cron2 = '''sed -i '/^$/{N;/\\n$/D};' /tmp/config'''
     v_cron3 = '''crontab /tmp/config'''
 
-    exec_ssh_cmd(cfg, v_cron0)
+    if not exec_ssh_cmd(cfg, v_cron0)['status']:
+        return {'code': -1, 'msg': 'failure!'}
+
     if cfg['msg']['status'] == '1':
         exec_ssh_cmd(cfg, v_cron1)
     else:
         exec_ssh_cmd(cfg, v_cron1_)
-    exec_ssh_cmd(cfg, v_cron2)
-    exec_ssh_cmd(cfg, v_cron3)
+
+    if not exec_ssh_cmd(cfg, v_cron2)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
+    if not exec_ssh_cmd(cfg, v_cron3)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
     res = exec_ssh_cmd(cfg, 'crontab -l')
     if res['status']:
        return {'code':200,'msg':res['stdout']}
@@ -177,11 +175,14 @@ async def stop_remote_backup_task(v_tag):
     if cfg['code']!=200:
        return cfg
 
+    if (await update_backup_status(v_tag, '0'))['code']==-1:
+       return {'code': -1, 'msg': 'update_backup_status failure!'}
+
     cmd1 = "ps -ef | grep $$TAG$$ |grep -v grep | wc -l".replace('$$TAG$$', v_tag)
-    cmd2 = "ps -ef | grep {0} |grep -v grep | awk '{print $2}'  | xargs kill -9".format(v_tag)
+    cmd2 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | xargs kill -9".replace('$$TAG$$',v_tag)
     res  = exec_ssh_cmd(cfg, cmd1)
     if res['status']:
-        if int(res['stdout']) == 0:
+        if int(res['stdout'][0].replace('\n','')) == 0:
             return {'code': -2, 'msg': 'task not running!'}
         else:
             res = exec_ssh_cmd(cfg, cmd2)
@@ -189,6 +190,7 @@ async def stop_remote_backup_task(v_tag):
                 return {'code': 200, 'msg': 'success'}
             else:
                 return {'code': -1, 'msg': 'failure!'}
+
     else:
         return {'code': -1, 'msg': 'failure!'}
 
@@ -196,6 +198,12 @@ async def transfer_remote_file(v_tag):
     cfg  = await get_db_config(v_tag)
     if cfg['code']!=200:
        return cfg
+
+    cmd1 = 'mkdir -p {0}'.format(cfg['msg']['script_path'] + '/config')
+    res = exec_ssh_cmd(cfg, cmd1)
+    if not res['status']:
+        return {'code': -1, 'msg': 'failure!'}
+
     f_local,f_remote = gen_transfer_file(cfg,'backup',cfg['msg']['script_file'])
     if not ftp_transfer_file(cfg,f_local,f_remote):
        return {'code': -1, 'msg': 'failure!'}
@@ -212,22 +220,21 @@ async def run_remote_cmd(v_tag):
     if cfg['code'] != 200:
         return cfg
 
-    cmd1 = 'mkdir -p {0}'.format(cfg['msg']['script_path'] + '/config')
-    cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
-    cmd3 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_backup.sh')
-    cmd4 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_backup.bat')
+    cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
+    cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_backup.sh')
+    cmd3 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_backup.bat')
 
     res = exec_ssh_cmd(cfg,cmd1)
     if not res['status']:
        return {'code': -1, 'msg': 'failure!'}
+
     res = exec_ssh_cmd(cfg,cmd2)
     if not res['status']:
        return {'code': -1, 'msg': 'failure!'}
-    res = exec_ssh_cmd(cfg,cmd3)
-    if not res['status']:
-       return {'code': -1, 'msg': 'failure!'}
-    res = exec_ssh_cmd(cfg, cmd4)
+
+    res = exec_ssh_cmd(cfg, cmd3)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
+
     return {'code': 200, 'msg': 'success!'}
 

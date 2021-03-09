@@ -57,6 +57,7 @@ class create_remote_inst(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             id  = self.get_argument("inst_id")
+
             res = await transfer_remote_file_inst(id)
             if res['code'] != 200:
                 self.write(json.dumps(res))
@@ -83,10 +84,12 @@ class manager_remote_inst(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             id    = self.get_argument("inst_id")
             flag  = self.get_argument("op_type")
+
             res   = await transfer_remote_file_inst(id)
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('transfer_remote_file_inst error!')
+
             res   = await mgr_remote_cmd_inst(id,flag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
@@ -100,19 +103,18 @@ class destroy_remote_inst(tornado.web.RequestHandler):
     async def post(self):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
-            id = self.get_argument("inst_id")
+            id  = self.get_argument("inst_id")
             res = await transfer_remote_file_inst(id)
-
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('transfer_remote_file_inst error!')
-            res = await write_remote_crontab_inst(id, 'destroy')
 
+            res = await write_remote_crontab_inst(id, 'destroy')
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('write_remote_crontab_inst error!')
-            res = await write_remote_crontab_inst(id)
 
+            res = await destroy_remote_cmd_inst(id)
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('write_remote_crontab_inst error!')
