@@ -95,7 +95,7 @@ class manager_remote_inst(tornado.web.RequestHandler):
                 self.write(json.dumps(res))
                 raise Exception('mgr_remote_cmd_inst error!')
             self.write(json.dumps(res))
-        except:
+        except Exception as e:
             traceback.print_stack()
             self.write({'code': -1, 'msg': str(e)})
 
@@ -120,6 +120,6 @@ class destroy_remote_inst(tornado.web.RequestHandler):
                 raise Exception('write_remote_crontab_inst error!')
 
             self.write(json.dumps(res))
-        except :
+        except Exception as e:
             traceback.print_stack()
             self.write({'code': -1, 'msg': str(e)})

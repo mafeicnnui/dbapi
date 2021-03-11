@@ -10,11 +10,10 @@ import tornado
 import traceback
 
 from model.transfer import get_db_transfer_config,\
-                           transfer_remote_file_transfer,\
-                           run_remote_cmd_transfer,\
                            run_remote_transfer_task,\
                            stop_remote_transfer_task,\
-                           save_transfer_log
+                           save_transfer_log,\
+                           push
 
 class read_config_transfer(tornado.web.RequestHandler):
     async def post(self):
@@ -32,16 +31,6 @@ class run_script_remote_transfer(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag = self.get_argument("tag")
-            res = await transfer_remote_file_transfer(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_transfer error!')
-
-            res = await run_remote_cmd_transfer(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_transfer error!')
-
             res = await run_remote_transfer_task(tag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
@@ -71,16 +60,7 @@ class push_script_remote_transfer(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag = self.get_argument("tag")
-            res = await transfer_remote_file_transfer(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_transfer error!')
-
-            res = await run_remote_cmd_transfer(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_transfer error!')
-
+            res = await push(tag)
             self.write(json.dumps(res))
         except Exception as e:
             traceback.print_stack()

@@ -10,10 +10,8 @@ import tornado
 import traceback
 from utils.common import  db_config_info
 from model.monitor import get_db_monitor_config,\
-                          transfer_remote_file_monitor,\
-                          write_remote_crontab_monitor,\
-                          run_remote_cmd_monitor,\
-                          save_monitor_log
+                          save_monitor_log,\
+                          push
 
 class read_config_monitor(tornado.web.RequestHandler):
     async def post(self):
@@ -31,22 +29,8 @@ class push_script_remote_monitor(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag = self.get_argument("tag")
-            res = await transfer_remote_file_monitor(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_monitor error!')
-
-            res = await run_remote_cmd_monitor(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_monitor error!')
-
-            res = await write_remote_crontab_monitor(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('write_remote_crontab_monitor error!')
-
-            self.write({'code': 200, 'msg': 'success'})
+            res = await push(tag)
+            self.write(json.dumps(res))
         except Exception as e:
             traceback.print_stack()
             self.write({'code': -1, 'msg': str(e)})

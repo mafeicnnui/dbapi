@@ -10,13 +10,11 @@ import tornado
 import traceback
 
 from model.datax import get_datax_sync_config,\
-                        transfer_datax_remote_file_sync,\
                         run_remote_datax_task,\
                         stop_datax_sync_task,\
-                        run_datax_remote_cmd_sync,\
-                        write_datax_remote_crontab_sync,\
                         save_datax_sync_log,\
-                        get_datax_sync_templete
+                        get_datax_sync_templete,\
+                        push
 
 class read_datax_config_sync(tornado.web.RequestHandler):
     async def post(self):
@@ -40,19 +38,12 @@ class run_datax_remote_sync(tornado.web.RequestHandler):
     async def post(self):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
-            tag  = self.get_argument("tag")
-            res  = await transfer_datax_remote_file_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_datax_remote_file_sync error!')
-
+            tag = self.get_argument("tag")
             res = await run_remote_datax_task(tag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('run_remote_datax_task error!')
-
             self.write({'code': 200, 'msg': 'success'})
-
         except Exception as e:
             traceback.print_exc()
             self.write({'code': -1, 'msg': str(e)})
@@ -75,21 +66,7 @@ class push_datax_remote_sync(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag  = self.get_argument("tag")
-            res  = await transfer_datax_remote_file_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_datax_remote_file_sync error!')
-
-            res  = await run_datax_remote_cmd_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_datax_remote_cmd_sync error!')
-
-            res  = await write_datax_remote_crontab_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('write_datax_remote_crontab_sync error!')
-
+            res  =  await push(tag)
             self.write(json.dumps(res))
         except :
             traceback.print_exc()

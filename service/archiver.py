@@ -10,12 +10,10 @@ import traceback
 import tornado
 
 from model.archive import get_db_archive_config,\
-                          transfer_remote_file_archive,\
-                          run_remote_cmd_archive,\
                           run_remote_archive_task,\
                           stop_remote_archive_task,\
-                          write_remote_crontab_archive,\
-                          save_archive_log
+                          save_archive_log,\
+                          push
 
 class read_config_archive(tornado.web.RequestHandler):
     async def post(self):
@@ -40,16 +38,6 @@ class run_script_remote_archive(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag = self.get_argument("tag")
-            res = await transfer_remote_file_archive(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_archive error!')
-
-            res = await run_remote_cmd_archive(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_archive error!')
-
             res = await run_remote_archive_task(tag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
@@ -76,22 +64,7 @@ class push_script_remote_archive(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag = self.get_argument("tag")
-
-            res = await transfer_remote_file_archive(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_archive error!')
-
-            res = await run_remote_cmd_archive(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_archive error!')
-
-            res = await write_remote_crontab_archive(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('write_remote_crontab_archive error!')
-
+            res = await push(tag)
             self.write(json.dumps(res))
         except Exception as e:
             traceback.print_exc()

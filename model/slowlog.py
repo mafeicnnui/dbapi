@@ -6,11 +6,11 @@
 # @Software: PyCharm
 
 import  traceback
-from utils.common import get_time2,aes_decrypt,format_sql,exec_ssh_cmd,gen_transfer_file,ftp_transfer_file
+from utils.common import get_time2,aes_decrypt,format_sql,gen_transfer_file
 from utils.mysql_async import async_processer
+from utils.common import ssh_helper,ftp_helper
 
 async def get_slow_config(p_slow_id):
-
     if await check_server_slow_status(p_slow_id)>0:
        return {'code': -1, 'msg': '采集服务器已禁用!'}
 
@@ -111,31 +111,39 @@ async def write_remote_crontab_slow(v_flow_id):
     v_cron4 = '''mkdir -p {}/crontab && crontab -l >{}/crontab/crontab.{}
               '''.format(cfg['msg']['script_path'],cfg['msg']['script_path'],get_time2())
 
+    ssh = ssh_helper(cfg)
     if cfg['msg']['status'] == '0':
-       if exec_ssh_cmd(cfg, v_cron_)['status']:
+       if ssh.exec(v_cron_)['status']:
           return {'code': -1, 'msg': 'failure!'}
-       if exec_ssh_cmd(cfg, v_cron3)['status']:
+
+       if ssh.exec(v_cron3)['status']:
           return {'code': -1, 'msg': 'failure!'}
 
     if cfg['msg']['status'] == '1':
        if cfg['msg']['is_rds'] == 'N':
-          if exec_ssh_cmd(cfg, v_cron0)['status']:
-             return {'code': -1, 'msg': 'failure!'}
-          if exec_ssh_cmd(cfg, v_cron1)['status']:
-             return {'code': -1, 'msg': 'failure!'}
-          if exec_ssh_cmd(cfg, v_cron3)['status']:
-             return {'code': -1, 'msg': 'failure!'}
-          if exec_ssh_cmd(cfg, v_cron4)['status']:
-             return {'code': -1, 'msg': 'failure!'}
-       else:
-          if exec_ssh_cmd(cfg, v_cron2)['status']:
-             return {'code': -1, 'msg': 'failure!'}
-          if exec_ssh_cmd(cfg, v_cron3)['status']:
-             return {'code': -1, 'msg': 'failure!'}
-          if exec_ssh_cmd(cfg, v_cron4)['status']:
+          if ssh.exec(v_cron0)['status']:
              return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, 'crontab -l')
+          if ssh.exec(v_cron1)['status']:
+             return {'code': -1, 'msg': 'failure!'}
+
+          if ssh.exec( v_cron3)['status']:
+             return {'code': -1, 'msg': 'failure!'}
+
+          if ssh.exec(v_cron4)['status']:
+             return {'code': -1, 'msg': 'failure!'}
+       else:
+          if ssh.exec(v_cron2)['status']:
+             return {'code': -1, 'msg': 'failure!'}
+
+          if ssh.exec(v_cron3)['status']:
+             return {'code': -1, 'msg': 'failure!'}
+
+          if ssh.exec(v_cron4)['status']:
+             return {'code': -1, 'msg': 'failure!'}
+
+    res = ssh.exec('crontab -l')
+    ssh.close()
     if res['status']:
         return {'code': 200, 'msg': res['stdout']}
     else:
@@ -146,13 +154,23 @@ async def transfer_remote_file_slow(v_tag):
     if cfg['code']!=200:
        return cfg
 
-    exec_ssh_cmd('mkdir -p {0}'.format(cfg['msg']['script_path']))
+    ssh = ssh_helper(cfg)
+    ftp = ftp_helper(cfg)
+    cmd = 'mkdir -p {0}'.format(cfg['msg']['script_path'])
+    res = ssh.exec(cmd)
+    if not res['status']:
+        return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'transfer', cfg['msg']['script_file'])
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'transfer', 'gather_slow.sh')
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
+
+    ssh.close()
+    ftp.close()
     return {'code': 200, 'msg': 'success!'}
 
 async def run_remote_cmd_slow(v_tag):
@@ -165,20 +183,22 @@ async def run_remote_cmd_slow(v_tag):
     cmd3 = 'nohup {0}/gather_slow.sh update &>/tmp/gather_slow.log &'.format(cfg['msg']['script_path'])
     cmd4 = 'nohup  {0}/gather_slow.sh cut {1} &>>/tmp/gather_slow.log &'.format(cfg['msg']['script_path'], v_tag)
 
-    res = exec_ssh_cmd(cfg, cmd1)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd2)
+    res = ssh.exec(cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd3)
+    res = ssh.exec(cmd3)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd4)
+    res = ssh.exec(cmd4)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
+    ssh.close()
     return {'code': 200, 'msg': 'success!'}

@@ -6,8 +6,9 @@
 # @Software: PyCharm
 
 import traceback
-from utils.common import check_tab_exists,aes_decrypt,exec_ssh_cmd,gen_transfer_file,ftp_transfer_file
+from utils.common import check_tab_exists,aes_decrypt,gen_transfer_file
 from utils.mysql_async import async_processer
+from utils.common import ssh_helper,ftp_helper
 
 async def check_server_archive_status(p_tag):
     st = "select count(0) from t_db_archive_config a,t_server b \
@@ -49,86 +50,101 @@ async def run_remote_archive_task(p_tag):
     if await check_db_archive_config(p_tag) == 0:
        return {'code':-1,'msg': '归档标识不存在!'}
 
-    res = exec_ssh_cmd(cfg, cmd)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd)
     if res['status']:
-        return {'code': 200, 'msg': res['stdout']}
+        res = {'code': 200, 'msg': res['stdout']}
     else:
-        return {'code': -1, 'msg': 'failure!'}
+        res = {'code': -1, 'msg': 'failure!'}
+    ssh.close()
+    return res
 
 async def stop_remote_archive_task(v_tag):
     cfg = await get_db_archive_config(v_tag)
     if cfg['code']!=200:
        return cfg
+
     cmd1 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | wc -l".replace('$$TAG$$',v_tag)
     cmd2 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | xargs kill -9".replace('$$TAG$$',v_tag)
 
-    res = exec_ssh_cmd(cfg, cmd1)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
     if res['status']:
         if int(res['stdout']) == 0:
-            return {'code': -2, 'msg': 'task not running!'}
+            res = {'code': -2, 'msg': 'task not running!'}
         else:
-            res = exec_ssh_cmd(cfg, cmd2)
+            res = ssh.exec(cmd2)
             if res['status']:
-                return {'code': 200, 'msg': 'success'}
+                res = {'code': 200, 'msg': 'success'}
             else:
-                return {'code': -1, 'msg': 'failure!'}
+                res = {'code': -1, 'msg': 'failure!'}
     else:
+        res = {'code': -1, 'msg': 'failure!'}
+
+    ssh.close()
+    return res
+
+async def transfer_remote_file_archive(cfg,ssh,ftp):
+    cmd = 'mkdir -p {0}'.format(cfg['msg']['script_path'])
+    res = ssh.exec(cmd)
+    if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-async def transfer_remote_file_archive(v_tag):
-    cfg = await get_db_archive_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-    exec_ssh_cmd('mkdir -p {0}'.format(cfg['msg']['script_path']))
     f_local, f_remote = gen_transfer_file(cfg, 'archive', cfg['msg']['script_file'])
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'archive', 'db_archive.sh')
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
+
     return {'code': 200, 'msg': 'success!'}
 
-async def run_remote_cmd_archive(v_tag):
-    cfg = await get_db_archive_config(v_tag)
-    if cfg['code'] != 200:
-        return cfg
-
+async def run_remote_cmd_archive(cfg,ssh):
     cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
     cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_archive.bat')
-    res = exec_ssh_cmd(cfg, cmd1)
+    res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
-    res = exec_ssh_cmd(cfg, cmd2)
+
+    res = ssh.exec(cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
+
     return {'code': 200, 'msg': 'success!'}
 
-async def write_remote_crontab_archive(v_tag):
-    cfg = await get_db_archive_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    v_cmd   = '{0}/db_archive.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],v_tag)
-    v_cron0 = '''echo -e "#{0}" >/tmp/config'''.format(v_tag)
+async def write_remote_crontab_archive(cfg,ssh):
+    v_cmd   = '{0}/db_archive.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],cfg['msg']['archive_tag'])
+    v_cron0 = '''echo -e "#{0}" >/tmp/config'''.format(cfg['msg']['archive_tag'])
     v_cron1 = '''
                  crontab -l >> /tmp/config && sed -i "/{0}/d" /tmp/config && echo -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/config && crontab /tmp/config       
-              '''.format(v_tag,cfg['msg']['comments'],v_tag,cfg['msg']['run_time'],v_cmd)
+              '''.format(cfg['msg']['archive_tag'],cfg['msg']['comments'],cfg['msg']['archive_tag'],cfg['msg']['run_time'],v_cmd)
 
     v_cron1_= '''
                  crontab -l > /tmp/config && sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/config
-              '''.format(v_tag, cfg['msg']['comments'], v_tag, cfg['msg']['run_time'], v_cmd)
+              '''.format(cfg['msg']['archive_tag'], cfg['msg']['comments'], cfg['msg']['archive_tag'], cfg['msg']['run_time'], v_cmd)
 
     v_cron2 = '''sed -i '/^$/{N;/\\n$/D};' /tmp/config'''
     v_cron3 = '''crontab /tmp/config'''
 
-    exec_ssh_cmd(cfg, v_cron0)
+    if not ssh.exec(v_cron0)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
     if cfg['msg']['status'] == '1':
-        exec_ssh_cmd(cfg, v_cron1)
+        if not ssh.exec(v_cron1)['status']:
+           return {'code': -1, 'msg': 'failure!'}
+
     else:
-        exec_ssh_cmd(cfg, v_cron1_)
-    exec_ssh_cmd(cfg, v_cron2)
-    exec_ssh_cmd(cfg, v_cron3)
-    res = exec_ssh_cmd(cfg, 'crontab -l')
+        if ssh.exec(v_cron1_)['status']:
+           return {'code': -1, 'msg': 'failure!'}
+
+    if not ssh.exec(v_cron2)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
+    if not ssh.exec(v_cron3)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
+    res = ssh.exec('crontab -l')
     if res['status']:
         return {'code': 200, 'msg': res['stdout']}
     else:
@@ -161,3 +177,27 @@ async def save_archive_log(config):
     except:
         traceback.print_exc()
         return {'code': -1, 'msg': 'failure'}
+
+async def push(tag):
+    cfg = await get_db_archive_config(tag)
+    if cfg['code']!=200:
+       return cfg
+
+    ssh = ssh_helper(cfg)
+    ftp = ftp_helper(cfg)
+
+    res = await transfer_remote_file_archive(cfg,ssh,ftp)
+    if res['code'] != 200:
+        raise Exception('transfer_remote_file error!')
+
+    res = await run_remote_cmd_archive(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('run_remote_cmd error!')
+
+    res = await write_remote_crontab_archive(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('write_remote_crontab error!')
+
+    ssh.close()
+    ftp.close()
+    return res

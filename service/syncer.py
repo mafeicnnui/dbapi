@@ -9,13 +9,12 @@ import json
 import tornado
 import traceback
 from model.syncer import get_db_sync_config,\
-                         run_remote_cmd_sync,\
                          run_remote_sync_task,\
-                         transfer_remote_file_sync,\
                          stop_remote_sync_task,\
-                         write_remote_crontab_sync,\
                          save_sync_log,\
-                         save_sync_log_detail
+                         save_sync_log_detail,\
+                         update_sync_status,\
+                         push
 
 class read_config_sync(tornado.web.RequestHandler):
     async def post(self):
@@ -33,16 +32,6 @@ class run_script_remote_sync(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag  = self.get_argument("tag")
-            res  = await transfer_remote_file_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_sync error!')
-
-            res = await run_remote_cmd_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_sync error!')
-
             res = await run_remote_sync_task(tag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
@@ -71,23 +60,9 @@ class push_script_remote_sync(tornado.web.RequestHandler):
     async def post(self):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
-            tag  = self.get_argument("tag")
-            res  = await transfer_remote_file_sync(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file_sync error!')
-
-            res  = await run_remote_cmd_sync(tag)
-            if res['code']!=200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_sync error!')
-
-            res  = await write_remote_crontab_sync(tag)
-            if res['code']!=200:
-                self.write(json.dumps(res))
-                raise Exception('write_remote_crontab_sync error!')
-
-            self.write({'code': 200, 'msg': 'success'})
+            tag = self.get_argument("tag")
+            res = await push(tag)
+            self.write(json.dumps(res))
         except Exception as e:
             traceback.print_exc()
             self.write({'code': -1, 'msg': str(e)})
@@ -105,3 +80,15 @@ class write_sync_log_detail(tornado.web.RequestHandler):
         tag = self.get_argument("tag")
         res = await save_sync_log_detail(json.loads(tag))
         self.write(json.dumps(res))
+
+class write_sync_status(tornado.web.RequestHandler):
+    async def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            tag    = self.get_argument("tag")
+            status = self.get_argument("status")
+            res    = await update_sync_status(tag,status)
+            self.write(json.dumps(res))
+        except Exception as e:
+            traceback.print_exc()
+            self.write({'code':-1,'msg':str(e)})

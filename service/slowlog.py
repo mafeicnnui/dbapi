@@ -43,18 +43,17 @@ class push_script_slow_remote(tornado.web.RequestHandler):
                 self.write(json.dumps(res))
                 raise Exception('transfer_remote_file_slow error!')
 
+            res = await run_remote_cmd_slow(id)
+            if res['code'] != 200:
+                self.write(json.dumps(res))
+                raise Exception('run_remote_cmd_slow error!')
 
             res = await write_remote_crontab_slow(id)
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('write_remote_crontab_slow error!')
 
-            res = await run_remote_cmd_slow(id)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd_slow error!')
-
-                self.write(json.dumps(res))
+            self.write(json.dumps(res))
 
         except Exception as e:
             traceback.print_exc()

@@ -144,7 +144,6 @@ def update_backup_status(db_tag,status):
     }
     url = 'http://$$API_SERVER$$/update_backup_status'
     res = requests.post(url, data=data).json()
-
     if res['code'] == 200:
        print('call interface update_backup_status :{}!'.format('running' if status =='1' else 'complete'))
     else:
@@ -204,7 +203,6 @@ def db_backup(config):
                      FROM information_schema.schemata 
                     WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')                            
                 '''
-    print('update_backup_status is running!')
     update_backup_status(config['db_tag'],'1')
     cr.execute(v_sql)
     rs=cr.fetchall()
@@ -271,9 +269,8 @@ def db_backup(config):
     config['elaspsed_gzip']   = n_elaspsed_gzip_total
     config['status']          = g_status
     write_backup_total(config)
-    print('update_backup_status is complete!')
     update_backup_status(config['db_tag'],'0')
-    #delete recent 7 day data
+    # delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
     print(v_del)
     os.system(v_del)
@@ -300,7 +297,6 @@ def db_backup_mydumper(config):
                      FROM information_schema.schemata 
                     WHERE schema_name not IN('information_schema','performance_schema','test','sys','mysql')                            
                 '''
-    print('update_backup_status is running!')
     update_backup_status(config['db_tag'], '1')
     cr.execute(v_sql)
     rs=cr.fetchall()
@@ -363,7 +359,6 @@ def db_backup_mydumper(config):
     config['elaspsed_gzip']   = n_elaspsed_gzip_total
     config['status']          = g_status
     write_backup_total(config)
-    print('update_backup_status is complete!')
     update_backup_status(config['db_tag'], '0')
 
     #delete recent 7 day data

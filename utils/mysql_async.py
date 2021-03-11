@@ -46,6 +46,7 @@ class async_processer:
                     rs = await cur.fetchall()
                     for r in rs:
                         v_list.append(list(r))
+        print(p_sql)
         return v_list
 
 
@@ -56,6 +57,7 @@ class async_processer:
                 async with conn.cursor() as cur:
                     await cur.execute(p_sql)
                     rs = await cur.fetchone()
+        print(p_sql)
         return rs
 
     async def query_one_desc(p_sql):
@@ -102,6 +104,7 @@ class async_processer:
                     rs = await cur.fetchall()
                     for r in rs:
                         v_list.append(capital_to_lower(r))
+        print(p_sql)
         return v_list
 
     async def query_dict_list_by_ds(p_ds, p_sql):
@@ -123,6 +126,7 @@ class async_processer:
                 async with conn.cursor(DictCursor) as cur:
                     await cur.execute(p_sql)
                     rs = await cur.fetchone()
+        print(p_sql)
         return capital_to_lower(rs)
 
     async def query_dict_one_by_ds(p_ds,p_sql):

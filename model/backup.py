@@ -6,8 +6,9 @@
 # @Software: PyCharm
 
 import traceback
-from utils.common import check_tab_exists, aes_decrypt,exec_ssh_cmd,gen_transfer_file,ftp_transfer_file
+from utils.common import check_tab_exists, aes_decrypt,gen_transfer_file
 from utils.mysql_async import async_processer
+from utils.common import ssh_helper,ftp_helper
 
 async def check_db_config(p_tag):
     st = "select count(0) from t_db_config where db_tag='{0}'".format(p_tag)
@@ -112,6 +113,49 @@ async def save_backup_detail(config):
         traceback.print_exc()
         return {'code': -1, 'msg': str(e)}
 
+async def run_remote_backup_task(v_tag):
+    cfg = await get_db_config(v_tag)
+    if cfg['code']!=200:
+       return cfg
+
+    cmd = 'nohup {0}/db_backup.sh {1} {2} &>/tmp/backup.log &>/dev/null &'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],v_tag)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd)
+    if res['status']:
+        res = {'code': 200, 'msg': res['stdout']}
+    else:
+        res = {'code': -1, 'msg': 'failure!'}
+    ssh.close()
+    return res
+
+async def stop_remote_backup_task(v_tag):
+    cfg = await get_db_config(v_tag)
+    if cfg['code']!=200:
+       return cfg
+
+    if (await update_backup_status(v_tag, '0'))['code']==-1:
+        return {'code': -1, 'msg': 'update_backup_status failure!'}
+
+    cmd1 = "ps -ef | grep $$TAG$$ |grep -v grep | wc -l".replace('$$TAG$$', v_tag)
+    cmd2 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | xargs kill -9".replace('$$TAG$$',v_tag)
+
+    ssh  = ssh_helper(cfg)
+    res  = ssh.exec(cmd1)
+    if res['status']:
+        if int(res['stdout'][0].replace('\n','')) == 0:
+            res = {'code': -2, 'msg': 'task not running!'}
+        else:
+            res = ssh.exec(cmd2)
+            if res['status']:
+               res = {'code': 200, 'msg': 'success'}
+            else:
+               res = {'code': -1, 'msg': 'failure!'}
+
+    else:
+        res = {'code': -1, 'msg': 'failure!'}
+    ssh.close()
+    return res
+
 async def update_backup_status(p_tag,p_status):
     cfg = await get_db_config(p_tag)
     if cfg['code']!=200:
@@ -123,118 +167,96 @@ async def update_backup_status(p_tag,p_status):
         traceback.print_exc()
         return {'code': -1, 'msg': 'failure'}
 
-async def write_remote_crontab(v_tag):
-    cfg = await get_db_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    v_cmd   = '{0}/db_backup.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],v_tag)
-    v_cron0 = '''echo -e "#{0}" >/tmp/config'''.format(v_tag)
+async def write_remote_crontab(cfg,ssh):
+    v_cmd   = '{0}/db_backup.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],cfg['msg']['db_tag'])
+    v_cron0 = '''echo -e "#{0}" >/tmp/config'''.format(cfg['msg']['db_tag'])
     v_cron1 = '''
                  crontab -l >> /tmp/config && sed -i "/{0}/d" /tmp/config && echo -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/config && crontab /tmp/config       
-              '''.format(v_tag,cfg['msg']['comments'],v_tag,cfg['msg']['run_time'],v_cmd)
+              '''.format(cfg['msg']['db_tag'],cfg['msg']['comments'],cfg['msg']['db_tag'],cfg['msg']['run_time'],v_cmd)
     v_cron1_= '''
                  crontab -l > /tmp/config && sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/config
-              '''.format(v_tag, cfg['msg']['comments'], v_tag, cfg['msg']['run_time'], v_cmd)
+              '''.format(cfg['msg']['db_tag'], cfg['msg']['comments'], cfg['msg']['db_tag'], cfg['msg']['run_time'], v_cmd)
     v_cron2 = '''sed -i '/^$/{N;/\\n$/D};' /tmp/config'''
     v_cron3 = '''crontab /tmp/config'''
 
-    if not exec_ssh_cmd(cfg, v_cron0)['status']:
-        return {'code': -1, 'msg': 'failure!'}
+    if not ssh.exec(v_cron0)['status']:
+       return {'code': -1, 'msg': 'failure!'}
 
     if cfg['msg']['status'] == '1':
-        exec_ssh_cmd(cfg, v_cron1)
+        if not ssh.exec(v_cron1)['status']:
+           return {'code': -1, 'msg': 'failure!'}
     else:
-        exec_ssh_cmd(cfg, v_cron1_)
+        if ssh.exec(v_cron1_)['status']:
+           return {'code': -1, 'msg': 'failure!'}
 
-    if not exec_ssh_cmd(cfg, v_cron2)['status']:
+    if not ssh.exec(v_cron2)['status']:
        return {'code': -1, 'msg': 'failure!'}
 
-    if not exec_ssh_cmd(cfg, v_cron3)['status']:
+    if not ssh.exec(v_cron3)['status']:
        return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, 'crontab -l')
+    res = ssh.exec('crontab -l')
     if res['status']:
        return {'code':200,'msg':res['stdout']}
     else:
        return {'code':-1,'msg':'failure!'}
 
-async def run_remote_backup_task(v_tag):
-    cfg = await get_db_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-    cmd = 'nohup {0}/db_backup.sh {1} {2} &>/tmp/backup.log &>/dev/null &'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],v_tag)
-    res = exec_ssh_cmd(cfg,cmd)
-    if res['status']:
-        return {'code': 200, 'msg': res['stdout']}
-    else:
-        return {'code': -1, 'msg': 'failure!'}
-
-async def stop_remote_backup_task(v_tag):
-    cfg = await get_db_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    if (await update_backup_status(v_tag, '0'))['code']==-1:
-       return {'code': -1, 'msg': 'update_backup_status failure!'}
-
-    cmd1 = "ps -ef | grep $$TAG$$ |grep -v grep | wc -l".replace('$$TAG$$', v_tag)
-    cmd2 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | xargs kill -9".replace('$$TAG$$',v_tag)
-    res  = exec_ssh_cmd(cfg, cmd1)
-    if res['status']:
-        if int(res['stdout'][0].replace('\n','')) == 0:
-            return {'code': -2, 'msg': 'task not running!'}
-        else:
-            res = exec_ssh_cmd(cfg, cmd2)
-            if res['status']:
-                return {'code': 200, 'msg': 'success'}
-            else:
-                return {'code': -1, 'msg': 'failure!'}
-
-    else:
-        return {'code': -1, 'msg': 'failure!'}
-
-async def transfer_remote_file(v_tag):
-    cfg  = await get_db_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    cmd1 = 'mkdir -p {0}'.format(cfg['msg']['script_path'] + '/config')
-    res = exec_ssh_cmd(cfg, cmd1)
+async def transfer_remote_file(cfg,ssh,ftp):
+    cmd = 'mkdir -p {0}'.format(cfg['msg']['script_path'] + '/config')
+    res = ssh.exec(cmd)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
     f_local,f_remote = gen_transfer_file(cfg,'backup',cfg['msg']['script_file'])
-    if not ftp_transfer_file(cfg,f_local,f_remote):
+    if not ftp.transfer(f_local,f_remote):
        return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'backup', 'db_backup.bat')
-    if not ftp_transfer_file(cfg,f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
        return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'backup', 'db_backup.sh')
-    if not ftp_transfer_file(cfg,f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
        return {'code': -1, 'msg': 'failure!'}
+
     return {'code': 200, 'msg': 'success!'}
 
-async def run_remote_cmd(v_tag):
-    cfg = await get_db_config(v_tag)
-    if cfg['code'] != 200:
-        return cfg
-
+async def run_remote_cmd(cfg,ssh):
     cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
     cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_backup.sh')
     cmd3 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_backup.bat')
 
-    res = exec_ssh_cmd(cfg,cmd1)
-    if not res['status']:
+    if not ssh.exec(cmd1)['status']:
        return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg,cmd2)
-    if not res['status']:
+    if not ssh.exec(cmd2)['status']:
        return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd3)
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
-
+    if not ssh.exec(cmd3)['status']:
+       return {'code': -1, 'msg': 'failure!'}
     return {'code': 200, 'msg': 'success!'}
+
+async def push(tag):
+    cfg = await get_db_config(tag)
+    if cfg['code'] != 200:
+        return cfg
+
+    ssh = ssh_helper(cfg)
+    ftp = ftp_helper(cfg)
+
+    res = await transfer_remote_file(cfg,ssh,ftp)
+    if res['code'] != 200:
+        raise Exception('transfer_remote_file error!')
+
+    res = await run_remote_cmd(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('run_remote_cmd error!')
+
+    res = await write_remote_crontab(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('write_remote_crontab error!')
+
+    ssh.close()
+    ftp.close()
+    return res
 

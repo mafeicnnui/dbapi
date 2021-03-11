@@ -13,11 +13,9 @@ from model.backup import get_db_config,\
                          update_backup_status,\
                          save_backup_total,\
                          save_backup_detail, \
-                         write_remote_crontab,\
-                         transfer_remote_file,\
                          run_remote_backup_task,\
-                         run_remote_cmd,\
-                         stop_remote_backup_task
+                         stop_remote_backup_task,\
+                         push
 
 class read_config_backup(tornado.web.RequestHandler):
     async def post(self):
@@ -63,21 +61,7 @@ class push_script_remote(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag  = self.get_argument("tag")
-            res  = await transfer_remote_file(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file error!')
-
-            res = await run_remote_cmd(tag)
-            if res['code'] != 200:
-               self.write(json.dumps(res))
-               raise Exception('run_remote_cmd error!')
-
-            res = await write_remote_crontab(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('write_remote_crontab error!')
-
+            res = await push(tag)
             self.write(json.dumps(res))
         except Exception as e:
             traceback.print_exc()
@@ -87,24 +71,12 @@ class run_script_remote(tornado.web.RequestHandler):
     async def post(self):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
-            tag   = self.get_argument("tag")
-            res  = await transfer_remote_file(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('transfer_remote_file error!')
-
-            res = await run_remote_cmd(tag)
-            if res['code'] != 200:
-                self.write(json.dumps(res))
-                raise Exception('run_remote_cmd error!')
-
+            tag = self.get_argument("tag")
             res = await run_remote_backup_task(tag)
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('run_remote_backup_task error!')
-
             self.write({'code': 200, 'msg': 'success'})
-
         except Exception as e:
             traceback.print_exc()
             self.write({'code': -1, 'msg': str(e)})

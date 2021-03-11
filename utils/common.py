@@ -147,7 +147,7 @@ def gen_transfer_file(p_cfg,p_flag,p_templete):
     os.system('cp -f {0} {1}'.format(f_templete, f_local))
     with open(f_local, 'w') as f:
         f.write(get_file_contents(f_templete).
-                    replace('$$API_SERVER$$',   p_cfg['msg']['api_server']).
+                    replace('$$API_SERVER$$',   p_cfg['msg']['api_server'].split(',')[0]).
                     replace('$$PYTHON3_HOME$$', p_cfg['msg']['python3_home']).
                     replace('$$SCRIPT_PATH$$',  p_cfg['msg']['script_path']).
                     replace('$$SCRIPT_FILE$$',  p_cfg['msg']['script_file']).
@@ -168,6 +168,61 @@ def ftp_transfer_file(p_cfg,p_local,p_remote):
     except:
         traceback.print_exc()
         return False
+
+class ssh_helper:
+    def __init__(self,cfg,timeout=6):
+        self.server_ip   = cfg['msg']['server_ip']
+        self.server_port = int(cfg['msg']['server_port'])
+        self.username    = cfg['msg']['server_user']
+        self.password    = cfg['msg']['server_pass']
+        self.ssh         = paramiko.SSHClient()
+        self.timeout     = timeout
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(hostname=self.server_ip,port=self.server_port,username=self.username,password=self.password)
+
+    def exec(self,cmd):
+        stdout_lines = []
+        stderr_lines = []
+        cmd_exec_status = True
+        try:
+            stdin, stdout, stderr = self.ssh.exec_command(cmd, timeout=self.timeout)
+            stdout_lines = stdout.readlines()
+            stderr_lines = stderr.readlines()
+            if stdout.channel.recv_exit_status() != 0:
+               raise paramiko.SSHException()
+            print('Execute remote cmd: {}'.format(cmd))
+        except paramiko.SSHException as e:
+            print("Failed to execute the command on '{}': {}".format(self.server_ip, str(e)))
+            if len(stderr_lines) > 0:
+                print("Error reported by {}: {}".format(self.server_ip, "\n".join(stderr_lines)))
+            cmd_exec_status = False
+        return {'status': cmd_exec_status, 'stdout': stdout_lines}
+
+    def close(self):
+        self.ssh.close()
+
+class ftp_helper:
+    def __init__(self, cfg, timeout=6):
+        self.server_ip   = cfg['msg']['server_ip']
+        self.server_port = int(cfg['msg']['server_port'])
+        self.username    = cfg['msg']['server_user']
+        self.password    = cfg['msg']['server_pass']
+        self.timeout     = timeout
+        self.transport   = paramiko.Transport((self.server_ip, self.server_port))
+        self.transport.connect(username=self.username, password=self.password)
+        self.sftp = paramiko.SFTPClient.from_transport(self.transport)
+
+    def transfer(self,local,remote):
+        try:
+            self.sftp.put(localpath=local, remotepath=remote)
+            print('Script:{0} send to {1} ok.'.format(local, remote))
+            return True
+        except:
+            traceback.print_exc()
+            return False
+
+    def close(self):
+        self.transport.close()
 
 def check_task(p_cfg,p_cmd):
     pass

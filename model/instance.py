@@ -5,11 +5,10 @@
 # @File : instance.py.py
 # @Software: PyCharm
 
-import os
-import paramiko
 import traceback
 from utils.common import aes_decrypt,exec_ssh_cmd,gen_transfer_file,ftp_transfer_file,format_sql,get_time2
 from utils.mysql_async import async_processer
+from utils.common import ssh_helper,ftp_helper
 
 async def get_db_inst_config(p_inst_id):
     st = '''SELECT  b.server_ip,b.server_port,b.server_user,
@@ -118,13 +117,22 @@ async def transfer_remote_file_inst(v_inst_id):
     if cfg['code']!=200:
        return cfg
 
-    exec_ssh_cmd('mkdir -p {0}'.format(cfg['msg']['script_path']))
+    ssh = ssh_helper(cfg)
+    ftp = ftp_helper(cfg)
+    cmd = 'mkdir -p {0}'.format(cfg['msg']['script_path'])
+    res = ssh.exec(cmd)
+    if not res['status']:
+        return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'instance', cfg['msg']['script_file'])
-    if not ftp_transfer_file(cfg, f_local, f_remote):
-        return {'code': -1, 'msg': 'failure!'}
+    if not ftp.transfer(f_local, f_remote):
+       return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'instance', 'db_creator.sh')
-    if not ftp_transfer_file(cfg, f_local, f_remote):
-        return {'code': -1, 'msg': 'failure!'}
+    if not ftp.transfer(f_local, f_remote):
+       return {'code': -1, 'msg': 'failure!'}
+    ssh.close()
+    ftp.close()
     return {'code': 200, 'msg': 'success!'}
 
 async def run_remote_cmd_inst(v_inst_id):
@@ -136,18 +144,20 @@ async def run_remote_cmd_inst(v_inst_id):
     cmd2 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_creator.sh')
     cmd3 = 'nohup {0}/db_creator.sh create &>/tmp/db_create.log &'.format(cfg['msg']['script_path'])
 
-    res = exec_ssh_cmd(cfg, cmd1)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd2)
+    res = ssh.exec(cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd3)
+    res = ssh.exec(cmd3)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
+    ssh.close()
     return {'code': 200, 'msg': 'success!'}
 
 async def mgr_remote_cmd_inst(v_inst_id,v_flag):
@@ -159,20 +169,21 @@ async def mgr_remote_cmd_inst(v_inst_id,v_flag):
     cmd2 = '{0}/{1}'.format(cfg['msg']['script_path'], 'db_creator.sh')
     cmd3 = 'nohup {0}/db_creator.sh {1} &>/tmp/db_manager.log &'.format(cfg['msg']['script_path'], v_flag)
 
-    res = exec_ssh_cmd(cfg, cmd1)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd2)
+    res = ssh.exec(cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd3)
+    res = ssh.exec(cmd3)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
+    ssh.close()
     return {'code': 200, 'msg': 'success!'}
-
 
 async def destroy_remote_cmd_inst(v_inst_id):
     cfg = await get_db_inst_config(v_inst_id)
@@ -183,16 +194,18 @@ async def destroy_remote_cmd_inst(v_inst_id):
     cmd2 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_creator.sh')
     cmd3 = 'nohup {0}/db_creator.sh destroy &>/tmp/db_create.log &'.format(cfg['msg']['script_path'])
 
-    res = exec_ssh_cmd(cfg, cmd1)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd2)
+    res = ssh.exec(cfg, cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd3)
+    res = ssh.exec(cfg, cmd3)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
+    ssh.close()
     return {'code': 200, 'msg': 'success!'}

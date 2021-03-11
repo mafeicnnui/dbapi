@@ -6,8 +6,9 @@
 # @Software: PyCharm
 
 import traceback
-from utils.common import aes_decrypt,exec_ssh_cmd,gen_transfer_file,ftp_transfer_file,get_time2
+from utils.common import aes_decrypt,exec_ssh_cmd,gen_transfer_file,get_time2
 from utils.mysql_async import async_processer
+from utils.common import ssh_helper,ftp_helper
 
 async def check_db_monitor_config(p_tag):
     st = "select count(0) from t_monitor_task where task_tag='{0}'".format(p_tag)
@@ -76,20 +77,16 @@ async def save_monitor_log(config):
         traceback.print_exc()
         return {'code': -1, 'msg': 'failure'}
 
-async def write_remote_crontab_monitor(v_tag):
-    cfg = await get_db_monitor_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    v_cmd   = '{0}/db_monitor.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'], v_tag)
+async def write_remote_crontab_monitor(cfg,ssh):
+    v_cmd   = '{0}/db_monitor.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'], cfg['msg']['task_tag'])
 
     v_cron  = '''
                crontab -l > /tmp/config && sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/config
-              '''.format(v_tag,cfg['msg']['comments'],v_tag,cfg['msg']['run_time'],v_cmd)
+              '''.format(cfg['msg']['task_tag'],cfg['msg']['comments'],cfg['msg']['task_tag'],cfg['msg']['run_time'],v_cmd)
 
     v_cron_ = '''
                 crontab -l > /tmp/config && sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/config
-              '''.format(v_tag, cfg['msg']['comments'], v_tag, cfg['msg']['run_time'], v_cmd)
+              '''.format(cfg['msg']['task_tag'], cfg['msg']['comments'], cfg['msg']['task_tag'], cfg['msg']['run_time'], v_cmd)
 
     v_cron2 ='''sed -i '/^$/{N;/\\n$/D};' /tmp/config'''
 
@@ -99,34 +96,39 @@ async def write_remote_crontab_monitor(v_tag):
     v_cron4 ='''crontab /tmp/config'''
 
     if cfg['msg']['status']=='1':
-       exec_ssh_cmd(cfg, v_cron)
+       if not ssh.exec(v_cron)['status']:
+          return {'code': -1, 'msg': 'failure!'}
     else:
-       exec_ssh_cmd(cfg, v_cron_)
+       if not ssh.exec(v_cron_)['status']:
+          return {'code': -1, 'msg': 'failure!'}
 
-    if not exec_ssh_cmd(cfg, v_cron2)['status']:
-       return {'code': -1, 'msg': 'failure!'}
-    if not exec_ssh_cmd(cfg, v_cron3)['status']:
-       return {'code': -1, 'msg': 'failure!'}
-    if not exec_ssh_cmd(cfg, v_cron4)['status']:
+    if not ssh.exec(v_cron2)['status']:
        return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, 'crontab -l')
+    if not ssh.exec(v_cron3)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
+    if not ssh.exec(v_cron4)['status']:
+       return {'code': -1, 'msg': 'failure!'}
+
+    res = ssh.exec('crontab -l')
     if res['status']:
         return {'code': 200, 'msg': res['stdout']}
     else:
         return {'code': -1, 'msg': 'failure!'}
 
-async def transfer_remote_file_monitor(v_tag):
-    cfg = await get_db_monitor_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    exec_ssh_cmd('mkdir -p {0}'.format(cfg['msg']['script_path']))
-    f_local, f_remote = gen_transfer_file(cfg, 'monitor', cfg['msg']['script_file'])
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+async def transfer_remote_file_monitor(cfg,ssh,ftp):
+    cmd = 'mkdir -p {0}'.format(cfg['msg']['script_path'])
+    res = ssh.exec(cmd)
+    if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
+
+    f_local, f_remote = gen_transfer_file(cfg, 'monitor', cfg['msg']['script_file'])
+    if not ftp.transfer(cfg, f_local, f_remote):
+        return {'code': -1, 'msg': 'failure!'}
+
     f_local, f_remote = gen_transfer_file(cfg, 'monitor', 'db_monitor.sh')
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
     return {'code': 200, 'msg': 'success!'}
 
@@ -140,7 +142,33 @@ async def run_remote_cmd_monitor(v_tag):
     res = exec_ssh_cmd(cfg, cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
+
     res = exec_ssh_cmd(cfg, cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
+
     return {'code': 200, 'msg': 'success!'}
+
+async def push(tag):
+    cfg = await get_db_monitor_config(tag)
+    if cfg['code']!=200:
+       return cfg
+
+    ssh = ssh_helper(cfg)
+    ftp = ftp_helper(cfg)
+
+    res = await transfer_remote_file_monitor(cfg,ssh,ftp)
+    if res['code'] != 200:
+        raise Exception('transfer_remote_file error!')
+
+    res = await run_remote_cmd_monitor(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('run_remote_cmd error!')
+
+    res = await write_remote_crontab_monitor(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('write_remote_crontab error!')
+
+    ssh.close()
+    ftp.close()
+    return res

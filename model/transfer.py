@@ -6,8 +6,9 @@
 # @Software: PyCharm
 
 import traceback
-from utils.common import check_tab_exists,exec_ssh_cmd,gen_transfer_file,ftp_transfer_file
+from utils.common import check_tab_exists,gen_transfer_file
 from utils.mysql_async import async_processer
+from utils.common import ssh_helper,ftp_helper
 
 async def check_db_transfer_config(p_tag):
     st = "select count(0) from t_db_transfer_config where transfer_tag='{0}'".format(p_tag)
@@ -47,11 +48,9 @@ async def save_transfer_log(config):
        return {'code': -1, 'msg': 'failure'}
 
 async def get_db_transfer_config(p_tag):
-    # 检测传输服务器是否有效
     if await check_server_transfer_status(p_tag)>0:
        return {'code': -1, 'msg': '传输服务器已禁用!'}
 
-    # 检测同步标识是否存在
     if await check_db_transfer_config(p_tag)==0:
        return {'code': -1, 'msg': '传输标识不存在!'}
 
@@ -75,64 +74,88 @@ async def run_remote_transfer_task(v_tag):
     if cfg['code']!=200:
        return cfg
 
-    cmd   = 'nohup {0}/db_transfer.sh {1} {2} &>/dev/null &'.format(cfg['msg']['script_path'], cfg['msg']['script_file'], v_tag)
+    cmd  = 'nohup {0}/db_transfer.sh {1} {2} &>/dev/null &'.format(cfg['msg']['script_path'], cfg['msg']['script_file'], v_tag)
     if cfg['code']!=200:
        return cfg
-    cmd = 'nohup {0}/db_backup.sh {1} {2} &>/tmp/backup.log &>/dev/null &'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],v_tag)
-    res = exec_ssh_cmd(cfg,cmd)
+
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd)
     if res['status']:
-        return {'code': 200, 'msg': res['stdout']}
+        res = {'code': 200, 'msg': res['stdout']}
     else:
-        return {'code': -1, 'msg': 'failure!'}
+        res = {'code': -1, 'msg': 'failure!'}
+
+    ssh.close()
+    return res
 
 async def stop_remote_transfer_task(v_tag):
     cfg = await get_db_transfer_config(v_tag)
     if cfg['code']!=200:
        return cfg
-    cmd1 = """ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | wc -l""".replace('$$TAG$$',v_tag)
-    cmd2 = """ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | xargs kill -9""".replace('$$TAG$$',v_tag)
-    res = exec_ssh_cmd(cfg, cmd1)
+
+    cmd1 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | wc -l".replace('$$TAG$$',v_tag)
+    cmd2 = "ps -ef | grep $$TAG$$ |grep -v grep | awk '{print $2}'  | xargs kill -9".replace('$$TAG$$',v_tag)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
     if res['status']:
         if int(res['stdout']) == 0:
-            return {'code': -2, 'msg': 'task not running!'}
+            res = {'code': -2, 'msg': 'task not running!'}
         else:
-            res = exec_ssh_cmd(cfg, cmd2)
+            res = ssh.exec(cmd2)
             if res['status']:
-                return {'code': 200, 'msg': 'success'}
+               res = {'code': 200, 'msg': 'success'}
             else:
-                return {'code': -1, 'msg': 'failure!'}
+               res = {'code': -1, 'msg': 'failure!'}
     else:
+        res = {'code': -1, 'msg': 'failure!'}
+
+    ssh.close()
+    return res
+
+async def transfer_remote_file_transfer(cfg,ssh,ftp):
+    cmd = 'mkdir -p {0}'.format(cfg['msg']['script_path'])
+    res = ssh.exec(cmd)
+    if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-async def transfer_remote_file_transfer(v_tag):
-    cfg = await get_db_transfer_config(v_tag)
-    if cfg['code']!=200:
-       return cfg
-
-    cmd = 'mkdir -p {0}'.format(result['msg']['script_path'])
-    exec_ssh_cmd(cmd)
-
     f_local, f_remote = gen_transfer_file(cfg, 'transfer', cfg['msg']['script_file'])
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     f_local, f_remote = gen_transfer_file(cfg, 'transfer', 'db_transfer.sh')
-    if not ftp_transfer_file(cfg, f_local, f_remote):
+    if not ftp.transfer(cfg, f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
     return {'code': 200, 'msg': 'success!'}
 
-async def run_remote_cmd_transfer(v_tag):
-    cfg = await get_db_transfer_config(v_tag)
+async def run_remote_cmd_transfer(cfg,ssh):
+    cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
+    cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_transfer.sh')
+    res  = ssh.exec(cmd1)
+    if not res['status']:
+        return {'code': -1, 'msg': 'failure!'}
+
+    res = ssh.exec(cmd2)
+    if not res['status']:
+        return {'code': -1, 'msg': 'failure!'}
+
+    return {'code': 200, 'msg': 'success!'}
+
+async def push(tag):
+    cfg = await get_db_transfer_config(tag)
     if cfg['code'] != 200:
         return cfg
 
-    cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
-    cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_transfer.sh')
-    res  = exec_ssh_cmd(cfg, cmd1)
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
-    res = exec_ssh_cmd(cfg, cmd2)
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
+    ssh = ssh_helper(cfg)
+    ftp = ftp_helper(cfg)
 
-    return {'code': 200, 'msg': 'success!'}
+    res = await transfer_remote_file_transfer(cfg,ssh,ftp)
+    if res['code'] != 200:
+        raise Exception('transfer_remote_file error!')
+
+    res = await run_remote_cmd_transfer(cfg,ssh)
+    if res['code'] != 200:
+        raise Exception('run_remote_cmd error!')
+
+    ssh.close()
+    ftp.close()
+    return res
