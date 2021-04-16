@@ -52,7 +52,6 @@ class write_backup_detail(tornado.web.RequestHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         tag  = self.get_argument("tag")
-        print('tag=',tag,type(tag))
         res  = await save_backup_detail(json.loads(tag))
         self.write(json.dumps(res))
 

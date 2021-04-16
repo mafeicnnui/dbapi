@@ -46,7 +46,7 @@ class async_processer:
                     rs = await cur.fetchall()
                     for r in rs:
                         v_list.append(list(r))
-        print(p_sql)
+        #print(p_sql)
         return v_list
 
 
@@ -83,7 +83,7 @@ class async_processer:
                                db=db['db_service'], autocommit=True) as pool:
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
-                    print('exec:{}'.format(p_sql))
+                    #print('exec:{}'.format(p_sql))
                     await cur.execute(p_sql)
 
     async def exec_sql_by_ds(p_ds,p_sql):
@@ -104,7 +104,7 @@ class async_processer:
                     rs = await cur.fetchall()
                     for r in rs:
                         v_list.append(capital_to_lower(r))
-        print(p_sql)
+        #print(p_sql)
         return v_list
 
     async def query_dict_list_by_ds(p_ds, p_sql):
@@ -126,7 +126,7 @@ class async_processer:
                 async with conn.cursor(DictCursor) as cur:
                     await cur.execute(p_sql)
                     rs = await cur.fetchone()
-        print(p_sql)
+        #print(p_sql)
         return capital_to_lower(rs)
 
     async def query_dict_one_by_ds(p_ds,p_sql):

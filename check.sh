@@ -3,7 +3,7 @@ export WORKDIR="/home/hopson/apps/usr/webserver/dbapi"
 export PYTHONUNBUFFERED="1"
 export PYTHONPATH=${WORKDIR}
 echo "Testing dbapi Server..."
-for i in {8181..8200}
+for i in {18161..18200}
 do
     if [ `ps -ef |grep dbapi | grep -v grep | grep ${i} | wc -l` == '0' ]
     then

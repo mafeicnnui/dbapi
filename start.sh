@@ -5,7 +5,7 @@ for i in {18161..18200}
 do
   if [ `ps -ef |grep dbapi | grep -v grep | grep ${i} | wc -l` == '1' ]
   then
-     echo "Dbops Server ${i} already running..."
+     echo "Dbapi Server ${i} already running..."
   else
      python3 ${WORKDIR}/dbapi.py ${i} &>/dev/null &
   fi

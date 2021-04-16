@@ -6,7 +6,7 @@ export PYTHON3_HOME=/usr/local/python3.6
 export LD_LIBRARY_PATH=${PYTHON3_HOME}/lib
 
 echo "Testing dbapi Server..."
-for i in {8181..8200}
+for i in {18161..18200}
 do
     if [ `ps -ef |grep dbapi | grep -v grep | grep ${i} | wc -l` == '0' ]
     then

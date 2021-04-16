@@ -98,7 +98,7 @@ def get_date():
     return datetime.datetime.now().strftime("%Y%m%d")
 
 def get_ds_mysql(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8')
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4')
     return conn
 
 def get_ds_sqlserver(ip,port,service,user,password):
@@ -318,13 +318,13 @@ def write_sync_log(config):
 
     try:
         url = 'http://$$API_SERVER$$/write_sync_log'
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
     except:
         api = query_health_api(config)
         url = 'http://{}/write_sync_log'.format(api)
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
 
-    if res['code'] == 200:
+    if  res.status_code == 200:
         print('Interface write_sync_log call successful!')
     else:
         print('Interface write_sync_log call failed!')
@@ -346,25 +346,32 @@ def write_sync_log_detail(config,ftab):
 
     try:
         url = 'http://$$API_SERVER$$/write_sync_log_detail'
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
     except:
         api = query_health_api(config)
         url = 'http://{}/write_sync_log_detail'.format(api)
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
 
-    if res['code'] == 200:
+    if  res.status_code == 200:
         print('Interface write_sync_log_detail call successful!')
     else:
         print('Interface write_sync_log_detail call failed!')
 
-def update_sync_status(sync_tag,status):
+def update_sync_status(config,status):
     data = {
-        'tag'    : sync_tag,
+        'tag'    : config['sync_tag'],
         'status' : status
     }
-    url = 'http://$$API_SERVER$$/update_sync_status'
-    res = requests.post(url, data=data).json()
-    if res['code'] == 200:
+
+    try:
+        url = 'http://$$API_SERVER$$/update_sync_status'
+        res = requests.post(url, data=data)
+    except:
+        api = query_health_api(config)
+        url = 'http://{}/update_sync_status'.format(api)
+        res = requests.post(url, data=data).json()
+
+    if res.status_code == 200:
        print('call interface update_sync_status :{}!'.format('running' if status =='1' else 'complete'))
     else:
        print('call interface update_sync_status error :{}'.format(res['msg']))
@@ -910,7 +917,7 @@ def sync_mysql_data_no_pkid_7(config, ftab):
             db_desc.commit()
 
     except Exception as e:
-        print('sync_sqlserver_data_pk exceptiion:' + traceback.format_exc())
+        print('sync_mysql_data_no_pkid_7 exceptiion:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
         exit(0)
 
@@ -1387,7 +1394,7 @@ def sync(config,debug):
 
       disconnect(config)
 
-      update_sync_status(config['sync_tag'], '0')
+      update_sync_status(config, '0')
 
       sys.exit(0)
 
@@ -1410,7 +1417,7 @@ def main():
     config=init(config,debug,workdir)
 
     # 数据同步
-    update_sync_status(config['sync_tag'], '1')
+    update_sync_status(config, '1')
     sync(config, debug)
 
 

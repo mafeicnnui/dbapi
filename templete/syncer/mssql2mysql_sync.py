@@ -263,13 +263,13 @@ def write_sync_log(config):
     }
     try:
         url = 'http://$$API_SERVER$$/write_sync_log'
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
     except:
         api = query_health_api(config)
         url = 'http://{}/write_sync_log'.format(api)
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
 
-    if res['code'] == 200:
+    if  res.status_code == 200:
         print('Interface write_sync_log call successful!')
     else:
         print('Interface write_sync_log call failed!')
@@ -286,29 +286,36 @@ def write_sync_log_detail(config,ftab):
             'tab_name'     : ftab.split(':')[0].split('.')[1].lower(),
             'sync_cols'    : gather_sync_table_cols(config,ftab.split(':')[0]).replace('`','').replace(',','#').lower(),
             'sync_incr_col': ftab.split(':')[1].lower(),
-            'sync_time'    : ftab.split(':')[2] }
+            'sync_time'    : ftab.split(':')[2]
+    }
 
     try:
         url = 'http://$$API_SERVER$$/write_sync_log_detail'
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
     except:
         api = query_health_api(config)
         url = 'http://{}/write_sync_log_detail'.format(api)
-        res = requests.post(url, data={'tag': json.dumps(par)}).json()
+        res = requests.post(url, data={'tag': json.dumps(par)})
 
-    if res['code'] == 200:
+    if res.status_code == 200:
         print('Interface write_sync_log_detail call successful!')
     else:
         print('Interface write_sync_log_detail call failed!')
 
-def update_sync_status(sync_tag,status):
+def update_sync_status(config,status):
     data = {
-        'tag'    : sync_tag,
+        'tag'    : config['sync_tag'],
         'status' : status
     }
-    url = 'http://$$API_SERVER$$/update_sync_status'
-    res = requests.post(url, data=data).json()
-    if res['code'] == 200:
+    try:
+        url = 'http://$$API_SERVER$$/update_sync_status'
+        res = requests.post(url, data=data)
+    except:
+        api = query_health_api(config)
+        url = 'http://{}/update_sync_status'.format(api)
+        res = requests.post(url, data=data)
+
+    if res.status_code == 200:
        print('call interface update_sync_status :{}!'.format('running' if status =='1' else 'complete'))
     else:
        print('call interface update_sync_status error :{}'.format(res['msg']))
@@ -1370,6 +1377,8 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
             else:
                 print('DB:{0},delete {1} table increment data for In recent {2} {3} please wait...'
                       .format(config['db_mysql_string'], get_mapping_tname(tab),ftab.split(':')[2],config['sync_time_type']))
+                print('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
+                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
 
             while rs_source:
                 batch_sql = ""
@@ -1494,6 +1503,7 @@ def sync_sqlserver_data_nopk(config, ftab, config_init):
                     'DB:{0},delete {1} table recent {2} {3} data please wait...'.format(config['db_mysql_string'], tab,
                                                                                         ftab.split(':')[2],
                                                                                         config['sync_time_type']))
+                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
 
             while rs_source:
                 batch_sql = ''
@@ -1534,9 +1544,6 @@ def sync_sqlserver_data_nopk(config, ftab, config_init):
                     cr_desc.execute(batch_sql)
                     i_counter = i_counter + len(rs_source)
 
-                    # print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
-                    #       .format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2),
-                    #               str(get_seconds(start_time))), end='')
                     if n_tab_total_rows == 0:
                         print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
                               .format(tab, n_tab_total_rows, i_counter, round(i_counter / 1 * 100, 2),
@@ -1609,6 +1616,7 @@ def sync_sqlserver_data_pk_7(config, ftab):
                 print('DB:{0},delete {1} table {2} data ok!'.format(config['db_mysql_string'], get_mapping_tname(tab),v_where))
             else:
                 print('{}:`{}`表SQLServer与MySQL数据不一致({}/{})，同步中...'.format(day,tab,n_tab_total_rows,n_tab_total_rows2))
+                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where))
 
             cr_source.execute(v_sql)
             rs_source  = cr_source.fetchmany(n_batch_size)
@@ -2135,7 +2143,7 @@ def sync(config, debug, workdir):
         print_dict(config)
 
     # update sync task status is running
-    update_sync_status(config['sync_tag'], '1')
+    update_sync_status(config, '1')
 
     # sync table ddl
     sync_sqlserver_ddl(config, debug)
@@ -2157,7 +2165,7 @@ def sync(config, debug, workdir):
         disconnect(config)
 
         # update sync task status is complete
-        update_sync_status(config['sync_tag'], '0')
+        update_sync_status(config, '0')
 
         sys.exit(0)
 

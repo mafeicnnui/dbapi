@@ -40,7 +40,7 @@
       <paths name="hopson@10.2.39.18:65508_dbapi">
         <serverdata>
           <mappings>
-            <mapping deploy="dbapi2.0" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="dbapi" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
@@ -87,6 +87,13 @@
         </serverdata>
       </paths>
       <paths name="root@192.168.20.128:22">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@192.168.20.13:22">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />

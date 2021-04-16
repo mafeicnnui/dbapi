@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Time : 2020/7/23 16:59
-# @Author : 马飞
+# @Author : ma.fei
 # @File : analysis_slowlog_detail_ecs.py.py
 # @Software: PyCharm
 
@@ -155,6 +155,7 @@ def parse_ecs_log(p_log,p_cfg):
     d_log['finish_time']   = datetime.datetime.strftime(d_log['finish_time'], '%Y-%m-%d %H:%M:%S')
     d_log['user']          = re.sub(' +', ' ',''.join(rows[5:]).split(',  user')[1]).split(',')[0].replace(' => ', '').replace("'","").replace('};','')
     d_log['inst_id']       = p_cfg['inst_id']
+    d_log['db_id']         = p_cfg['ds_id']
     p_cfg['sync_time']     = d_log['finish_time']
 
     if datetime.datetime.strptime(d_log['finish_time'], "%Y-%m-%d %H:%M:%S") > datetime.datetime.strptime(p_cfg['last_sync_time'], "%Y-%m-%d %H:%M:%S"):
@@ -221,6 +222,7 @@ def parse_log_rds(p_log,p_cfg):
         d_log['bytes']            =  len(re.sub(' +', ' ', ''.join(rows[4:]).replace('\n', '')).encode())
         d_log['sql_id']           =  get_md5(d_log['sql_text'])
         d_log['inst_id']          = p_cfg['inst_id']
+        d_log['db_id']            = p_cfg['ds_id']
         if d_log['sql_text'] != '':
             write_slow_log(d_log)
             print('slow log parse success! {}'.format(d_log['finish_time']))
@@ -261,48 +263,48 @@ def write_config(config):
     parameter       = {}
 
     for c in config['cfg']:
-        if  c['TYPE'] == 'mysqld':
-            if c['VALUE'].split('=')[0] == 'datadir' \
-                 or c['VALUE'].split('=')[0] == 'socket' \
-                    or c['VALUE'].split('=')[0] == 'log-error' :
-                n_val = c['VALUE'].format(config['dver'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+        if  c['type'] == 'mysqld':
+            if c['value'].split('=')[0] == 'datadir' \
+                 or c['value'].split('=')[0] == 'socket' \
+                    or c['value'].split('=')[0] == 'log-error' :
+                n_val = c['value'].format(config['dver'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif  c['VALUE'].split('=')[0] == 'pid-file':
-                n_val = c['VALUE'].format(config['dver'],config['db_port'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif  c['value'].split('=')[0] == 'pid-file':
+                n_val = c['value'].format(config['dver'],config['db_port'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'port':
-                n_val = c['VALUE'].format(config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'port':
+                n_val = c['value'].format(config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'slow_query_log':
-                n_val = c['VALUE'].format('ON' if config['status'] == '1' else 'OFF')
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'slow_query_log':
+                n_val = c['value'].format('ON' if config['status'] == '1' else 'OFF')
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'slow_query_log_file':
-                n_val = c['VALUE'].format(parameter['datadir']).replace('YYYYMMDD',get_day())
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'slow_query_log_file':
+                n_val = c['value'].format(parameter['datadir']).replace('YYYYMMDD',get_day())
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'long_query_time':
-                n_val = c['VALUE'].format(config['query_time'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'long_query_time':
+                n_val = c['value'].format(config['query_time'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'],c['VALUE'])
-                parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'],c['value'])
+                parameter[c['value'].split('=')[0]] = c['VALUE'].split('=')[1]
 
-        elif c['TYPE'] == 'mysql':
-            config_mysql  = config_mysql + '#{}\n{}\n'.format(c['NAME'], c['VALUE'])
-            parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
-        elif c['TYPE'] == 'client':
-            if c['VALUE'].split('=')[0] == 'socket' :
-                n_val = c['VALUE'].format(config['dver'],config['db_port'])
-                config_client = config_client + '#{}\n{}\n'.format(c['NAME'], n_val)
+        elif c['type'] == 'mysql':
+            config_mysql  = config_mysql + '#{}\n{}\n'.format(c['name'], c['value'])
+            parameter[c['value'].split('=')[0]] = c['VALUE'].split('=')[1]
+        elif c['type'] == 'client':
+            if c['value'].split('=')[0] == 'socket' :
+                n_val = c['value'].format(config['dver'],config['db_port'])
+                config_client = config_client + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
-                config_client = config_client + '#{}\n{}\n'.format(c['NAME'], c['VALUE'])
-                parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+                config_client = config_client + '#{}\n{}\n'.format(c['name'], c['value'])
+                parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
         else:
             pass
     config_file = config_mysqld+'\n'+config_mysql+'\n'+config_client
@@ -319,7 +321,6 @@ def write_config(config):
     print_dict(parameter)
     return parameter
 
-
 def get_config_from_db(slow_id):
     values = {
         'slow_id': slow_id
@@ -335,16 +336,18 @@ def get_config_from_db(slow_id):
     print(res, res['code'])
     if res['code'] == 200:
         print('接口调用成功!')
-        config             = res['msg']
-        config['dpath']    = config['dpath'][0]['mysql_download_url']
-        config['dfile']    = config['dpath'].split('/')[-1]
-        config['dver']     = config['dfile'].split('-')[1]
-        config['lpath']    = config['dfile'].replace('.tar.gz', '')
-        if config['is_rds'] == 'Y':
-           config['db_ip'] = config['inst_ip_in']
+        config  = res['msg']
 
-        config['db_pass']  = aes_decrypt(config['db_pass'],
-                                         config['db_user'])
+        if config['db_type'] == '0' and config['inst_id'] != '':
+           config['dpath']    = config['dpath'][0]['mysql_download_url']
+           config['dfile']    = config['dpath'].split('/')[-1]
+           config['dver']     = config['dfile'].split('-')[1]
+           config['lpath']    = config['dfile'].replace('.tar.gz', '')
+
+        # if config['is_rds'] == 'Y':
+        #    config['db_ip'] = config['inst_ip_in']
+
+        config['db_pass']  = aes_decrypt(config['db_pass'], config['db_user'])
         # if config['is_rds'] == 'Y':
         #     config['db_mysql'] = get_ds_mysql(config['inst_ip_in'],
         #                                       config['db_port'],
@@ -443,9 +446,9 @@ def cut(config):
     print('mysql慢日志参数已更新!')
     write_inst_log(config, '慢日志配置已更新!')
 
-
 def stats(config):
-    if config['is_rds'] == 'N':
+    #if config['is_rds'] == 'N':
+    if config['db_type'] == '0' and config['inst_id'] != '':
         parameter = write_config(config)
         i_counter = 0
         config['last_sync_time'] = read_sync_time_ecs(config,parameter)
@@ -456,7 +459,8 @@ def stats(config):
         if i_counter == 1:
            write_sync_time_ecs(config,parameter)
 
-    if config['is_rds'] == 'Y':
+    #if config['is_rds'] == 'Y':
+    if config['db_type'] == '0' and config['ds_id'] != '':
         i_counter = 0
         config['last_sync_time'] = read_sync_time(config)
         print('last_sync_time=', config['last_sync_time'])

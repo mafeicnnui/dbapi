@@ -30,10 +30,10 @@ async def get_db_sync_config(p_tag):
        return {'code': -1, 'msg': '同步服务器已禁用!'}
 
     if await check_db_sync_config(p_tag)==0:
-       return {'code': -1, 'msg': '同步标识不存在!'}
+       return {'code': -2, 'msg': '同步标识不存在!'}
 
     if await check_sync_task_status(p_tag) > 0:
-       return {'code': -1, 'msg': '同步任务已禁用!'}
+       return {'code': -3, 'msg': '同步任务已禁用!'}
 
     st = '''
 select a.sync_tag,a.sync_ywlx,
@@ -78,9 +78,9 @@ async def save_sync_log(config):
     try:
         await async_processer.exec_sql(st)
         return {'code': 200, 'msg': 'success'}
-    except:
+    except Exception as e:
         traceback.print_exc()
-        return {'code': -1, 'msg': 'failure'}
+        return {'code': -1, 'msg': str(e)}
 
 async def save_sync_log_detail(config):
     st = '''insert into t_db_sync_tasks_log_detail(sync_tag,create_date,sync_table,sync_amount,duration) 
@@ -98,9 +98,9 @@ async def save_sync_log_detail(config):
                                    config['tab_name'],config['sync_cols'],config['sync_incr_col'],config['sync_time'])
                await async_processer.exec_sql(st)
         return {'code': 200, 'msg': 'success'}
-    except:
+    except Exception as e:
         traceback.print_exc()
-        return {'code': -1, 'msg': 'failure'}
+        return {'code': -1, 'msg': str(e)}
 
 async def update_sync_status(p_tag,p_status):
     cfg = await get_db_sync_config(p_tag)
@@ -109,9 +109,9 @@ async def update_sync_status(p_tag,p_status):
     try:
         await async_processer.exec_sql("update t_db_sync_config set task_status={},task_create_time=now() where sync_tag='{}'".format(p_status,p_tag))
         return {'code': 200, 'msg': 'success'}
-    except:
+    except Exception as e:
         traceback.print_exc()
-        return {'code': -1, 'msg': 'failure'}
+        return {'code': -1, 'msg': str(e)}
 
 async def run_remote_sync_task(v_tag):
     cfg = await get_db_sync_config(v_tag)
@@ -155,7 +155,7 @@ async def stop_remote_sync_task(v_tag):
         res = {'code': -1, 'msg': 'failure!'}
     return res
 
-async def write_remote_crontab_sync(cfg,ssh):
+def write_remote_crontab_sync(cfg,ssh):
     v_cmd   = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'],cfg['msg']['sync_tag'])
 
     v_cmd_  = '{0}/db_agent.sh '.format(cfg['msg']['script_path'])
@@ -197,12 +197,14 @@ async def write_remote_crontab_sync(cfg,ssh):
        return {'code': -1, 'msg': 'failure!'}
 
     res = ssh.exec('crontab -l')
+    print("res['stdout']=",res['stdout'])
+
     if res['status']:
         return {'code': 200, 'msg': res['stdout']}
     else:
         return {'code': -1, 'msg': 'failure!'}
 
-async def transfer_remote_file_sync(cfg,ssh,ftp):
+def transfer_remote_file_sync(cfg,ssh,ftp):
     res = ssh.exec('mkdir -p {0}'.format(cfg['msg']['script_path']))
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
@@ -224,7 +226,7 @@ async def transfer_remote_file_sync(cfg,ssh,ftp):
         return {'code': -1, 'msg': 'failure!'}
     return {'code': 200, 'msg': 'success!'}
 
-async def run_remote_cmd_sync(cfg,ssh):
+def run_remote_cmd_sync(cfg,ssh):
     cmd1 = 'mkdir -p {0}'.format(cfg['msg']['script_path'] + '/config')
     cmd2 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
     cmd3 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_sync.sh')
@@ -255,15 +257,15 @@ async def push(tag):
     ssh = ssh_helper(cfg)
     ftp = ftp_helper(cfg)
 
-    res = await transfer_remote_file_sync(cfg,ssh,ftp)
+    res =  transfer_remote_file_sync(cfg,ssh,ftp)
     if res['code'] != 200:
         raise Exception('transfer_remote_file error!')
 
-    res = await run_remote_cmd_sync(cfg,ssh)
+    res =  run_remote_cmd_sync(cfg,ssh)
     if res['code'] != 200:
         raise Exception('run_remote_cmd error!')
 
-    res = await write_remote_crontab_sync(cfg,ssh)
+    res =  write_remote_crontab_sync(cfg,ssh)
     if res['code'] != 200:
         traceback.print_exc()
         raise Exception('write_remote_crontab error!')
