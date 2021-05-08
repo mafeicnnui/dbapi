@@ -153,7 +153,9 @@ def gen_transfer_file(p_cfg,p_flag,p_templete):
                     replace('$$SCRIPT_FILE$$',  p_cfg['msg']['script_file']).
                     replace('$$PORT$$',         p_cfg['msg'].get('proxy_local_port') if p_cfg['msg'].get('proxy_local_port') is not None else '').
                     replace('$$DB_TAG$$',       p_cfg['msg'].get('db_tag')  if p_cfg['msg'].get('db_tag') is not None else '').
-                    replace('$$INST_ID$$',      p_cfg['msg'].get('inst_id') if p_cfg['msg'].get('inst_id') is not None else ''))
+                    replace('$$INST_ID$$',      p_cfg['msg'].get('inst_id') if p_cfg['msg'].get('inst_id') is not None else '').
+                    replace('$$SLOW_ID$$',      p_cfg['msg'].get('slow_id')  if p_cfg['msg'].get('slow_id') is not None else ''))
+
     return f_local,f_remote
 
 def ftp_transfer_file(p_cfg,p_local,p_remote):
@@ -196,7 +198,25 @@ class ssh_helper:
             if len(stderr_lines) > 0:
                 print("Error reported by {}: {}".format(self.server_ip, "\n".join(stderr_lines)))
             cmd_exec_status = False
-        return {'status': cmd_exec_status, 'stdout': stdout_lines}
+        return {'status': cmd_exec_status, 'stdout': stdout_lines,'stderr':stderr_lines }
+
+    def exec_win(self, cmd):
+        stdout_lines = []
+        stderr_lines = []
+        cmd_exec_status = True
+        try:
+            stdin, stdout, stderr = self.ssh.exec_command(cmd, timeout=self.timeout)
+            # stdout_lines = stdout.readlines()
+            # stderr_lines = stderr.readlines()
+            if stdout.channel.recv_exit_status() != 0:
+                raise paramiko.SSHException()
+            print('Execute remote cmd: {}'.format(cmd))
+        except paramiko.SSHException as e:
+            print("Failed to execute the command on '{}': {}".format(self.server_ip, str(e)))
+            if len(stderr_lines) > 0:
+                print("Error reported by {}: {}".format(self.server_ip, "\n".join(stderr_lines)))
+            cmd_exec_status = False
+        return {'status': cmd_exec_status, 'stdout': stdout_lines, 'stderr': stderr_lines}
 
     def close(self):
         self.ssh.close()
@@ -214,6 +234,7 @@ class ftp_helper:
 
     def transfer(self,local,remote):
         try:
+            print('Transfering:{0}  to {1} ok.'.format(local, remote))
             self.sftp.put(localpath=local, remotepath=remote)
             print('Script:{0} send to {1} ok.'.format(local, remote))
             return True

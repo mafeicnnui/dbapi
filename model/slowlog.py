@@ -6,7 +6,7 @@
 # @Software: PyCharm
 
 import  traceback
-from utils.common import get_time2,aes_decrypt,format_sql,gen_transfer_file
+from utils.common import get_time2,aes_decrypt,format_sql,gen_transfer_file,check_tab_exists
 from utils.mysql_async import async_processer
 from utils.common import ssh_helper,ftp_helper
 
@@ -19,10 +19,11 @@ async def get_slow_config(p_slow_id):
 
     st = 'select * from t_slow_log where id={}'.format(p_slow_id)
     rs = await async_processer.query_dict_one(st)
-    print('rs=',rs)
+
     if rs['db_type']=='0' and rs['inst_id'] != '':
         st = '''SELECT   concat(a.id,'') as slow_id, 
                          concat(a.inst_id,'') as inst_id,
+                         CONCAT(a.ds_id,'') AS ds_id,
                          a.python3_home,a.script_path, a.script_file,
                          a.api_server,a.log_file,a.query_time,
                          a.exec_time,a.run_time,a.status,
@@ -31,7 +32,7 @@ async def get_slow_config(p_slow_id):
                          b.mgr_pass as db_pass, b.inst_type as db_type,
                          b.inst_name, b.inst_ver,b.inst_ip_in,
                          b.is_rds,c.server_ip,c.server_port,
-                         c.server_user,c.server_pass,c.server_desc
+                         c.server_user,c.server_pass,c.server_desc,c.server_os
                   FROM t_slow_log a ,t_db_inst b,t_server c
                    where a.inst_id = b.id and a.server_id=c.id and a.id='{0}'  ORDER BY a.id'''.format(p_slow_id)
     else:
@@ -44,13 +45,13 @@ async def get_slow_config(p_slow_id):
                      a.exec_time,a.run_time,a.status,
                      b.ip        AS db_ip, 
                      b.port      AS db_port,
-                     ''          AS db_service, 
+                     b.service   AS db_service, 
                      b.user      AS db_user,
                      b.password  AS db_pass, 
                      b.db_type   AS db_type,
                      b.db_desc   as inst_name, 
                      c.server_ip,c.server_port,
-                     c.server_user,c.server_pass,c.server_desc
+                     c.server_user,c.server_pass,c.server_desc,c.server_os
             FROM t_slow_log a ,t_db_source b,t_server c
             WHERE a.ds_id = b.id AND a.server_id=c.id AND a.id='{}'  ORDER BY a.id'''.format(p_slow_id)
 
@@ -107,22 +108,78 @@ async def save_slow_log(config):
         try:
             await async_processer.exec_sql(st)
             return {'code': 200, 'msg': 'success'}
-        except:
+        except Exception as e:
             traceback.print_exc()
-            return {'code': -1, 'msg': 'failure'}
+            return {'code': -1, 'msg': str(e)}
+
+async def save_slow_log_oracle(config):
+    for cfg in config:
+        vv = " where sql_id='{0}'".format(cfg['sql_id'])
+        if await check_tab_exists('t_slow_detail_oracle', vv) > 0:
+           await async_processer.exec_sql("delete from  t_slow_detail_oracle where sql_id='{}'".format(cfg['sql_id']))
+
+        st = '''insert into t_slow_detail_oracle
+                   (ds_id,dbid,username,sql_id,priority,first_time,last_time,executions,total_time,avg_time,rows_processed,disk_reads,buffer_gets,sql_text)
+                 values('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')
+             '''.format(cfg.get('ds_id'),cfg.get('dbid'),cfg.get('username'),
+                        cfg.get('sql_id'), cfg.get('priority'),
+                        cfg.get('first_time'), cfg.get('last_time'),
+                        cfg.get('executions'), cfg.get('total_time'),
+                        cfg.get('avg_time'),   cfg.get('rows_processed'),
+                        cfg.get('disk_reads'), cfg.get('buffer_gets'),
+                        format_sql(cfg.get('sql_text')))
+        try:
+            await async_processer.exec_sql(st)
+        except Exception as e:
+            traceback.print_exc()
+            return {'code': -1, 'msg': str(e)}
+    return {'code': 200, 'msg': 'success'}
+
+async def save_slow_log_mssql(config):
+    for cfg in config:
+        vv = " where sql_id='{0}'".format(cfg['sql_id'])
+        if await check_tab_exists('t_slow_detail_mssql', vv) > 0:
+           await async_processer.exec_sql("delete from  t_slow_detail_mssql where sql_id='{}'".format(cfg['sql_id']))
+
+        st = '''insert into t_slow_detail_mssql
+                   (ds_id,sql_id,dbname,loginame,hostname,first_time,last_time,query_time,physical_io,cmd,sql_text,create_time)
+                 values('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}',now())
+             '''.format(cfg.get('ds_id'),cfg.get('sql_id'),cfg.get('dbname'),cfg.get('loginame'),
+                        cfg.get('hostname'), cfg.get('start_time'),
+                        cfg.get('end_time'), cfg.get('query_time'),
+                        cfg.get('physical_io'), cfg.get('cmd'),
+                        format_sql(cfg.get('sql_text')))
+        try:
+            await async_processer.exec_sql(st)
+        except Exception as e:
+            traceback.print_exc()
+            return {'code': -1, 'msg': str(e)}
+    return {'code': 200, 'msg': 'success'}
+
+
 
 async def transfer_remote_file_slow(cfg,ssh,ftp):
-    res = ssh.exec('mkdir -p {0}'.format(cfg['msg']['script_path']))
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
+    if cfg['msg']['server_os'] != 'Windows':
+        res = ssh.exec('mkdir -p {0}'.format(cfg['msg']['script_path']))
+        if not res['status']:
+            return {'code': -1, 'msg': 'failure!'}
+    else:
+        ssh.exec_win('mkdir {0}'.format(cfg['msg']['script_path']))
+        ssh.exec_win('del {}'.format(cfg['msg']['script_file']))
+        ssh.exec_win('del {}'.format('gather_slow.bat'))
 
     f_local, f_remote = gen_transfer_file(cfg, 'gather', cfg['msg']['script_file'])
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
-    f_local, f_remote = gen_transfer_file(cfg, 'gather', 'gather_slow.sh')
-    if not ftp.transfer(f_local, f_remote):
-        return {'code': -1, 'msg': 'failure!'}
+    if cfg['msg']['server_os'] != 'Windows':
+        f_local, f_remote = gen_transfer_file(cfg, 'gather', 'gather_slow.sh')
+        if not ftp.transfer(f_local, f_remote):
+            return {'code': -1, 'msg': 'failure!'}
+    else:
+        f_local, f_remote = gen_transfer_file(cfg, 'gather', 'gather_slow.bat')
+        if not ftp.transfer(f_local, f_remote):
+            return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
 
@@ -223,16 +280,17 @@ async def push(tag):
 
     res = await transfer_remote_file_slow(cfg,ssh,ftp)
     if res['code'] != 200:
-        raise Exception('transfer_remote_file error!')
+        return {'code': -1, 'msg': 'ransfer_remote_file error!'}
 
-    res = await run_remote_cmd_slow(cfg,ssh)
-    if res['code'] != 200:
-        raise Exception('run_remote_cmd error!')
+    if cfg['msg']['server_os'] != 'Windows':
+        res = await run_remote_cmd_slow(cfg,ssh)
+        if res['code'] != 200:
+            return {'code': -1, 'msg': 'run_remote_cmd error!'}
 
-    res = await write_remote_crontab_slow(cfg,ssh)
-    if res['code'] != 200:
-        traceback.print_exc()
-        raise Exception('write_remote_crontab error!')
+    if cfg['msg']['server_os'] != 'Windows':
+       res = await write_remote_crontab_slow(cfg,ssh)
+       if res['code'] != 200:
+            return {'code': -1, 'msg': 'write_remote_crontab error!'}
 
     ssh.close()
     ftp.close()

@@ -90,8 +90,9 @@ def get_log_rds(config):
        print('slow log file:{}'.format(log))
        os.system("ps -ef |grep pt-query-digest | awk '{print $2}' |xargs kill -9")
 
-    print('ps -ef | grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
-    os.system('ps -ef|grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
+    # print('ps -ef | grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
+    # os.system('ps -ef|grep pt-query-digest | grep {} | wc -l'.format(config['inst_id']))
+
     if check_process_status(config['db_ip']) == 0:
        gen_log_file(config)
        print('starting slow log stats task...')
@@ -113,9 +114,8 @@ def format_sql(v_sql):
 
 def write_slow_log(d_log):
     try:
-        v_tag =d_log
-        #print('write_slow_log=',v_tag)
-        v_msg = json.dumps(v_tag)
+        v_tag  = d_log
+        v_msg  = json.dumps(v_tag)
         values = {
             'tag': v_msg
         }
@@ -227,8 +227,6 @@ def parse_log_rds(p_log,p_cfg):
             write_slow_log(d_log)
             print('slow log parse success! {}'.format(d_log['finish_time']))
 
-
-
 def get_ds_mysql(ip,port,service ,user,password):
     try:
         conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8',connect_timeout=3)
@@ -292,11 +290,11 @@ def write_config(config):
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
                 config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'],c['value'])
-                parameter[c['value'].split('=')[0]] = c['VALUE'].split('=')[1]
+                parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
 
         elif c['type'] == 'mysql':
             config_mysql  = config_mysql + '#{}\n{}\n'.format(c['name'], c['value'])
-            parameter[c['value'].split('=')[0]] = c['VALUE'].split('=')[1]
+            parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
         elif c['type'] == 'client':
             if c['value'].split('=')[0] == 'socket' :
                 n_val = c['value'].format(config['dver'],config['db_port'])
@@ -337,37 +335,13 @@ def get_config_from_db(slow_id):
     if res['code'] == 200:
         print('接口调用成功!')
         config  = res['msg']
-
         if config['db_type'] == '0' and config['inst_id'] != '':
            config['dpath']    = config['dpath'][0]['mysql_download_url']
            config['dfile']    = config['dpath'].split('/')[-1]
            config['dver']     = config['dfile'].split('-')[1]
            config['lpath']    = config['dfile'].replace('.tar.gz', '')
 
-        # if config['is_rds'] == 'Y':
-        #    config['db_ip'] = config['inst_ip_in']
-
         config['db_pass']  = aes_decrypt(config['db_pass'], config['db_user'])
-        # if config['is_rds'] == 'Y':
-        #     config['db_mysql'] = get_ds_mysql(config['inst_ip_in'],
-        #                                       config['db_port'],
-        #                                       config['db_service'],
-        #                                       config['db_user'],
-        #                                       config['db_pass'])
-        #
-        # else:
-        #     try:
-        #         config['db_mysql'] = get_ds_mysql(config['db_ip'],
-        #                                           config['db_port'],
-        #                                           config['db_service'],
-        #                                           config['db_user'],
-        #                                           config['db_pass'])
-        #     except:
-        #         config['db_mysql'] = get_ds_mysql(config['inst_ip_in'],
-        #                                           config['db_port'],
-        #                                           config['db_service'],
-        #                                           config['db_user'],
-        #                                           config['db_pass'])
         return config
     else:
         print('接口调用失败!,{0}'.format(res['msg']))
@@ -447,7 +421,6 @@ def cut(config):
     write_inst_log(config, '慢日志配置已更新!')
 
 def stats(config):
-    #if config['is_rds'] == 'N':
     if config['db_type'] == '0' and config['inst_id'] != '':
         parameter = write_config(config)
         i_counter = 0
@@ -459,7 +432,6 @@ def stats(config):
         if i_counter == 1:
            write_sync_time_ecs(config,parameter)
 
-    #if config['is_rds'] == 'Y':
     if config['db_type'] == '0' and config['ds_id'] != '':
         i_counter = 0
         config['last_sync_time'] = read_sync_time(config)

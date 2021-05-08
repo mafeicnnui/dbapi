@@ -9,7 +9,7 @@ import json
 import tornado
 import traceback
 
-from model.slowlog import get_slow_config,save_slow_log,push
+from model.slowlog import get_slow_config,save_slow_log,save_slow_log_oracle,save_slow_log_mssql,push
 
 class read_slow_config(tornado.web.RequestHandler):
     async def post(self):
@@ -28,6 +28,21 @@ class write_slow_log(tornado.web.RequestHandler):
         tag  = self.get_argument("tag")
         res  = await save_slow_log(json.loads(tag))
         self.write(json.dumps(res))
+
+class write_slow_log_oracle(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        tag  = self.get_argument("tag")
+        res  = await save_slow_log_oracle(json.loads(tag))
+        self.write(json.dumps(res))
+
+class write_slow_log_mssql(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        tag  = self.get_argument("tag")
+        res  = await save_slow_log_mssql(json.loads(tag))
+        self.write(json.dumps(res))
+
 
 class push_script_slow_remote(tornado.web.RequestHandler):
     async def post(self):

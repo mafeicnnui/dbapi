@@ -33,7 +33,7 @@ async def get_db_monitor_config(p_tag):
     if await check_server_monitor_status(p_tag)>0:
        return {'code': -1, 'msg': '采集服务器已禁用!'}
 
-    if check_db_monitor_config(p_tag)==0:
+    if await check_db_monitor_config(p_tag)==0:
        return {'code': -1, 'msg': '监控标识不存在!'}
 
     st = '''SELECT a.task_tag,a.comments,a.templete_id,
@@ -123,27 +123,23 @@ async def transfer_remote_file_monitor(cfg,ssh,ftp):
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    f_local, f_remote = gen_transfer_file(cfg, 'monitor', cfg['msg']['script_file'])
-    if not ftp.transfer(cfg, f_local, f_remote):
+    f_local, f_remote = gen_transfer_file(cfg, 'gather', cfg['msg']['script_file'])
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     f_local, f_remote = gen_transfer_file(cfg, 'monitor', 'db_monitor.sh')
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
     return {'code': 200, 'msg': 'success!'}
 
-async def run_remote_cmd_monitor(v_tag):
-    cfg = await get_db_monitor_config(v_tag)
-    if cfg['code'] != 200:
-        return cfg
-
+async def run_remote_cmd_monitor(cfg,ssh):
     cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
     cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_monitor.sh')
-    res = exec_ssh_cmd(cfg, cmd1)
+    res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = exec_ssh_cmd(cfg, cmd2)
+    res = ssh.exec(cmd2)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 

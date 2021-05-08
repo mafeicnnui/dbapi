@@ -57,7 +57,7 @@ class async_processer:
                 async with conn.cursor() as cur:
                     await cur.execute(p_sql)
                     rs = await cur.fetchone()
-        print(p_sql)
+        #print(p_sql)
         return rs
 
     async def query_one_desc(p_sql):
