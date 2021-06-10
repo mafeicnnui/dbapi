@@ -44,7 +44,13 @@ async def get_db_config(p_tag):
                     c.password as db_pass,
                     a.expire,a.bk_base,a.script_path,a.script_file,a.bk_cmd,a.run_time,
                     b.server_ip,b.server_port,b.server_user,b.server_pass,b.server_os,
-                    a.comments,a.python3_home,a.backup_databases,a.api_server,a.status
+                    a.comments,a.python3_home,a.backup_databases,a.api_server,a.status,
+                    (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
+                    (select `value` from t_sys_settings where `key`='send_server') as send_server,
+                    (select `value` from t_sys_settings where `key`='send_port') as send_port,
+                    (select `value` from t_sys_settings where `key`='sender') as sender,
+                    (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
+                    (select `value` from t_sys_settings where `key`='receiver') as receiver
             FROM t_db_config a,t_server b,t_db_source c
             WHERE a.server_id=b.id and a.db_id=c.id and a.db_tag='{0}' and b.status='1'""".format(p_tag)
 
