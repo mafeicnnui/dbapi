@@ -340,7 +340,6 @@ class get_mysql_tables(tornado.web.RequestHandler):
             result['msg']  = traceback.format_exc()
             self.write(result)
 
-
 class get_mysql_columns(tornado.web.RequestHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
@@ -371,7 +370,6 @@ class get_mysql_columns(tornado.web.RequestHandler):
             result['code'] = -1
             result['msg']  = traceback.format_exc()
             self.write(result)
-
 
 class get_mysql_incr_columns(tornado.web.RequestHandler):
     async def post(self):
@@ -404,7 +402,6 @@ class get_mysql_incr_columns(tornado.web.RequestHandler):
             result['code'] = -1
             result['msg'] = traceback.format_exc()
             self.write(result)
-
 
 class get_mysql_query(tornado.web.RequestHandler):
     async def post(self):
