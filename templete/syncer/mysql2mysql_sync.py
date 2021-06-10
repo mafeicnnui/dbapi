@@ -20,22 +20,6 @@ import requests
 import os
 import socket
 
-
-def send_mail465(p_from_user,p_from_pass,p_to_user,p_title,p_content):
-    to_user=p_to_user.split(",")
-    try:
-        msg = MIMEText(p_content,'html','utf-8')
-        msg["Subject"] = p_title
-        msg["From"]    = p_from_user
-        msg["To"]      = ",".join(to_user)
-        server = smtplib.SMTP_SSL("smtp.exmail.qq.com", 465)
-        server.set_debuglevel(0)
-        server.login(p_from_user, p_from_pass)
-        server.sendmail(p_from_user, to_user, msg.as_string())
-        server.quit()
-    except smtplib.SMTPException as e:
-        print(e)
-
 def socket_port(ip, port):
     try:
         socket.setdefaulttimeout(1)
@@ -49,7 +33,7 @@ def socket_port(ip, port):
         return False
 
 def get_available_port():
-    for p in [25,465]:
+    for p in [465,25]:
         if socket_port("smtp.exmail.qq.com",p):
             return p
 
@@ -76,13 +60,42 @@ def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
         msg["From"]    = p_from_user
         msg["To"]      = ",".join(to_user)
         #server = smtplib.SMTP("smtp.exmail.qq.com", 25)
-        server = smtplib.SMTP("smtp.exmail.qq.com", get_available_port())
+        server = smtplib.SMTP("smtp.exmail.qq.com", 465)
         server.set_debuglevel(0)
         server.login(p_from_user, p_from_pass)
         server.sendmail(p_from_user, to_user, msg.as_string())
         server.quit()
     except smtplib.SMTPException as e:
         print(e)
+
+def send_mail465(p_from_user,p_from_pass,p_to_user,p_title,p_content):
+    to_user=p_to_user.split(",")
+    try:
+        msg = MIMEText(p_content,'html','utf-8')
+        msg["Subject"] = p_title
+        msg["From"]    = p_from_user
+        msg["To"]      = ",".join(to_user)
+        server = smtplib.SMTP_SSL("smtp.exmail.qq.com", 465)
+        server.set_debuglevel(0)
+        server.login(p_from_user, p_from_pass)
+        server.sendmail(p_from_user, to_user, msg.as_string())
+        server.quit()
+    except smtplib.SMTPException as e:
+        print(e)
+
+def send_mail_param(p_sendserver,p_from_user, p_from_pass, p_to_user, p_title, p_content):
+    try:
+        port = get_available_port()
+        if port == 465:
+           print('send_mail465')
+           send_mail465(p_sendserver,p_from_user, p_from_pass, p_to_user, p_title, p_content)
+        else:
+           print('send_mail25')
+           send_mail25(p_sendserver,p_from_user, p_from_pass, p_to_user, p_title, p_content)
+        print('send_mail_param send success!')
+    except :
+        print("send_mail_param exception:")
+        traceback.print_exc()
 
 def exception_info():
     e_str=traceback.format_exc()
@@ -222,6 +235,7 @@ def get_config_from_db(tag,workdir):
 
         if res['code'] == 200:
             print('read_config_sync 接口调用成功!')
+            config = res['msg']
             try:
                 tmp = get_local_config_json(file_name)
                 if tmp.get('counter') is None or tmp.get('counter') > 0:
@@ -231,7 +245,6 @@ def get_config_from_db(tag,workdir):
 
             try:
                 print(res['msg'])
-                config = res['msg']
                 config['sync_time_type_name']   = get_sync_time_type_name(config['sync_time_type'])
                 db_sour_ip                      = config['sync_db_sour'].split(':')[0]
                 db_sour_port                    = config['sync_db_sour'].split(':')[1]
@@ -283,7 +296,7 @@ def get_config_from_db(tag,workdir):
             v_content = v_content.replace('$$parameter$$', json.dumps(par))
             v_content = v_content.replace('$$error$$', res['msg'])
             if res['code'] != -3:
-                exception_interface(v_title, v_content)
+                exception_interface(cfg,v_title, v_content)
             else:
                 print(res['msg'])
             return None
@@ -305,7 +318,7 @@ def get_config_from_db(tag,workdir):
            v_content = v_content.replace('$$parameter$$',  json.dumps(par))
            v_content = v_content.replace('$$error$$', traceback.format_exc())
            v_content = v_content.replace('$$desc$$', v_desc)
-           exception_interface(v_title, v_content)
+           exception_interface(cfg,v_title, v_content)
         return config
 
 def write_sync_log(config):
@@ -745,7 +758,8 @@ def sync_mysql_init(config,debug):
                 print('delete table:{0} all data ok!'.format(tab))
 
                 n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
-                v_sql            = "select * from {0}".format(tab)
+                #v_sql            = "select * from {0}".format(tab)
+                v_sql = "select {0} from {1}".format(get_sync_table_cols(config, tab),tab)
                 cr_source.execute(v_sql)
                 rs_source = cr_source.fetchmany(n_batch_size)
                 while rs_source:
@@ -1239,9 +1253,10 @@ def exception_connect_db(config,p_error):
     v_content = v_content.replace('$$script_file$$', config.get('script_file'))
     v_content = v_content.replace('$$run_time$$', config.get('run_time'))
     v_content = v_content.replace('$$run_error$$', str(p_error))
-    send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
+    #send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content
+    send_mail_param(config.get('send_server'),config.get('sender'),config.get('sendpass'),config.get('receiver'),v_title, v_content)
 
-def exception_interface(v_title,v_content):
+def exception_interface(config,v_title,v_content):
     v_templete = '''
            <html>
               <head>
@@ -1264,7 +1279,9 @@ def exception_interface(v_title,v_content):
            </html>
           '''
     v_templete = v_templete.replace('$$TABLE$$',v_content)
-    send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_templete)
+    #send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_templete)
+    send_mail_param(config.get('send_server'), config.get('sender'), config.get('sendpass'), config.get('receiver'),
+                    v_title, v_templete)
 
 def exception_running(config,p_error):
     v_templete = '''
@@ -1302,7 +1319,6 @@ def exception_running(config,p_error):
         </body>
      </html>
     '''
-
     v_title   = config.get('comments')+'数据同步运行异常[★★★]'
     v_content = v_templete.replace('$$task_desc$$'    ,config.get('comments'))
     v_content = v_content.replace('$$sync_tag$$'      ,config.get('sync_tag'))
@@ -1317,8 +1333,9 @@ def exception_running(config,p_error):
     v_content = v_content.replace('$$run_time$$'      ,config.get('run_time'))
     v_content = v_content.replace('$$run_sql$$'       ,config.get('run_sql'))
     v_content = v_content.replace('$$run_error$$'     ,str(p_error))
-
-    send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
+    #send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
+    send_mail_param(config.get('send_server'), config.get('sender'), config.get('sendpass'), config.get('receiver'),
+                    v_title, v_content)
 
 def recover_running(config):
     v_templete = '''
@@ -1366,7 +1383,9 @@ def recover_running(config):
     v_content = v_content.replace('$$sync_time_type$$',config.get('sync_time_type_name'))
     v_content = v_content.replace('$$script_file$$'  , config.get('script_file'))
     v_content = v_content.replace('$$run_time$$'      ,config.get('run_time'))
-    send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content)
+    #send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content
+    send_mail_param(config.get('send_server'), config.get('sender'), config.get('sendpass'), config.get('receiver'),
+                    v_title, v_content)
 
 def disconnect(config):
     config['db_mysql_sour']
