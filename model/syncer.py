@@ -54,7 +54,12 @@ select a.sync_tag,a.sync_ywlx,
         LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
         a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
         a.status,b.server_ip,b.server_port,b.server_user,b.server_pass,c.proxy_server,
-        (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port
+        (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
+        (select `value` from t_sys_settings where `key`='send_server') as send_server,
+        (select `value` from t_sys_settings where `key`='send_port') as send_port,
+        (select `value` from t_sys_settings where `key`='sender') as sender,
+        (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
+        (select `value` from t_sys_settings where `key`='receiver') as receiver
 from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
   where a.server_id=b.id AND a.sour_db_id=c.id  AND a.desc_db_id=d.id 
     and a.sync_tag ='{0}' ORDER BY a.id,a.sync_ywlx
