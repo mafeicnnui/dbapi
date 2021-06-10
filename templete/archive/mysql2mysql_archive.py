@@ -58,7 +58,7 @@ def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
         msg["Subject"] = p_title
         msg["From"]    = p_from_user
         msg["To"]      = ",".join(to_user)
-        server = smtplib.SMTP("smtp.exmail.qq.com", 25)
+        server = smtplib.SMTP("smtp.exmail.qq.com", 465)
         server.set_debuglevel(0)
         server.login(p_from_user, p_from_pass)
         server.sendmail(p_from_user, to_user, msg.as_string())
@@ -195,17 +195,18 @@ def get_config_from_db(tag):
             exit(0)
     else:
         print('接口调用失败!,{0}'.format(res['msg']))  # 发异常邮件
-        v_title = '数据同步接口异常[★]'
-        v_content = '''<table class='xwtable'>
-                                       <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
-                                       <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
-                                       <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr>            
-                                   </table>'''
-        v_content = v_content.replace('$$interface$$', url)
-        v_content = v_content.replace('$$parameter$$', json.dumps(values))
-        v_content = v_content.replace('$$error$$', res['msg'])
-        exception_interface(v_title, v_content)
         sys.exit(0)
+        # v_title = '数据同步接口异常[★]'
+        # v_content = '''<table class='xwtable'>
+        #                <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
+        #                <tr><td  width="30%">接口参数</td><td  width="70%">$$parameter$$</td></tr>
+        #                <tr><td  width="30%">错误信息</td><td  width="70%">$$error$$</td></tr>
+        #            </table>'''
+        # v_content = v_content.replace('$$interface$$', url)
+        # v_content = v_content.replace('$$parameter$$', json.dumps(values))
+        # v_content = v_content.replace('$$error$$', res['msg'])
+        # exception_interface(v_title, v_content)
+        # sys.exit(0)
 
 def write_archive_log(config):
     v_tag = {
@@ -604,7 +605,6 @@ def archive_mysql_move(config,debug):
                     batch_sql = ins_sql_header + v_sql[0:-1]
 
                     if config['if_cover'] == '1':
-                        print('delete batch data...')
                         for d in v_sql_del[0:-1].split(','):
                             cr_desc.execute('delete from {0} where {1}'.format(tab, d))
 
