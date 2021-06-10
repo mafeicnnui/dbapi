@@ -10,6 +10,12 @@ from utils.common import check_tab_exists,aes_decrypt,gen_transfer_file
 from utils.mysql_async import async_processer
 from utils.common import ssh_helper,ftp_helper
 
+
+async def check_archive_task_status(p_tag):
+    st ="select count(0) from t_db_archive_config a,t_server b  \
+            where a.server_id=b.id and a.archive_tag='{0}' and a.status='0'".format(p_tag)
+    return (await async_processer.query_one(st))[0]
+
 async def check_server_archive_status(p_tag):
     st = "select count(0) from t_db_archive_config a,t_server b \
               where a.server_id=b.id and a.archive_tag='{0}' and b.status='0'".format(p_tag)
@@ -20,6 +26,16 @@ async def check_db_archive_config(p_tag):
     return  (await async_processer.query_one(st))[0]
 
 async def get_db_archive_config(p_tag):
+
+    if await check_archive_task_status(p_tag) > 0:
+       return {'code': -1, 'msg': '归档任务已禁用!'}
+
+    if await check_server_archive_status(p_tag) > 0:
+        return {'code': -1, 'msg': '归档服务器已禁用!'}
+
+    if await check_db_archive_config(p_tag) == 0:
+        return {'code': -1, 'msg': '归档标识不存在!'}
+
     st = '''SELECT a.archive_tag,
                    CONCAT(c.ip,':',c.port,':',a.sour_schema,':',c.user,':',c.password) AS archive_db_sour,
                    CONCAT(d.ip,':',d.port,':',a.dest_schema,':',d.user,':',d.password) AS archive_db_dest,  
@@ -43,13 +59,7 @@ async def run_remote_archive_task(p_tag):
     if cfg['code']!=200:
        return cfg
 
-    cmd = 'nohup {0}/db_archive.sh {1} {2} &>/dev/null &'.format(cfg['script_path'], cfg['script_file'], p_tag)
-    if await check_server_archive_status(p_tag) > 0:
-       return {'code':-1,'msg':'归档服务器已禁用!'}
-
-    if await check_db_archive_config(p_tag) == 0:
-       return {'code':-1,'msg': '归档标识不存在!'}
-
+    cmd = 'nohup {0}/db_archive.sh {1} {2} &>/dev/null &'.format(cfg['msg']['script_path'], cfg['msg']['script_file'], p_tag)
     ssh = ssh_helper(cfg)
     res = ssh.exec(cmd)
     if res['status']:
@@ -91,25 +101,25 @@ async def transfer_remote_file_archive(cfg,ssh,ftp):
         return {'code': -1, 'msg': 'failure!'}
 
     f_local, f_remote = gen_transfer_file(cfg, 'archive', cfg['msg']['script_file'])
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     f_local, f_remote = gen_transfer_file(cfg, 'archive', 'db_archive.sh')
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
 
 async def run_remote_cmd_archive(cfg,ssh):
     cmd1 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
-    cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_archive.bat')
+    cmd2 = 'chmod +x {0}/{1}'.format(cfg['msg']['script_path'], 'db_archive.sh')
     res = ssh.exec(cmd1)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
     res = ssh.exec(cmd2)
     if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
+        return {'code': -1, 'msg': res['stderr']}
 
     return {'code': 200, 'msg': 'success!'}
 
@@ -192,6 +202,7 @@ async def push(tag):
 
     res = await run_remote_cmd_archive(cfg,ssh)
     if res['code'] != 200:
+        print(res['msg'])
         raise Exception('run_remote_cmd error!')
 
     res = await write_remote_crontab_archive(cfg,ssh)
