@@ -15,6 +15,7 @@ import tornado.options
 import tornado.httpserver
 import tornado.locale
 import traceback
+import pymongo
 
 from   tornado.options  import define
 from   aiomysql import create_pool,DictCursor
@@ -447,6 +448,128 @@ class get_mysql_query(tornado.web.RequestHandler):
             result['column'] = ''
             self.write(result)
 
+def get_ds_mongo(ip,port,replset):
+    conn = pymongo.MongoClient(host=ip, port=int(port),replicaSet=replset)
+    return conn
+
+def get_ds_mongo_auth(p_ip,p_port,p_serice,p_user,p_password):
+    conn      = pymongo.MongoClient('mongodb://{0}:{1}/'.format(p_ip,int(p_port)))
+    db        = conn[p_serice]
+    db.authenticate(p_user, p_password)
+    return conn
+
+class get_mongo_databases(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        try:
+            if db_pass == '':
+                db_mongo = get_ds_mongo(db_ip,db_port)
+            else:
+                db_mongo = get_ds_mongo_auth(db_ip,db_port,db_service,db_user, db_pass)
+
+            data = db_mongo.list_database_names()
+            result['code'] = 200
+            result['msg'] = ''
+            result['data'] = data
+            print('get_mysql_query=',result)
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg'] = traceback.format_exc()
+            result['data'] = ''
+            self.write(result)
+
+class get_mongo_collections(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        try:
+            if db_pass == '':
+                db_mongo = get_ds_mongo(db_ip,db_port)
+            else:
+                db_mongo = get_ds_mongo_auth(db_ip,db_port,db_service,db_user, db_pass)
+
+            data = db_mongo[db_service].collection_names()
+            result['code'] = 200
+            result['msg'] = ''
+            result['data'] = data
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg'] = traceback.format_exc()
+            result['data'] = ''
+            self.write(result)
+
+class get_mongo_query(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        db_sql     = self.get_argument("db_sql")
+        columns    = []
+        data       = []
+        try:
+            if db_pass == '':
+               db_conn = get_ds_mongo(db_ip,db_port)
+            else:
+               db_conn = get_ds_mongo_auth(db_ip,db_port,db_service,db_user, db_pass)
+
+            db = db_conn[db_service]
+            rs = db.command(db_sql)
+            print('rs=',rs)
+
+            #rs,desc  = await async_processer.query_list_by_ds(ds,db_sql)
+
+            # for i in range(len(desc)):
+            #     columns.append({"title": desc[i][0]})
+            #
+            # # process data
+            # for i in rs:
+            #     tmp = []
+            #     for j in range(len(desc)):
+            #         if i[j] is None:
+            #             tmp.append('')
+            #         else:
+            #             tmp.append(str(i[j]))
+            #     data.append(tmp)
+
+            result['code'] = 200
+            result['msg'] = ''
+            result['data'] = ''
+            result['column'] = ''
+            print('get_mysql_query=',result)
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg'] = traceback.format_exc()
+            result['data'] = ''
+            result['column'] = ''
+            self.write(result)
+
 class get_mysql_query_dict(tornado.web.RequestHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
@@ -485,8 +608,6 @@ class Application(tornado.web.Application):
             (r"/get_mssql_incr_columns", get_mssql_incr_columns),
             (r"/get_mssql_query",        get_mssql_query),
             (r"/get_mssql_query_dict",   get_mssql_query_dict),
-            # (r"/get_mssql_table_df", ''),
-            # (r"/get_mssql_index_df", ''),
 
             # mysql 数据库查询接口
             (r"/get_mysql_tables",       get_mysql_tables),
@@ -494,8 +615,12 @@ class Application(tornado.web.Application):
             (r"/get_mysql_incr_columns", get_mysql_incr_columns),
             (r"/get_mysql_query",        get_mysql_query),
             (r"/get_mysql_query_dict",   get_mysql_query_dict),
-            # (r"/get_mysql_table_df",     ''),
-            # (r"/get_mysql_index_df",     ''),
+
+            # mongo 数据库查询接口
+            (r"/get_mongo_databases",    get_mongo_databases),
+            (r"/get_mongo_collections",  get_mongo_collections),
+            (r"/get_mongo_query",        get_mongo_query),
+
 
         ]
         tornado.web.Application.__init__(self, handlers)

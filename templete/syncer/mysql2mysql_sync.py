@@ -787,7 +787,6 @@ def sync_mysql_init(config,debug):
                     cr_desc.execute(batch_sql)
                     i_counter = i_counter + len(rs_source)
 
-
                     print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
                           format(tab,n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100,2)), end='')
                     if n_tab_total_rows == 0:
@@ -994,6 +993,7 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
 
                 if ftab.split(':')[1] == '':
                     config['run_sql'] =batch_sql
+
                     cr_desc.execute(batch_sql)
                 else:
                     for d in v_sql_del[0:-1].split(','):

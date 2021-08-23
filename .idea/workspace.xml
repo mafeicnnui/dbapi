@@ -1,20 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="sync agent update">
-      <change afterPath="$PROJECT_DIR$/templete/gather/gather_mongo_slow.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templete/gather/gather_mssql_slow.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templete/gather/gather_oracle_slow.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templete/gather/gather_slow.bat" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="db_agent update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/slowlog.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/slowlog.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/service/slowlog.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/slowlog.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/backup/mysql_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/mysql_backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/gather/gather_slow.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/gather_slow.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/urls/slowlog.py" beforeDir="false" afterPath="$PROJECT_DIR$/urls/slowlog.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/common.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/mysql_async.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/mysql_async.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbapi.py" beforeDir="false" afterPath="$PROJECT_DIR$/dbapi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/backup/mongo_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/mongo_backup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/gather/gather_mssql_slow.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/gather_mssql_slow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/db_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/db_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,20 +37,6 @@
     <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1612428974745" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$elastic_backup.coverage" NAME="elastic_backup Coverage Results" MODIFIED="1572061733562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/templete" />
     <SUITE FILE_PATH="coverage/dbapi$datax_sync.coverage" NAME="datax_sync Coverage Results" MODIFIED="1579081941377" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/datax" />
-  </component>
-  <component name="DatabaseView">
-    <option name="SHOW_INTERMEDIATE" value="true" />
-    <option name="GROUP_DATA_SOURCES" value="true" />
-    <option name="GROUP_SCHEMA" value="true" />
-    <option name="GROUP_CONTENTS" value="false" />
-    <option name="SORT_POSITIONED" value="false" />
-    <option name="SHOW_EMPTY_GROUPS" value="false" />
-    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
-    <option name="HIDDEN_KINDS">
-      <set />
-    </option>
-    <expand />
-    <select />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -312,7 +309,47 @@
       <workItem from="1619486632522" duration="21171000" />
       <workItem from="1619569465540" duration="3859000" />
       <workItem from="1619664748382" duration="1276000" />
-      <workItem from="1620437473540" duration="9445000" />
+      <workItem from="1620437473540" duration="11251000" />
+      <workItem from="1620612142714" duration="713000" />
+      <workItem from="1620909565444" duration="1108000" />
+      <workItem from="1621319205431" duration="1821000" />
+      <workItem from="1621387614883" duration="657000" />
+      <workItem from="1621843169521" duration="3917000" />
+      <workItem from="1621915047449" duration="3184000" />
+      <workItem from="1621988257376" duration="664000" />
+      <workItem from="1622008798756" duration="6333000" />
+      <workItem from="1622075105637" duration="13942000" />
+      <workItem from="1622162143085" duration="6481000" />
+      <workItem from="1622183470681" duration="408000" />
+      <workItem from="1622508734261" duration="1612000" />
+      <workItem from="1622512012658" duration="2727000" />
+      <workItem from="1622530349492" duration="334000" />
+      <workItem from="1622599650239" duration="625000" />
+      <workItem from="1622656002675" duration="9474000" />
+      <workItem from="1623220666293" duration="11167000" />
+      <workItem from="1623289550868" duration="6202000" />
+      <workItem from="1623296539849" duration="251000" />
+      <workItem from="1623737371939" duration="7173000" />
+      <workItem from="1623891926453" duration="8041000" />
+      <workItem from="1623975425202" duration="615000" />
+      <workItem from="1623997678528" duration="3320000" />
+      <workItem from="1624234882927" duration="7931000" />
+      <workItem from="1624366052979" duration="6282000" />
+      <workItem from="1624493485574" duration="1918000" />
+      <workItem from="1624521472777" duration="1225000" />
+      <workItem from="1625110478764" duration="1988000" />
+      <workItem from="1625187906039" duration="8364000" />
+      <workItem from="1626250234451" duration="606000" />
+      <workItem from="1626312547245" duration="638000" />
+      <workItem from="1626417064660" duration="33000" />
+      <workItem from="1626826903144" duration="601000" />
+      <workItem from="1627519487210" duration="1476000" />
+      <workItem from="1628228942071" duration="239000" />
+      <workItem from="1628561514607" duration="166000" />
+      <workItem from="1628561855808" duration="423000" />
+      <workItem from="1628646687951" duration="1467000" />
+      <workItem from="1629483979291" duration="1210000" />
+      <workItem from="1629682333954" duration="833000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -447,7 +484,63 @@
       <option name="project" value="LOCAL" />
       <updated>1618534454344</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="sync agent update">
+      <created>1620456861010</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1620456861010</updated>
+    </task>
+    <task id="LOCAL-00021" summary="update mongo backup">
+      <created>1623295479541</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295479541</updated>
+    </task>
+    <task id="LOCAL-00022" summary="add mail param">
+      <created>1623295530688</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295530688</updated>
+    </task>
+    <task id="LOCAL-00023" summary="archive bug fix">
+      <created>1623295549313</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295549313</updated>
+    </task>
+    <task id="LOCAL-00024" summary="upate sync api">
+      <created>1623295577104</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295577104</updated>
+    </task>
+    <task id="LOCAL-00025" summary="update backup api">
+      <created>1623295592531</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295592531</updated>
+    </task>
+    <task id="LOCAL-00026" summary="update archive api">
+      <created>1623295657199</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295657199</updated>
+    </task>
+    <task id="LOCAL-00027" summary="db_agent update">
+      <created>1623295728517</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1623295728517</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TodoView">
@@ -461,6 +554,18 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="2" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="数据库自动化平台API-Server" />
@@ -476,7 +581,14 @@
     <MESSAGE value="backup api update" />
     <MESSAGE value="async update" />
     <MESSAGE value="sync agent update" />
-    <option name="LAST_COMMIT_MESSAGE" value="sync agent update" />
+    <MESSAGE value="update mongo backup" />
+    <MESSAGE value="add mail param" />
+    <MESSAGE value="archive bug fix" />
+    <MESSAGE value="upate sync api" />
+    <MESSAGE value="update backup api" />
+    <MESSAGE value="update archive api" />
+    <MESSAGE value="db_agent update" />
+    <option name="LAST_COMMIT_MESSAGE" value="db_agent update" />
   </component>
   <component name="WindowStateProjectService">
     <state x="323" y="235" key="#Deployment" timestamp="1620445521811">
@@ -500,50 +612,44 @@
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
     <state x="2630" y="320" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1614735973824" />
-    <state x="558" y="86" key="CommitChangelistDialog2" timestamp="1618534451433">
+    <state x="345" y="173" key="CommitChangelistDialog2" timestamp="1620456832686">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="558" y="86" key="CommitChangelistDialog2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1618534451433" />
+    <state x="345" y="173" key="CommitChangelistDialog2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1620456832686" />
     <state x="2478" y="86" key="CommitChangelistDialog2/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1615455203678" />
-    <state x="558" y="86" key="CommitChangelistDialog2/0.0.1920.1040@0.0.1920.1040" timestamp="1613308614189" />
     <state x="2660" y="274" key="FileChooserDialogImpl" timestamp="1615511878021">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
     <state x="2660" y="274" key="FileChooserDialogImpl/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1615511878021" />
-    <state x="740" y="274" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1612868972861" />
     <state x="771" y="421" key="Github.CreateGistDialog" timestamp="1619164262342">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="771" y="421" key="Github.CreateGistDialog/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1619164262342" />
-    <state x="744" y="386" key="Github.CreatePullRequestDialog" timestamp="1612868952239">
+    <state width="1877" height="170" key="GridCell.Tab.0.bottom" timestamp="1622670835212">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="744" y="386" key="Github.CreatePullRequestDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1612868952239" />
-    <state width="1877" height="239" key="GridCell.Tab.0.bottom" timestamp="1620456241507">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="239" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1620456241507" />
+    <state width="1877" height="170" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1622670835212" />
     <state width="1877" height="415" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1617245489839" />
     <state width="1877" height="156" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1617330468730" />
     <state width="1877" height="748" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1618285200618" />
-    <state width="1877" height="239" key="GridCell.Tab.0.center" timestamp="1620456241507">
+    <state width="1877" height="170" key="GridCell.Tab.0.center" timestamp="1622670835212">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="239" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1620456241507" />
+    <state width="1877" height="170" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1622670835212" />
     <state width="1877" height="415" key="GridCell.Tab.0.center/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1617245489839" />
     <state width="1877" height="156" key="GridCell.Tab.0.center/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1617330468730" />
     <state width="1877" height="748" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1618285200618" />
-    <state width="1877" height="239" key="GridCell.Tab.0.left" timestamp="1620456241507">
+    <state width="1877" height="170" key="GridCell.Tab.0.left" timestamp="1622670835212">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="239" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1620456241507" />
+    <state width="1877" height="170" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1622670835212" />
     <state width="1877" height="415" key="GridCell.Tab.0.left/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1617245489838" />
     <state width="1877" height="156" key="GridCell.Tab.0.left/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1617330468730" />
     <state width="1877" height="748" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1618285200618" />
-    <state width="1877" height="239" key="GridCell.Tab.0.right" timestamp="1620456241507">
+    <state width="1877" height="170" key="GridCell.Tab.0.right" timestamp="1622670835212">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="239" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1620456241507" />
+    <state width="1877" height="170" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1622670835212" />
     <state width="1877" height="415" key="GridCell.Tab.0.right/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1617245489839" />
     <state width="1877" height="156" key="GridCell.Tab.0.right/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1617330468730" />
     <state width="1877" height="748" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1618285200618" />
@@ -567,18 +673,16 @@
     </state>
     <state width="1877" height="257" key="GridCell.Tab.1.right/0.0.1920.1040/1920.0.1920.1040@0.0.1920.1040" timestamp="1617242000219" />
     <state width="1877" height="174" key="GridCell.Tab.1.right/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1617271314904" />
-    <state x="318" y="162" key="SettingsEditor" timestamp="1619086160148">
+    <state x="318" y="162" key="SettingsEditor" timestamp="1623292062553">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="318" y="162" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1619086160148" />
-    <state x="2491" y="200" key="SettingsEditor/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1614064836645" />
+    <state x="318" y="162" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1623292062553" />
     <state x="318" y="162" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1618294513112" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1618534464072">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1623295774136">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1618534464072" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1623295774136" />
     <state x="2472" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1615455220008" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040@0.0.1920.1040" timestamp="1613308641885" />
     <state width="968" height="528" key="XDebugger.FullValuePopup" timestamp="1615430211914">
       <screen x="1920" y="0" width="1920" height="1040" />
     </state>
@@ -587,7 +691,6 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="486" y="698" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1620456458120" />
-    <state x="2673" y="432" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1920.1040/1920.0.1920.1040@1920.0.1920.1040" timestamp="1613963896812" />
     <state x="653" y="244" width="904" height="658" key="find.popup" timestamp="1618211656565">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -614,7 +717,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1620456241487" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1622659403352" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
   </component>
 </project>

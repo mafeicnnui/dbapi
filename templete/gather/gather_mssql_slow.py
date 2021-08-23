@@ -30,6 +30,7 @@ slow_tj_log = '''
     outer apply sys.dm_exec_sql_text(a.sql_handle) b
     where a.spid>50 and a.status<>'sleeping' and spid<>@@SPID
      and b.text is not null
+     and DATEDIFF(s,a.last_batch,GETDATE()) >{}
     order by DATEDIFF(s,a.last_batch,GETDATE()),physical_io desc
 '''
 
@@ -76,7 +77,8 @@ def get_mssql_slowlog(config):
         db_pass    = aes_decrypt(config['db_pass'], db_user)
         db         = get_ds_sqlserver_test(db_ip, db_port, db_service, db_user, db_pass)
         cr         = db.cursor(as_dict=True)
-        cr.execute(slow_tj_log)
+        print(slow_tj_log.format(config['query_time']))
+        cr.execute(slow_tj_log.format(config['query_time']))
         rs=cr.fetchall()
         return rs
         db.commit()

@@ -27,6 +27,3 @@ if __name__ == '__main__':
     http_server.listen(sys.argv[1])
     print('Dbapi Api Server running {0} port ...'.format(sys.argv[1]))
     tornado.ioloop.IOLoop.instance().start()
-
-
-

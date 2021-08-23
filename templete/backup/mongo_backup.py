@@ -122,13 +122,15 @@ def read_config(tag):
     if res['code'] == 200:
         print('接口调用成功!')
         config=res['msg']
+        print_dict(config)
         config['year'] = get_year()
         config['day']  = get_date()
         config['bk_path']=config['bk_base']+'/'+get_date()
-        if config['db_pass'] is not None or config['db_pass'] !='':
-           config['db_mongo'] = get_ds_mongo_auth(config['db_ip'],config['db_port'],config['db_service'],config['db_user'],config['db_pass'])
+        if config['db_pass'] =='':
+           config['db_mongo'] = get_ds_mongo(config['db_ip'], config['db_port'])
         else:
-           config['db_mongo'] = get_ds_mongo(config['db_ip'],config['db_port'])
+           config['db_mongo'] = get_ds_mongo_auth(config['db_ip'], config['db_port'], config['db_service'],
+                                                   config['db_user'], config['db_pass'])
         return config
     else:
         print('接口调用失败!,{0}'.format(res['msg']))
@@ -223,13 +225,11 @@ def write_log(msg):
 def db_backup(config):
     db_mongodb              = config['db_mongo']
     db_list                 = db_mongodb.list_database_names()
-    db_pass                 = aes_decrypt(config['db_pass'],config['db_user'])
+    db_pass                 = aes_decrypt(config['db_pass'],config['db_user']) if config['db_pass']!=''  else config['db_pass']
     bk_begin_time           = get_now()
     n_elaspsed_backup_total = 0
     n_elaspsed_gzip_total   = 0
     g_status                = '0'
-
-
     for db in db_list:
         error  = ''
         status = '0'
@@ -237,7 +237,9 @@ def db_backup(config):
 
         if db not in ('admin', 'local', 'push'):
             if  config['backup_databases'] is not None and config['backup_databases']!='':
-                if ',' in config['backup_databases'] and config['backup_databases'].find(db)>=0:
+              print('backup_database=', db,config['backup_databases'],config['backup_databases'].find(db))
+
+              if ',' in config['backup_databases'] and config['backup_databases'].find(db)>=0:
                     print('backup database {0}...'.format(db))
                     start_time = get_now()
                     file_name  = db + '.tar.gz'
@@ -293,48 +295,6 @@ def db_backup(config):
                     n_elaspsed_backup_total = n_elaspsed_backup_total + config['elaspsed_backup']
                     n_elaspsed_gzip_total = n_elaspsed_gzip_total + config['elaspsed_gzip']
                     os.system('rm -f {0}'.format(err_name))
-
-                # if ',' in config['backup_databases'] and db.find(config['backup_databases'])>=0:
-                #     print('backup database {0}...'.format(db))
-                #     start_time = get_now()
-                #     file_name  = db + '.tar.gz'
-                #     full_name  = config['bk_path'] + '/' + file_name
-                #     err_name   = '/tmp/' + db + '_' + get_date() + '.err'
-                #     cmd = "{0} -h {1}:{2} -d {3} -o {4} &>{5}". \
-                #         format(config['bk_cmd'], config['db_ip'], config['db_port'], db, config['bk_path'], err_name)
-                #     print(cmd)
-                #
-                #     result = os.system(cmd)
-                #     if result != 0:
-                #         error  = get_file_contents(err_name)
-                #         status = '1'
-                #         os.system('rm {0}'.format(err_name))
-                #
-                #     end_time = get_now()
-                #     os.system('cd {0} && tar czf {1} {2}'.format(config['bk_path'], file_name, db))
-                #     os.system('rm -rf {0}'.format(config['bk_path'] + '/' + db))
-                #     filesize = os.path.getsize(full_name)
-                #     end_zip_time = get_now()
-                #     print(file_name, full_name, filesize)
-                #
-                #     #write backup detail
-                #     config['db_name'] = db
-                #     config['create_date'] = get_date()
-                #     config['file_name'] = file_name
-                #     config['db_size'] = get_file_size(full_name)
-                #     config['start_time'] = get_time2(start_time)
-                #     config['end_time'] = get_time2(end_zip_time)
-                #     config['elaspsed_backup'] = get_seconds(end_time, start_time)
-                #     config['elaspsed_gzip'] = get_seconds(end_zip_time, end_time)
-                #     config['status'] = status
-                #     config['error'] = error
-                #
-                #     if status == '1':
-                #         g_status = '1'
-                #     write_backup_detail(config)
-                #     n_elaspsed_backup_total = n_elaspsed_backup_total + config['elaspsed_backup']
-                #     n_elaspsed_gzip_total = n_elaspsed_gzip_total + config['elaspsed_gzip']
-                #     os.system('rm -f {0}'.format(err_name))
 
             else:
                 print('backup database {0}...'.format(db))
