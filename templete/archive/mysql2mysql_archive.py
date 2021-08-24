@@ -140,7 +140,9 @@ def get_archive_where(config):
     v = ''
     v_rqq,v_rqz = get_archive_rq(config)
     v = """where {0} between '{1}' and '{2}'""".format(config['archive_time_col'], v_rqq, v_rqz)
+    #v = """where create_time between '2000-01-01' and '2021-03-18'"""
     return v
+
 
 def get_config_from_db(tag):
     values = {
@@ -581,10 +583,11 @@ def archive_mysql_move(config,debug):
                 print('Execute Query,Total rows:{}'.format(n_tab_total_rows))
                 cr_source.execute(v_sql)
                 rs_source = cr_source.fetchmany(n_batch_size)
-
+                n_counter = 0
                 while rs_source:
                     v_sql = ''
                     v_sql_del = ''
+                    n_counter = n_counter + len(rs_source)
                     for r in list(rs_source):
                         rs_source_desc = cr_source.description
                         ins_val = ""
@@ -641,11 +644,11 @@ def archive_mysql_move(config,debug):
                 print('')
 
                 print('comparing source and dest data...')
-                n_desc_rows = get_sync_table_rows(db_desc, tab, v_where)
-                if n_tab_total_rows == n_desc_rows:
+                # n_desc_rows = get_sync_table_rows(db_desc, tab, v_where)
+                if n_tab_total_rows == n_counter:
                     print("Comparing source and dest data...ok!")
                     print("Archive rq range:'{0}' ~ '{1}'".format(v_start,v_end))
-                    print("Archive {0} rows.".format(n_desc_rows))
+                    print("Archive {0} rows.".format(n_counter))
                     print('Deleting sour:{0},table {1} data...'.format(config['archive_db_sour'],tab))
                     v_sql = 'delete from {0} {1}'.format(tab,v_where)
                     print(v_sql)
@@ -653,7 +656,7 @@ def archive_mysql_move(config,debug):
                     db_source.commit()
                     print('Deleting table {0} data ok!'.format(tab))
                 else:
-                    print('Table data not equal,source:{0} rows, dest:{1} rows '.format(n_tab_total_rows,n_desc_rows))
+                    print('Table data not equal,source:{0} rows, dest:{1} rows '.format(n_tab_total_rows,n_counter))
 
     except Exception as e:
         print('archive_mysql_init exceptiion:' + traceback.format_exc())
