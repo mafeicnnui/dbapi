@@ -52,15 +52,14 @@ def send_mail(p_from_user,p_from_pass,p_to_user,p_title,p_content):
     except smtplib.SMTPException as e:
         print(e)
 
-def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
+def send_mail25(p_sendserver,p_from_user,p_from_pass,p_to_user,p_title,p_content):
     to_user=p_to_user.split(",")
     try:
         msg = MIMEText(p_content,'html','utf-8')
         msg["Subject"] = p_title
         msg["From"]    = p_from_user
         msg["To"]      = ",".join(to_user)
-        #server = smtplib.SMTP("smtp.exmail.qq.com", 25)
-        server = smtplib.SMTP("smtp.exmail.qq.com", 465)
+        server = smtplib.SMTP(p_sendserver, 25)
         server.set_debuglevel(0)
         server.login(p_from_user, p_from_pass)
         server.sendmail(p_from_user, to_user, msg.as_string())
@@ -68,14 +67,14 @@ def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
     except smtplib.SMTPException as e:
         print(e)
 
-def send_mail465(p_from_user,p_from_pass,p_to_user,p_title,p_content):
+def send_mail465(p_sendserver,p_from_user,p_from_pass,p_to_user,p_title,p_content):
     to_user=p_to_user.split(",")
     try:
         msg = MIMEText(p_content,'html','utf-8')
         msg["Subject"] = p_title
         msg["From"]    = p_from_user
         msg["To"]      = ",".join(to_user)
-        server = smtplib.SMTP_SSL("smtp.exmail.qq.com", 465)
+        server = smtplib.SMTP_SSL(p_sendserver, 465)
         server.set_debuglevel(0)
         server.login(p_from_user, p_from_pass)
         server.sendmail(p_from_user, to_user, msg.as_string())
