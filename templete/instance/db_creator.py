@@ -179,36 +179,36 @@ def del_config(config):
     parameter     = {}
 
     for c in config['cfg']:
-        if  c['TYPE'] == 'mysqld':
-            if c['VALUE'].split('=')[0] == 'datadir' \
-                 or c['VALUE'].split('=')[0] == 'socket' \
-                    or c['VALUE'].split('=')[0] == 'log-error' :
-                n_val = c['VALUE'].format(config['dver'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+        if  c['type'] == 'mysqld':
+            if c['value'].split('=')[0] == 'datadir' \
+                 or c['value'].split('=')[0] == 'socket' \
+                    or c['value'].split('=')[0] == 'log-error' :
+                n_val = c['value'].format(config['dver'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif  c['VALUE'].split('=')[0] == 'pid-file':
-                n_val = c['VALUE'].format(config['dver'],config['db_port'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif  c['value'].split('=')[0] == 'pid-file':
+                n_val = c['value'].format(config['dver'],config['db_port'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'port':
-                n_val = c['VALUE'].format(config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'port':
+                n_val = c['value'].format(config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'],c['VALUE'])
-                parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'],c['value'])
+                parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
 
         elif c['TYPE'] == 'mysql':
-            config_mysql  = config_mysql + '#{}\n{}\n'.format(c['NAME'], c['VALUE'])
-            parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+            config_mysql  = config_mysql + '#{}\n{}\n'.format(c['name'], c['value'])
+            parameter[c['value'].split('=')[0]] = c['VALUE'].split('=')[1]
         elif c['TYPE'] == 'client':
-            if c['VALUE'].split('=')[0] == 'socket' :
-                n_val = c['VALUE'].format(config['dver'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            if c['value'].split('=')[0] == 'socket' :
+                n_val = c['value'].format(config['dver'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
-                config_client = config_client + '#{}\n{}\n'.format(c['NAME'], c['VALUE'])
-                parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+                config_client = config_client + '#{}\n{}\n'.format(c['name'], c['value'])
+                parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
         else:
             pass
 
@@ -224,40 +224,40 @@ def write_config(config):
     parameter       = {}
 
     for c in config['cfg']:
-        if  c['TYPE'] == 'mysqld':
-            if c['VALUE'].split('=')[0] == 'datadir' \
-                 or c['VALUE'].split('=')[0] == 'socket' \
-                    or c['VALUE'].split('=')[0] == 'log-error' :
-                n_val = c['VALUE'].format(config['dver'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+        if  c['type'] == 'mysqld':
+            if c['value'].split('=')[0] == 'datadir' \
+                 or c['value'].split('=')[0] == 'socket' \
+                    or c['value'].split('=')[0] == 'log-error' :
+                n_val = c['value'].format(config['dver'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif  c['VALUE'].split('=')[0] == 'pid-file':
-                n_val = c['VALUE'].format(config['dver'],config['db_port'],config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif  c['value'].split('=')[0] == 'pid-file':
+                n_val = c['value'].format(config['dver'],config['db_port'],config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'port':
-                n_val = c['VALUE'].format(config['db_port'])
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'port':
+                n_val = c['value'].format(config['db_port'])
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
-            elif c['VALUE'].split('=')[0] == 'slow_query_log_file':
-                n_val = c['VALUE'].format(parameter['datadir']).replace('YYYYMMDD', get_day())
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'], n_val)
+            elif c['value'].split('=')[0] == 'slow_query_log_file':
+                n_val = c['value'].format(parameter['datadir']).replace('YYYYMMDD', get_day())
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
-                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['NAME'],c['VALUE'])
-                parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+                config_mysqld = config_mysqld + '#{}\n{}\n'.format(c['name'],c['value'])
+                parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
 
-        elif c['TYPE'] == 'mysql':
-            config_mysql  = config_mysql + '#{}\n{}\n'.format(c['NAME'], c['VALUE'])
-            parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
-        elif c['TYPE'] == 'client':
-            if c['VALUE'].split('=')[0] == 'socket' :
-                n_val = c['VALUE'].format(config['dver'],config['db_port'])
-                config_client = config_client + '#{}\n{}\n'.format(c['NAME'], n_val)
+        elif c['type'] == 'mysql':
+            config_mysql  = config_mysql + '#{}\n{}\n'.format(c['name'], c['value'])
+            parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
+        elif c['type'] == 'client':
+            if c['value'].split('=')[0] == 'socket' :
+                n_val = c['value'].format(config['dver'],config['db_port'])
+                config_client = config_client + '#{}\n{}\n'.format(c['name'], n_val)
                 parameter[n_val.split('=')[0]] = n_val.split('=')[1]
             else:
-                config_client = config_client + '#{}\n{}\n'.format(c['NAME'], c['VALUE'])
-                parameter[c['VALUE'].split('=')[0]] = c['VALUE'].split('=')[1]
+                config_client = config_client + '#{}\n{}\n'.format(c['name'], c['value'])
+                parameter[c['value'].split('=')[0]] = c['value'].split('=')[1]
         else:
             pass
     config_file = config_mysqld+'\n'+config_mysql+'\n'+config_client
@@ -460,7 +460,6 @@ def set_db_reboot_status(config):
         update_inst_reboot_status(config,'N')
 
 def startup(config):
-    # write config file
     parameter = write_config(config)
     print_dict(config)
     write_inst_log(config, '生成mysql配置文件:/etc/{}'.format(config['cfile']))
@@ -475,7 +474,8 @@ def startup(config):
             write_inst_log(config, '实例[{}]状态已更改为已启动'.format(config['inst_name']))
        except:
             write_inst_log(config, s['message'] + '时发生错误!')
-            print(traceback.print_exc())
+            traceback.print_exc()
+
 
 def stop(config):
     # write config file
