@@ -41,7 +41,7 @@ def get_config(tag):
             'tag': tag
         }
         print('values=', values)
-        url = 'http://10.2.39.18:8290/read_datax_config_sync'
+        url = 'http://$$API_SERVER$$/read_datax_config_sync'
         context = ssl._create_unverified_context()
         data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
         print('data=', data)
@@ -67,7 +67,7 @@ def get_templete(id):
             'id': id
         }
         print('values=', values)
-        url = 'http://10.2.39.18:8290/read_datax_templete'
+        url = 'http://$$API_SERVER$$/read_datax_templete'
         context = ssl._create_unverified_context()
         data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
         print('data=', data)

@@ -69,7 +69,7 @@ class push_datax_remote_sync(tornado.web.RequestHandler):
             res  =  await push(tag)
             self.write(json.dumps(res))
         except :
-            traceback.print_exc()
+            e = traceback.print_exc()
             self.write({'code': -1, 'msg': str(e)})
 
 class read_datax_templete(tornado.web.RequestHandler):

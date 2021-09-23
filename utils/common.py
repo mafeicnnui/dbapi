@@ -144,13 +144,20 @@ def gen_transfer_file(p_cfg,p_flag,p_templete):
     f_templete = '{}/templete/{}/{}'.format(f_path,p_flag,p_templete)
     f_local    = '{}/script/{}'.format(f_path,p_templete)
     f_remote   = '{0}/{1}'.format(p_cfg['msg']['script_path'],p_templete)
+    print('f_path=',f_path)
+    print('f_templete=',f_templete)
+    print('f_local=',f_local)
+    print('f_remote=',f_remote)
+    print('p_cfg_msg=',p_cfg['msg'])
     os.system('cp -f {0} {1}'.format(f_templete, f_local))
     with open(f_local, 'w') as f:
         f.write(get_file_contents(f_templete).
                     replace('$$API_SERVER$$',   p_cfg['msg']['api_server'].split(',')[0]).
                     replace('$$PYTHON3_HOME$$', p_cfg['msg']['python3_home']).
-                    replace('$$SCRIPT_PATH$$',  p_cfg['msg']['script_path']).
-                    replace('$$SCRIPT_FILE$$',  p_cfg['msg']['script_file']).
+                    #replace('$$SCRIPT_PATH$$',  p_cfg['msg']['script_path']).
+                    replace('$$SCRIPT_FILE$$',  p_cfg['msg'].get('script_path') if p_cfg['msg'].get('script_path') is not None else '').
+                    #replace('$$SCRIPT_FILE$$',  p_cfg['msg']['script_file']).
+                    replace('$$SCRIPT_FILE$$',  p_cfg['msg'].get('script_file') if p_cfg['msg'].get('script_file') is not None else '').
                     replace('$$PORT$$',         p_cfg['msg'].get('proxy_local_port') if p_cfg['msg'].get('proxy_local_port') is not None else '').
                     replace('$$DB_TAG$$',       p_cfg['msg'].get('db_tag')  if p_cfg['msg'].get('db_tag') is not None else '').
                     replace('$$INST_ID$$',      p_cfg['msg'].get('inst_id') if p_cfg['msg'].get('inst_id') is not None else '').

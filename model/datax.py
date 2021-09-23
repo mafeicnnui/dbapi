@@ -5,6 +5,7 @@
 # @File : datax.py.py
 # @Software: PyCharm
 
+import json
 import traceback
 from utils.common import gen_transfer_file,aes_decrypt,get_mysql_columns
 from utils.mysql_async import async_processer
@@ -125,46 +126,45 @@ FROM t_datax_sync_config a,t_server b ,t_dmmx c,t_dmmx d,t_db_source e
     return await async_processer.query_dict_one(st)
 
 async def process_templete(p_sync_id,p_templete):
+    templete = p_templete
     cfg = await query_datax_by_id(p_sync_id)
-    p_templete['full'].replace('$$USERNAME$$',cfg['user'])
-    p_templete['full'].replace('$$PASSWORD$$',await aes_decrypt(cfg['password'],cfg['user']))
-    p_templete['full'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
-    p_templete['full'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
-    p_templete['full'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
-    p_templete['full'].replace('$$USERNAME$$', cfg['user'])
-    p_templete['full'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
-    p_templete['full'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
-    p_templete['full'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
-    p_templete['full'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
-    p_templete['incr'].replace('$$USERNAME$$', cfg['user'])
-    p_templete['incr'].replace('$$PASSWORD$$', cfg)
-    p_templete['incr'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
-    p_templete['incr'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
-    p_templete['incr'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
-    p_templete['incr'].replace('$$USERNAME$$', cfg['user'])
-    p_templete['incr'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
-    p_templete['incr'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
-    p_templete['incr'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
-    p_templete['incr'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
-    p_templete['incr'].replace('$$MYSQL_WHERE$$', cfg['sync_incr_where'])
+    npass = await aes_decrypt(cfg['password'],cfg['user'])
+    templete['full']= templete['full'].replace('$$USERNAME$$',cfg['user'])
+    templete['full']= templete['full'].replace('$$PASSWORD$$',npass)
+    templete['full']= templete['full'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
+    templete['full']= templete['full'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+    templete['full']= templete['full'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+    templete['full']= templete['full'].replace('$$USERNAME$$', cfg['user'])
+    templete['full']= templete['full'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
+    templete['full']= templete['full'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
+    templete['full']= templete['full'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
+    templete['full']= templete['full'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
+    templete['incr']= templete['incr'].replace('$$USERNAME$$', cfg['user'])
+    templete['incr']= templete['incr'].replace('$$PASSWORD$$', npass)
+    templete['incr']= templete['incr'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
+    templete['incr']= templete['incr'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+    templete['incr']= templete['incr'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+    templete['incr']= templete['incr'].replace('$$USERNAME$$', cfg['user'])
+    templete['incr']= templete['incr'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
+    templete['incr']= templete['incr'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
+    templete['incr']= templete['incr'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
+    templete['incr']= templete['incr'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
+    templete['incr']= templete['incr'].replace('$$MYSQL_WHERE$$', cfg['sync_incr_where'])
+    print('p_templete....=',templete)
+    return templete
 
 async def query_datax_sync_dataxTemplete(sync_id):
     templete   = {
-        'full' : await async_processer.query_one('select contents from t_templete where templete_id=1'),
-        'incr' : await async_processer.query_one('select contents from t_templete where templete_id=2')
+        'full' : (await async_processer.query_one('select contents from t_templete where templete_id=1'))[0],
+        'incr' : (await async_processer.query_one('select contents from t_templete where templete_id=2'))[0]
     }
-    await process_templete(sync_id,templete)
+    templete = await process_templete(sync_id,templete)
+    print('query_datax_sync_dataxTemplete2=',templete)
     return templete
-
-async def get_datax_sync_templete(id):
-    try:
-      return {'code':200, 'msg':await query_datax_sync_dataxTemplete(id)}
-    except Exception as e:
-      return {'code': -1, 'msg': str(e)}
 
 async def write_datax_sync_TempleteFile(sync_id,):
     # 获取 datax 配置
-    cfg = await query_datax_by_id(sync_id)['sync_tag']
+    cfg = (await query_datax_by_id(sync_id))['sync_tag']
 
     # 获取模板内容至templete字典中
     templete = await query_datax_sync_dataxTemplete(sync_id)
@@ -181,6 +181,12 @@ async def write_datax_sync_TempleteFile(sync_id,):
 
     return  v_datax_full_file, v_datax_incr_file
 
+async def get_datax_sync_templete(id):
+    try:
+      return {'code':200, 'msg':await query_datax_sync_dataxTemplete(id)}
+    except Exception as e:
+      return {'code': -1, 'msg': str(e)}
+
 def gen_datax_transfer_file(p_cfg,f_path):
     f_local  = '{0}'.format(f_path)
     f_remote = '{0}/{1}'.format(p_cfg['msg']['script_path'], f_path.split('/')[-1])
@@ -193,26 +199,26 @@ async def transfer_datax_remote_file_sync(cfg,ssh,ftp):
        return {'code': -1, 'msg': 'failure!'}
 
     # write json file
-    f_datax_full,f_datax_incr = write_datax_sync_TempleteFile(cfg['msg']['id'])
+    f_datax_full,f_datax_incr = await write_datax_sync_TempleteFile(cfg['msg']['id'])
 
     # send full json file
     f_local, f_remote = gen_datax_transfer_file(cfg, f_datax_full)
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     # send incr json file
     f_local, f_remote = gen_datax_transfer_file(cfg, f_datax_incr)
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     # replace and send datax_sync.py file
     f_local, f_remote = gen_transfer_file(cfg, 'datax', 'datax_sync.py')
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     # replace repstr.sh file
     f_local, f_remote = gen_transfer_file(cfg, 'datax', 'repstr.sh')
-    if not ftp.transfer(cfg, f_local, f_remote):
+    if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
@@ -224,20 +230,20 @@ async def run_datax_remote_cmd_sync(cfg,ssh):
     cmd4 = '{0}/repstr.sh {1}'.format(cfg['msg']['script_path'],cfg['msg']['script_path']+'/'+cfg['msg']['sync_tag']+'_full.json')
     cmd5 = '{0}/repstr.sh {1}'.format(cfg['msg']['script_path'],cfg['msg']['script_path']+'/'+cfg['msg']['sync_tag']+'_full.json')
 
-    res = not ssh.exec(cmd1)
-    if not res['status']:
+    #res = not ssh.exec(cmd1)
+    if not ssh.exec(cmd1)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    res = not ssh.exec(cmd2)
-    if not res['status']:
+    #res = not ssh.exec(cmd2)
+    if not ssh.exec(cmd2)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    res = not ssh.exec(cmd3)
-    if not res['status']:
+    #res = not ssh.exec(cmd3)
+    if not ssh.exec(cmd3)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    res = not ssh.exec(cmd4)
-    if not res['status']:
+    #res = not ssh.exec(cmd4)
+    if not ssh.exec(cmd4)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    res = not ssh.exec(cmd5)
-    if not res['status']:
+    #res = not ssh.exec(cmd5)
+    if not ssh.exec(cmd5)['status']:
         return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
@@ -269,11 +275,11 @@ async def write_datax_remote_crontab_sync(cfg,ssh):
     if not ssh.exec(v_cron3)['status']:
        return {'code': -1, 'msg': 'failure!'}
 
-    res = ssh.exec(cfg, 'crontab -l')
+    res = ssh.exec('crontab -l')
     if res['status']:
-       return {'code':200,'msg':res['stdout']}
+        return {'code': 200, 'msg': res['stdout']}
     else:
-       return {'code':-1,'msg':'failure!'}
+        return {'code': -1, 'msg': 'failure!'}
 
 async def push(tag):
     cfg = await get_datax_sync_config(tag)
