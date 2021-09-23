@@ -19,13 +19,9 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="db mgr bug fix">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="datax sync fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/datax.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/datax.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/service/datax.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/datax.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/datax/datax_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/datax/datax_sync.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/common.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -362,7 +358,7 @@
       <workItem from="1630631489600" duration="10012000" />
       <workItem from="1630894948157" duration="63000" />
       <workItem from="1632275503553" duration="1227000" />
-      <workItem from="1632378538608" duration="7384000" />
+      <workItem from="1632378538608" duration="8703000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -581,7 +577,14 @@
       <option name="project" value="LOCAL" />
       <updated>1630571729336</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="datax sync fix">
+      <created>1632386181149</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1632386181149</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="TodoView">
@@ -631,7 +634,8 @@
     <MESSAGE value="archive bug fix" />
     <MESSAGE value="sync bug fix" />
     <MESSAGE value="db mgr bug fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="db mgr bug fix" />
+    <MESSAGE value="datax sync fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="datax sync fix" />
   </component>
   <component name="WindowStateProjectService">
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1632382789128">
@@ -662,10 +666,14 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="421" y="252" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1630631514755" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1630571735066">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1632386186440">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1630571735066" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632386186440" />
+    <state x="662" y="254" width="596" height="532" key="find.popup" timestamp="1632387568035">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="662" y="254" width="596" height="532" key="find.popup/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632387568035" />
     <state x="623" y="225" width="672" height="678" key="search.everywhere.popup" timestamp="1632384749832">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
