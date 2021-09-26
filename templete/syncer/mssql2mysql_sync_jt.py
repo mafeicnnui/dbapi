@@ -19,6 +19,7 @@ import json
 import urllib.parse
 import urllib.request
 import ssl
+import requests
 
 
 def send_mail465(p_from_user, p_from_pass, p_to_user, p_title, p_content):
@@ -416,7 +417,7 @@ def write_log(msg):
     file_handle.close()
 
 
-def write_sync_log(config):
+def write_sync_log_old(config):
     v_tag = {
         'sync_tag'   : config['sync_tag'],
         'create_date': get_time(),
@@ -430,6 +431,7 @@ def write_sync_log(config):
     print(values)
     # write_log('values='+json.dump(values))
     url = 'http://$$API_SERVER$$/write_sync_log'
+
     context = ssl._create_unverified_context()
     data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
     req = urllib.request.Request(url, data=data)
@@ -441,8 +443,24 @@ def write_sync_log(config):
     else:
         write_log('Interface write_sync_log call failed!')
 
+def write_sync_log(config):
+    data = {
+        'tag': {
+                    'sync_tag': config['sync_tag'],
+                    'create_date': get_time(),
+                    'duration': config['sync_duration'],
+                    'amount': config['sync_amount']
+                }
+    }
+    url = 'http://$$API_SERVER$$/write_sync_log'
+    res = requests.post(url, data=data)
+    if res['code'] == 200:
+        print('Interface write_sync_log call successful!')
+    else:
+        print('Interface write_sync_log call failed,skip write log!')
 
-def write_sync_log_detail(config):
+
+def write_sync_log_detail_old(config):
     v_tag = {
         'sync_tag': config['sync_tag'],
         'create_date': get_time(),
@@ -467,6 +485,24 @@ def write_sync_log_detail(config):
         write_log('Interface write_sync_log_detail call successful!')
     else:
         write_log('Interface write_sync_log_detail call failed!')
+
+def write_sync_log_detail(config):
+    data = {
+                'tag':  {
+                    'sync_tag': config['sync_tag'],
+                    'create_date': get_time(),
+                    'sync_table': config['sync_table_inteface'],
+                    'sync_amount': config['sync_amount'],
+                    'duration': config['sync_duration']
+                }
+    }
+    url = 'http://$$API_SERVER$$/write_sync_log_detail'
+    res = requests.post(url, data=data)
+    if res['code'] == 200:
+        print('Interface write_sync_log_detail call successful!')
+    else:
+        print('Interface write_sync_log_detail call failed,skip write log!')
+
 
 
 def get_config(fname):

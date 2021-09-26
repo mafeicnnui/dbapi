@@ -143,7 +143,7 @@ def check_api_server_status(cfg):
     for api in cfg['api_server'].split(','):
         req = 'http://{}/health'.format(api)
         try:
-          res = requests.head(req)
+          res = requests.head(req,timeout=1)
           api_status[api] = res.status_code
         except:
           api_status[api] = 500
@@ -173,11 +173,11 @@ def get_config_from_db(tag, workdir):
     try:
         try:
             url = 'http://$$API_SERVER$$/read_config_sync'
-            res = requests.post(url, data = par).json()
+            res = requests.post(url, data = par,timeout=1).json()
         except:
             api = query_health_api(cfg)
             url = 'http://{}/read_config_sync'.format(api)
-            res = requests.post(url, data = par).json()
+            res = requests.post(url, data = par,timeout=1).json()
 
         if res['code'] == 200:
             print('read_config_sync 接口调用成功!')
@@ -276,17 +276,24 @@ def aes_decrypt(p_cfg,p_password, p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
        url = 'http://$$API_SERVER$$/read_db_decrypt'
-       res = requests.post(url, data = par).json()
+       res = requests.post(url, data = par,timeout=1).json()
+       if res['code'] == 200:
+           print('call interface aes_decrypt success!')
+           return res['msg']
+       else:
+           print('call interface aes_decrypt error:{}'.format(res['msg']))
     except:
-       url = 'http://{}/read_db_decrypt'.format(query_health_api(p_cfg))
-       res = requests.post(url, data = par).json()
+       try:
+           url = 'http://{}/read_db_decrypt'.format(query_health_api(p_cfg))
+           res = requests.post(url, data = par,timeout=1).json()
+           if res['code'] == 200:
+               print('call interface aes_decrypt success!')
+               return res['msg']
+           else:
+               print('call interface aes_decrypt error:{}'.format(res['msg']))
+       except:
+           print('aes_decrypt api not available!')
 
-    if res['code'] == 200:
-        print('call interface aes_decrypt success!')
-        return res['msg']
-    else:
-        print('call interface aes_decrypt error:{}'.format(res['msg']))
-        sys.exit(0)
 
 def write_sync_log(config):
     par = {
@@ -297,16 +304,23 @@ def write_sync_log(config):
     }
     try:
         url = 'http://$$API_SERVER$$/write_sync_log'
-        res = requests.post(url, data={'tag': json.dumps(par)})
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=1)
+        if res.status_code == 200:
+            print('Interface write_sync_log call successful!')
+        else:
+            print('Interface write_sync_log call failed!')
     except:
-        api = query_health_api(config)
-        url = 'http://{}/write_sync_log'.format(api)
-        res = requests.post(url, data={'tag': json.dumps(par)})
+        try:
+            api = query_health_api(config)
+            url = 'http://{}/write_sync_log'.format(api)
+            res = requests.post(url, data={'tag': json.dumps(par)},timeout=1)
+            if res.status_code == 200:
+                print('Interface write_sync_log call successful!')
+            else:
+                print('Interface write_sync_log call failed!')
+        except:
+            print('Interface API not available,skip write_sync_log!')
 
-    if  res.status_code == 200:
-        print('Interface write_sync_log call successful!')
-    else:
-        print('Interface write_sync_log call failed!')
 
 def write_sync_log_detail(config,ftab):
     par = {
@@ -325,16 +339,23 @@ def write_sync_log_detail(config,ftab):
 
     try:
         url = 'http://$$API_SERVER$$/write_sync_log_detail'
-        res = requests.post(url, data={'tag': json.dumps(par)})
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=1)
+        if res.status_code == 200:
+            print('Interface write_sync_log_detail call successful!')
+        else:
+            print('Interface write_sync_log_detail call failed!')
     except:
-        api = query_health_api(config)
-        url = 'http://{}/write_sync_log_detail'.format(api)
-        res = requests.post(url, data={'tag': json.dumps(par)})
+        try:
+            api = query_health_api(config)
+            url = 'http://{}/write_sync_log_detail'.format(api)
+            res = requests.post(url, data={'tag': json.dumps(par)},timeout=1)
+            if res.status_code == 200:
+                print('Interface write_sync_log_detail call successful!')
+            else:
+                print('Interface write_sync_log_detail call failed!')
+        except:
+            print('Interface API not available,skip write_sync_log_detail!')
 
-    if res.status_code == 200:
-        print('Interface write_sync_log_detail call successful!')
-    else:
-        print('Interface write_sync_log_detail call failed!')
 
 def update_sync_status(config,status):
     data = {
@@ -343,17 +364,24 @@ def update_sync_status(config,status):
     }
     try:
         url = 'http://$$API_SERVER$$/update_sync_status'
-        res = requests.post(url, data=data)
+        res = requests.post(url, data=data,timeout=1)
+        if res.status_code == 200:
+            print('call interface update_sync_status :{}!'.format('running' if status == '1' else 'complete'))
+        else:
+            print('call interface update_sync_status error :{}'.format(res['msg']))
+            sys.exit(0)
     except:
-        api = query_health_api(config)
-        url = 'http://{}/update_sync_status'.format(api)
-        res = requests.post(url, data=data)
+        try:
+            api = query_health_api(config)
+            url = 'http://{}/update_sync_status'.format(api)
+            res = requests.post(url, data=data,timeout=1)
+            if res.status_code == 200:
+                print('call interface update_sync_status :{}!'.format('running' if status == '1' else 'complete'))
+            else:
+                print('call interface update_sync_status error :{}'.format(res['msg']))
+        except:
+            print('Interface API not available,skip update_sync_status!')
 
-    if res.status_code == 200:
-       print('call interface update_sync_status :{}!'.format('running' if status =='1' else 'complete'))
-    else:
-       print('call interface update_sync_status error :{}'.format(res['msg']))
-       sys.exit(0)
 
 def get_local_config_json(fname):
     with open(fname, 'r') as f:

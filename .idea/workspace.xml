@@ -21,7 +21,10 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="datax sync fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/datax/datax_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/datax/datax_sync.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mssql2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mssql2mysql_sync.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mssql2mysql_sync_jt.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mssql2mysql_sync_jt.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/common.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -358,7 +361,9 @@
       <workItem from="1630631489600" duration="10012000" />
       <workItem from="1630894948157" duration="63000" />
       <workItem from="1632275503553" duration="1227000" />
-      <workItem from="1632378538608" duration="8703000" />
+      <workItem from="1632378538608" duration="9423000" />
+      <workItem from="1632454676737" duration="631000" />
+      <workItem from="1632618242154" duration="8074000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -584,7 +589,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632386181149</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="datax sync fix">
+      <created>1632387916292</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1632387916292</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="TodoView">
@@ -642,34 +654,34 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632382789128" />
-    <state width="1877" height="186" key="GridCell.Tab.0.bottom" timestamp="1632385556613">
+    <state width="1877" height="122" key="GridCell.Tab.0.bottom" timestamp="1632388487676">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
-    <state width="1877" height="186" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632385556613" />
-    <state width="1877" height="186" key="GridCell.Tab.0.center" timestamp="1632385556612">
+    <state width="1877" height="122" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632388487676" />
+    <state width="1877" height="122" key="GridCell.Tab.0.center" timestamp="1632388487676">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
-    <state width="1877" height="186" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632385556612" />
-    <state width="1877" height="186" key="GridCell.Tab.0.left" timestamp="1632385556612">
+    <state width="1877" height="122" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632388487676" />
+    <state width="1877" height="122" key="GridCell.Tab.0.left" timestamp="1632388487676">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
-    <state width="1877" height="186" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632385556612" />
-    <state width="1877" height="186" key="GridCell.Tab.0.right" timestamp="1632385556612">
+    <state width="1877" height="122" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632388487676" />
+    <state width="1877" height="122" key="GridCell.Tab.0.right" timestamp="1632388487676">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
-    <state width="1877" height="186" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632385556612" />
+    <state width="1877" height="122" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632388487676" />
     <state x="421" y="252" key="SettingsEditor" timestamp="1630631514755">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="421" y="252" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1630631514755" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1632386186440">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1632387920546">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632386186440" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1632387920546" />
     <state x="662" y="254" width="596" height="532" key="find.popup" timestamp="1632387568035">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>

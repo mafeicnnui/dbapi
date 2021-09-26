@@ -155,7 +155,7 @@ def gen_transfer_file(p_cfg,p_flag,p_templete):
                     replace('$$API_SERVER$$',   p_cfg['msg']['api_server'].split(',')[0]).
                     replace('$$PYTHON3_HOME$$', p_cfg['msg']['python3_home']).
                     #replace('$$SCRIPT_PATH$$',  p_cfg['msg']['script_path']).
-                    replace('$$SCRIPT_FILE$$',  p_cfg['msg'].get('script_path') if p_cfg['msg'].get('script_path') is not None else '').
+                    replace('$$SCRIPT_PATH$$',  p_cfg['msg'].get('script_path') if p_cfg['msg'].get('script_path') is not None else '').
                     #replace('$$SCRIPT_FILE$$',  p_cfg['msg']['script_file']).
                     replace('$$SCRIPT_FILE$$',  p_cfg['msg'].get('script_file') if p_cfg['msg'].get('script_file') is not None else '').
                     replace('$$PORT$$',         p_cfg['msg'].get('proxy_local_port') if p_cfg['msg'].get('proxy_local_port') is not None else '').
