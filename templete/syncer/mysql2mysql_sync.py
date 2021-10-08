@@ -501,7 +501,7 @@ def get_mysql_tab_incr_rows(config,tab):
 def check_mysql_tab_sync(config,tab):
    db=config['db_mysql_desc']
    cr=db.cursor()
-   sql="select count(0) from {0}".format(tab)
+   sql="select count(0) from `{0}`".format(tab)
    config['run_sql'] = sql
    cr.execute(sql)
    rs=cr.fetchone()
@@ -540,11 +540,11 @@ def get_tab_header_pkid(config,tab):
     db=config['db_mysql_sour']
     cr=db.cursor()
     cols=get_sync_table_cols_pkid(config,tab)
-    sql="select {0} from {1} limit 1".format(cols,tab)
+    sql="select {0} from `{1}` limit 1".format(cols,tab)
     config['run_sql'] = sql
     cr.execute(sql)
     desc=cr.description
-    s1="insert into "+tab.lower()+"("
+    s1="insert into `"+tab.lower()+"` ("
     s2=" values "
     s1=s1+cols+")"
     cr.close()
@@ -553,11 +553,11 @@ def get_tab_header_pkid(config,tab):
 def get_tab_header(config,tab):
     db=config['db_mysql_sour']
     cr=db.cursor()
-    sql="select * from {0} limit 1".format(tab)
+    sql="select * from `{0}` limit 1".format(tab)
     config['run_sql'] = sql
     cr.execute(sql)
     desc=cr.description
-    s1="insert into "+tab.lower()+"("
+    s1="insert into `"+tab.lower()+"` ("
     s2=" values "
     s1=s1+get_sync_table_cols(config,tab)+")"
     cr.close()
@@ -566,7 +566,7 @@ def get_tab_header(config,tab):
 def f_get_table_ddl(config,tab):
     db_source = config['db_mysql_sour']
     cr_source = db_source.cursor()
-    v_sql     ="""show create table {0}""".format(tab)
+    v_sql     ="""show create table `{0}`""".format(tab)
     config['run_sql'] = v_sql
     cr_source.execute(v_sql)
     rs=cr_source.fetchone()
@@ -623,7 +623,7 @@ def sync_mysql_ddl(config,debug):
 
 def get_sync_table_total_rows(db,tab,v_where):
     cr_source = db.cursor()
-    v_sql="select count(0) from {0} {1}".format(tab,v_where)
+    v_sql="select count(0) from `{0}` {1}".format(tab,v_where)
     cr_source.execute(v_sql)
     rs_source=cr_source.fetchone()
     cr_source.close()
@@ -772,6 +772,7 @@ def sync_mysql_init(config,debug):
                 config_init[tab] = True
                 i_counter        = 0
                 ins_sql_header   = get_tab_header(config,tab)
+                print('ins_sql_header=',ins_sql_header)
                 n_batch_size     = int(config['batch_size'])
                 db_source        = config['db_mysql_sour']
                 cr_source        = db_source.cursor()
@@ -779,12 +780,12 @@ def sync_mysql_init(config,debug):
                 cr_desc          = db_desc.cursor()
 
                 print('delete table:{0} all data!'.format(tab))
-                cr_desc.execute('delete from {0}'.format(tab))
+                cr_desc.execute('delete from `{0}`'.format(tab))
                 print('delete table:{0} all data ok!'.format(tab))
 
                 n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
                 #v_sql            = "select * from {0}".format(tab)
-                v_sql = "select {0} from {1}".format(get_sync_table_cols(config, tab),tab)
+                v_sql = "select {0} from `{1}`".format(get_sync_table_cols(config, tab),tab)
                 cr_source.execute(v_sql)
                 rs_source = cr_source.fetchmany(n_batch_size)
                 while rs_source:
@@ -975,7 +976,7 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
             v_pk_cols        = get_sync_table_pk_vals(db_source, tab)
             cr_desc          = db_desc.cursor()
             n_tab_total_rows = get_sync_table_total_rows(db_source, tab, v_where)
-            v_sql            = """select {0} as 'pk',{1} from {2} {3}""".format(v_pk_cols, get_sync_table_cols(config, tab), tab, v_where)
+            v_sql            = """select {0} as 'pk',{1} from `{2}` {3}""".format(v_pk_cols, get_sync_table_cols(config, tab), tab, v_where)
             n_rows           = 0
             cr_source.execute(v_sql)
             rs_source  = cr_source.fetchmany(n_batch_size)
@@ -1062,7 +1063,7 @@ def sync_mysql_data_pkid(config, ftab,config_init):
             db_desc          = config['db_mysql_desc']
             cr_desc          = db_desc.cursor()
             n_tab_total_rows = get_sync_table_total_rows(db_source, tab, v_where)
-            v_sql            = """select {0} from {1} {2}""".format(ins_sql_cols,tab, v_where)
+            v_sql            = """select {0} from `{1}` {2}""".format(ins_sql_cols,tab, v_where)
             n_rows           = 0
             cr_source.execute(v_sql)
             rs_source  = cr_source.fetchmany(n_batch_size)
