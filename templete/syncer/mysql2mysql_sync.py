@@ -1023,8 +1023,8 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
                     cr_desc.execute(batch_sql)
                 else:
                     for d in v_sql_del[0:-1].split(','):
-                        config['run_sql'] = 'delete from {0} where {1}'.format(tab, d)
-                        cr_desc.execute('delete from {0} where {1}'.format(tab, d))
+                        config['run_sql'] = 'delete from `{0}` where {1}'.format(tab, d)
+                        cr_desc.execute('delete from `{0}` where {1}'.format(tab, d))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
