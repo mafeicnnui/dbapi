@@ -8,7 +8,7 @@
 import json
 import tornado
 import traceback
-from utils.common import  db_config_info
+from utils.common import  db_config_info,DateEncoder
 from model.monitor import get_db_monitor_config,\
                           save_monitor_log,\
                           push
@@ -19,7 +19,7 @@ class read_config_monitor(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag  = self.get_argument("tag")
             res  = await get_db_monitor_config(tag)
-            self.write(json.dumps(res))
+            self.write(json.dumps(res,cls=DateEncoder))
         except Exception as e:
             traceback.print_exc()
             self.write({'code': -1, 'msg': str(e)})

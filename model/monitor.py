@@ -20,7 +20,7 @@ async def check_server_monitor_status(p_tag):
     return (await async_processer.query_one(st))[0]
 
 async def get_itmes_from_templete_ids(p_templete):
-    st = "SELECT index_code FROM t_monitor_index \
+    st = "SELECT index_code,index_threshold FROM t_monitor_index \
               WHERE id IN(SELECT index_id FROM `t_monitor_templete_index` \
                            WHERE INSTR('{0}',templete_id)>0) AND STATUS='1'".format(p_templete)
     rs = await async_processer.query_dict_list(st)
@@ -28,6 +28,14 @@ async def get_itmes_from_templete_ids(p_templete):
     for i in rs:
        t=t+i['index_code']+','
     return t[0:-1]
+
+
+async def get_itmes_from_monitor_templete(p_templete):
+    st = "SELECT index_code,index_threshold FROM t_monitor_index \
+              WHERE id IN(SELECT index_id FROM `t_monitor_templete_index` \
+                           WHERE INSTR('{0}',templete_id)>0) AND STATUS='1'".format(p_templete)
+    rs = await async_processer.query_dict_list(st)
+    return rs
 
 async def get_db_monitor_config(p_tag):
     if await check_server_monitor_status(p_tag)>0:
@@ -44,13 +52,24 @@ async def get_db_monitor_config(p_tag):
                    b.server_desc, b.market_id,
                    c.ip as db_ip, c.port  as db_port,
                    c.service as db_service,c.user as db_user,
-                   c.password as db_pass,c.db_type as db_type 
-        FROM t_monitor_task a JOIN t_server b ON a.server_id=b.id LEFT JOIN t_db_source c  ON  a.db_id=c.id  
+                   c.password as db_pass,c.db_type as db_type,
+                   c.db_desc,c.id_ro as id_ro,
+                   (select `value` from t_sys_settings where `key`='send_server') as send_server,
+                   (select `value` from t_sys_settings where `key`='send_port') as send_port,
+                   (select `value` from t_sys_settings where `key`='sender') as sender,
+                   (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
+                   a.receiver  as receiver 
+        FROM t_monitor_task a JOIN t_server b ON a.server_id=b.id 
+           LEFT JOIN t_db_source c  ON  a.db_id=c.id  
         where a.task_tag ='{0}' ORDER BY a.id'''.format(p_tag)
 
     rs = await async_processer.query_dict_one(st)
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
     rs['templete_indexes'] = await get_itmes_from_templete_ids(rs['templete_id'])
+    rs['templete_monitor_indexes'] = await get_itmes_from_monitor_templete(rs['templete_id'])
+    if rs.get('id_ro') is not None:
+       rs['ds_ro'] = await async_processer.query_dict_one("select * from t_db_source where id={}".format(rs['id_ro']))
+    print('rs=',rs)
     return {'code': 200, 'msg': rs}
 
 async def save_monitor_log(config):
