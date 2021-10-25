@@ -62,14 +62,12 @@ async def get_db_monitor_config(p_tag):
         FROM t_monitor_task a JOIN t_server b ON a.server_id=b.id 
            LEFT JOIN t_db_source c  ON  a.db_id=c.id  
         where a.task_tag ='{0}' ORDER BY a.id'''.format(p_tag)
-
     rs = await async_processer.query_dict_one(st)
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
     rs['templete_indexes'] = await get_itmes_from_templete_ids(rs['templete_id'])
     rs['templete_monitor_indexes'] = await get_itmes_from_monitor_templete(rs['templete_id'])
-    if rs.get('id_ro') is not None:
+    if rs.get('id_ro') is not None and rs.get('id_ro') !='':
        rs['ds_ro'] = await async_processer.query_dict_one("select * from t_db_source where id={}".format(rs['id_ro']))
-    print('rs=',rs)
     return {'code': 200, 'msg': rs}
 
 async def save_monitor_log(config):
@@ -166,6 +164,7 @@ async def run_remote_cmd_monitor(cfg,ssh):
 
 async def push(tag):
     cfg = await get_db_monitor_config(tag)
+    print('cfg=',cfg)
     if cfg['code']!=200:
        return cfg
 

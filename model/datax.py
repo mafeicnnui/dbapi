@@ -49,7 +49,7 @@ async def get_datax_sync_config(p_tag):
        return {'code': -3, 'msg': '同步任务已禁用!'}
 
     st = '''
-SELECT a.id, a.sync_tag,a.sync_ywlx,
+SELECT a.id, a.sync_tag,a.sync_ywlx,a.sync_type,
        CASE WHEN c.service='' THEN 
          CONCAT(c.ip,':',c.port,':',a.sync_schema,':',c.user,':',c.password)
        ELSE
@@ -59,7 +59,21 @@ SELECT a.id, a.sync_tag,a.sync_ywlx,
        LOWER(a.sync_table) AS sync_table,a.sync_gap,
        a.sync_time_type,a.script_path,a.comments,a.status,
        b.server_ip,b.server_port,b.server_user,b.server_pass,
-       a.hbase_thrift,a.sync_hbase_table,a.datax_home,a.sync_incr_col,a.sync_table,a.sync_incr_where
+       a.hbase_thrift,a.sync_hbase_table,a.datax_home,a.sync_incr_col,a.sync_table,a.sync_incr_where,
+       a.es_service,
+       a.es_index_name,
+       a.es_type_name,
+       a.sync_es_columns,
+       a.doris_id,
+       (select ip from t_db_source x where x.id=a.doris_id) as doris_ip,
+       (select port from t_db_source x where x.id=a.doris_id) as doris_port,
+       (select user from t_db_source x where x.id=a.doris_id) as doris_user,
+       (select password from t_db_source x where x.id=a.doris_id) as doris_password,
+       (select stream_load from t_db_source x where x.id=a.doris_id) as doris_stream_load,
+       (select concat(x.ip,':',x.port) from t_db_source x where x.id=a.doris_id) as doris_jbdc_url,
+       a.doris_db_name,
+       a.doris_tab_name,
+       a.doris_batch_size
 FROM t_datax_sync_config a,t_server b,t_db_source c
 WHERE a.server_id=b.id 
 AND a.sour_db_id=c.id
@@ -118,64 +132,164 @@ SELECT
      a.sync_hbase_columns,a.sync_incr_where,a.sync_ywlx,
      a.sync_type,a.script_path,a.run_time,a.comments,
      a.datax_home,a.sync_time_type,a.sync_gap,
-     a.api_server,a.status,a.python3_home
+     a.api_server,a.status,a.python3_home,
+     a.hbase_thrift,
+     a.es_service,
+     a.es_index_name,
+     a.es_type_name,
+     a.sync_es_columns,
+     a.doris_id,
+     (select user from t_db_source x where x.id=a.doris_id) as doris_user,
+     (select password from t_db_source x where x.id=a.doris_id) as doris_password,
+     (select stream_load from t_db_source x where x.id=a.doris_id) as doris_stream_load,
+     (select concat(x.ip,':',x.port) from t_db_source x where x.id=a.doris_id) as doris_jbdc_url,
+     a.doris_db_name,
+     a.doris_tab_name,
+     a.doris_batch_size
 FROM t_datax_sync_config a,t_server b ,t_dmmx c,t_dmmx d,t_db_source e
  WHERE a.server_id=b.id and b.status='1' and a.sour_db_id=e.id and c.dm='08' and d.dm='09'
     AND a.sync_ywlx=c.dmm and a.sync_type=d.dmm and a.id='{0}'
 """.format(sync_id)
     return await async_processer.query_dict_one(st)
 
-async def process_templete(p_sync_id,p_templete):
-    templete = p_templete
-    cfg = await query_datax_by_id(p_sync_id)
-    npass = await aes_decrypt(cfg['password'],cfg['user'])
-    templete['full']= templete['full'].replace('$$USERNAME$$',cfg['user'])
-    templete['full']= templete['full'].replace('$$PASSWORD$$',npass)
-    templete['full']= templete['full'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
-    templete['full']= templete['full'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
-    templete['full']= templete['full'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
-    templete['full']= templete['full'].replace('$$USERNAME$$', cfg['user'])
-    templete['full']= templete['full'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
-    templete['full']= templete['full'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
-    templete['full']= templete['full'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
-    templete['full']= templete['full'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
-    templete['incr']= templete['incr'].replace('$$USERNAME$$', cfg['user'])
-    templete['incr']= templete['incr'].replace('$$PASSWORD$$', npass)
-    templete['incr']= templete['incr'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
-    templete['incr']= templete['incr'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
-    templete['incr']= templete['incr'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
-    templete['incr']= templete['incr'].replace('$$USERNAME$$', cfg['user'])
-    templete['incr']= templete['incr'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
-    templete['incr']= templete['incr'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
-    templete['incr']= templete['incr'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
-    templete['incr']= templete['incr'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
-    templete['incr']= templete['incr'].replace('$$MYSQL_WHERE$$', cfg['sync_incr_where'])
-    print('p_templete....=',templete)
+
+async def get_templete_by_sync_type(p_type):
+    if p_type == '5':
+        templete = {
+            'full': (await async_processer.query_one('select contents from t_templete where templete_id=1'))[0],
+            'incr': (await async_processer.query_one('select contents from t_templete where templete_id=2'))[0]
+        }
+    elif p_type == '6':
+        templete = {
+            'full': (await async_processer.query_one('select contents from t_templete where templete_id=3'))[0],
+            'incr': (await async_processer.query_one('select contents from t_templete where templete_id=4'))[0]
+        }
+    elif p_type == '7':
+        templete = {
+            'full': (await async_processer.query_one('select contents from t_templete where templete_id=5'))[0],
+            'incr': (await async_processer.query_one('select contents from t_templete where templete_id=6'))[0]
+        }
+    else:
+        templete = {
+            'full': '',
+            'incr': '',
+        }
+    return  templete
+
+def get_mysql_columns_doris(p_sync):
+    v = ''
+    for i in p_sync['sync_columns'].split(','):
+       v=v+'''"{}",'''.format(i)
+    return v[0:-1]
+
+
+async def update_templete(cfg,templete):
+    if  cfg['sync_type'] == '5':
+        npass = await aes_decrypt(cfg['password'], cfg['user'])
+        templete['full'] = templete['full'].replace('$$USERNAME$$', cfg['user'])
+        templete['full'] = templete['full'].replace('$$PASSWORD$$', npass)
+        templete['full'] = templete['full'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
+        templete['full'] = templete['full'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+        templete['full'] = templete['full'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+        templete['full'] = templete['full'].replace('$$USERNAME$$', cfg['user'])
+        templete['full'] = templete['full'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
+        templete['full'] = templete['full'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
+        templete['full'] = templete['full'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
+        templete['full'] = templete['full'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
+        templete['incr'] = templete['incr'].replace('$$USERNAME$$', cfg['user'])
+        templete['incr'] = templete['incr'].replace('$$PASSWORD$$', npass)
+        templete['incr'] = templete['incr'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
+        templete['incr'] = templete['incr'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+        templete['incr'] = templete['incr'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+        templete['incr'] = templete['incr'].replace('$$USERNAME$$', cfg['user'])
+        templete['incr'] = templete['incr'].replace('$$ZK_HOSTS', cfg['zk_hosts'])
+        templete['incr'] = templete['incr'].replace('$$HBASE_TABLE_NAME$$', cfg['sync_hbase_table'])
+        templete['incr'] = templete['incr'].replace('$$HBASE_ROWKEY$$', cfg['sync_hbase_rowkey'])
+        templete['incr'] = templete['incr'].replace('$$HBASE_COLUMN_NAMES$$', cfg['sync_hbase_columns'])
+        templete['incr'] = templete['incr'].replace('$$MYSQL_WHERE$$', cfg['sync_incr_where'])
+    elif cfg['sync_type'] == '6':
+        templete['full'] = templete['full'].replace('$$USERNAME$$', cfg['user'])
+        templete['full'] = templete['full'].replace('$$PASSWORD$$', await aes_decrypt(cfg['password'], cfg['user']))
+        templete['full'] = templete['full'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
+        templete['full'] = templete['full'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+        templete['full'] = templete['full'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+        templete['full'] = templete['full'].replace('$$USERNAME$$', cfg['user'])
+        templete['full'] = templete['full'].replace('$$ES_SERVICE$$', cfg['es_service'])
+        templete['full'] = templete['full'].replace('$$ES_INDEX_NAME$$', cfg['es_index_name'])
+        templete['full'] = templete['full'].replace('$$ES_TYPE_NAME$$', cfg['es_type_name'])
+        templete['full'] = templete['full'].replace('$$ES_COLUMN_NAMES$$', cfg['sync_es_columns'])
+        # replacre incr templete
+        templete['incr'] = templete['incr'].replace('$$USERNAME$$', cfg['user'])
+        templete['incr'] = templete['incr'].replace('$$PASSWORD$$', await aes_decrypt(cfg['password'], cfg['user']))
+        templete['incr'] = templete['incr'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns(cfg))
+        templete['incr'] = templete['incr'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+        templete['incr'] = templete['incr'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+        templete['incr'] = templete['incr'].replace('$$MYSQL_WHERE$$', cfg['sync_incr_where'])
+        templete['full'] = templete['incr'].replace('$$ES_SERVICE$$', cfg['zk_hosts'])
+        templete['full'] = templete['incr'].replace('$$ES_INDEX_NAME$$', cfg['sync_hbase_table'])
+        templete['full'] = templete['incr'].replace('$$ES_TYPE_NAME$$', cfg['sync_hbase_rowkey'])
+        templete['full'] = templete['incr'].replace('$$ES_COLUMN_NAMES$$', cfg['sync_es_columns'])
+    elif cfg['sync_type'] == '7':
+        print('cfg=',cfg)
+        # replace full templete
+        templete['full'] = templete['full'].replace('$$USERNAME$$', cfg['user'])
+        templete['full'] = templete['full'].replace('$$PASSWORD$$', await aes_decrypt(cfg['password'], cfg['user']))
+        templete['full'] = templete['full'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns_doris(cfg))
+        templete['full'] = templete['full'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+        templete['full'] = templete['full'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+        templete['full'] = templete['full'].replace('$$USERNAME$$', cfg['user'])
+        templete['full'] = templete['full'].replace('$$DORIS_FE_LOAD_URL$$', cfg['doris_stream_load'])
+        templete['full'] = templete['full'].replace('$$DORIS_JDBC_URL$$', cfg['doris_jbdc_url'])
+        templete['full'] = templete['full'].replace('$$DORIS_DATABASE$$', cfg['doris_db_name'])
+        templete['full'] = templete['full'].replace('$$DORIS_TABLE$$', cfg['doris_tab_name'])
+        templete['full'] = templete['full'].replace('$$DORIS_USER$$', cfg['doris_user'])
+        templete['full'] = templete['full'].replace('$$DORIS_PASSWORD$$', await aes_decrypt(cfg['doris_password'],cfg['doris_user']))
+        templete['full'] = templete['full'].replace('$$MAX_BATCH_ROWS$$', cfg['doris_batch_size'])
+        # replacre incr templete
+        templete['incr'] = templete['incr'].replace('$$USERNAME$$', cfg['user'])
+        templete['incr'] = templete['incr'].replace('$$PASSWORD$$', await aes_decrypt(cfg['password'], cfg['user']))
+        templete['incr'] = templete['incr'].replace('$$MYSQL_COLUMN_NAMES$$', get_mysql_columns_doris(cfg))
+        templete['incr'] = templete['incr'].replace('$$MYSQL_TABLE_NAME$$', cfg['sync_table'])
+        templete['incr'] = templete['incr'].replace('$$MYSQL_URL$$', cfg['mysql_url'])
+        templete['incr'] = templete['incr'].replace('$$MYSQL_WHERE$$', cfg['sync_incr_where'])
+        templete['incr'] = templete['incr'].replace('$$DORIS_FE_LOAD_URL$$', cfg['doris_stream_load'])
+        templete['incr'] = templete['incr'].replace('$$DORIS_JDBC_URL$$', cfg['doris_jbdc_url'])
+        templete['incr'] = templete['incr'].replace('$$DORIS_DATABASE$$', cfg['doris_db_name'])
+        templete['incr'] = templete['incr'].replace('$$DORIS_TABLE$$', cfg['doris_tab_name'])
+        templete['incr'] = templete['incr'].replace('$$DORIS_USER$$', cfg['doris_user'])
+        templete['incr'] = templete['incr'].replace('$$DORIS_PASSWORD$$', await aes_decrypt(cfg['doris_password'],cfg['doris_user']))
+        templete['incr'] = templete['incr'].replace('$$MAX_BATCH_ROWS$$', cfg['doris_batch_size'])
     return templete
 
-async def query_datax_sync_dataxTemplete(sync_id):
-    templete   = {
-        'full' : (await async_processer.query_one('select contents from t_templete where templete_id=1'))[0],
-        'incr' : (await async_processer.query_one('select contents from t_templete where templete_id=2'))[0]
-    }
-    templete = await process_templete(sync_id,templete)
-    print('query_datax_sync_dataxTemplete2=',templete)
+async def process_templete(cfg):
+    # get templete by type
+    templete = await get_templete_by_sync_type(cfg['sync_type'])
+    # replace templete
+    templete = await  update_templete(cfg,templete)
     return templete
 
-async def write_datax_sync_TempleteFile(sync_id,):
-    # 获取 datax 配置
-    cfg = (await query_datax_by_id(sync_id))['sync_tag']
+async def query_datax_sync_dataxTemplete(id):
+    cfg = await query_datax_by_id(id)
+    templete = await process_templete(cfg)
+    return templete
+
+async def write_datax_sync_TempleteFile(sync_id):
+    # # 获取 datax 配置
+    # cfg = await query_datax_by_id(sync_id)
+    # print('write_datax_sync_TempleteFile=',cfg)
+
+    tag = (await query_datax_by_id(sync_id))['sync_tag']
 
     # 获取模板内容至templete字典中
     templete = await query_datax_sync_dataxTemplete(sync_id)
 
     # 生成全量json文件
-    v_datax_full_file = './script/{0}_full.json'.format(cfg)
+    v_datax_full_file = './script/{0}_full.json'.format(tag)
     with open(v_datax_full_file, 'w') as f:
         f.write(templete['full'])
 
     # 生成增量json文件
-    v_datax_incr_file = './script/{0}_incr.json'.format(cfg)
+    v_datax_incr_file = './script/{0}_incr.json'.format(tag)
     with open(v_datax_incr_file, 'w') as f:
         f.write(templete['incr'])
 
@@ -211,10 +325,26 @@ async def transfer_datax_remote_file_sync(cfg,ssh,ftp):
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
+    # replace and send datax_sync.sh file
+    f_local, f_remote = gen_transfer_file(cfg, 'datax', 'datax_sync.sh')
+    if not ftp.transfer(f_local, f_remote):
+        return {'code': -1, 'msg': 'failure!'}
+
     # replace and send datax_sync.py file
     f_local, f_remote = gen_transfer_file(cfg, 'datax', 'datax_sync.py')
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
+
+    # replace and send datax_sync_es.py file
+    f_local, f_remote = gen_transfer_file(cfg, 'datax', 'datax_sync_es.py')
+    if not ftp.transfer(f_local, f_remote):
+        return {'code': -1, 'msg': 'failure!'}
+
+    # replace and send datax_sync_doris.py file
+    f_local, f_remote = gen_transfer_file(cfg, 'datax', 'datax_sync_doris.py')
+    if not ftp.transfer(f_local, f_remote):
+        return {'code': -1, 'msg': 'failure!'}
+
 
     # replace repstr.sh file
     f_local, f_remote = gen_transfer_file(cfg, 'datax', 'repstr.sh')
@@ -227,29 +357,38 @@ async def run_datax_remote_cmd_sync(cfg,ssh):
     cmd1 = 'chmod +x {0}'.format(cfg['msg']['script_path']+'/repstr.sh')
     cmd2 = 'chmod +x {0}'.format(cfg['msg']['script_path']+'/datax_sync.sh')
     cmd3 = 'chmod +x {0}'.format(cfg['msg']['script_path']+'/datax_sync.py')
-    cmd4 = '{0}/repstr.sh {1}'.format(cfg['msg']['script_path'],cfg['msg']['script_path']+'/'+cfg['msg']['sync_tag']+'_full.json')
-    cmd5 = '{0}/repstr.sh {1}'.format(cfg['msg']['script_path'],cfg['msg']['script_path']+'/'+cfg['msg']['sync_tag']+'_full.json')
+    cmd4 = 'chmod +x {0}'.format(cfg['msg']['script_path'] + '/datax_sync_es.py')
+    cmd5 = 'chmod +x {0}'.format(cfg['msg']['script_path'] + '/datax_sync_doris.py')
+    cmd6 = '{0}/repstr.sh {1}'.format(cfg['msg']['script_path'],cfg['msg']['script_path']+'/'+cfg['msg']['sync_tag']+'_full.json')
+    cmd7 = '{0}/repstr.sh {1}'.format(cfg['msg']['script_path'],cfg['msg']['script_path']+'/'+cfg['msg']['sync_tag']+'_full.json')
 
-    #res = not ssh.exec(cmd1)
     if not ssh.exec(cmd1)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    #res = not ssh.exec(cmd2)
     if not ssh.exec(cmd2)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    #res = not ssh.exec(cmd3)
     if not ssh.exec(cmd3)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    #res = not ssh.exec(cmd4)
     if not ssh.exec(cmd4)['status']:
         return {'code': -1, 'msg': 'failure!'}
-    #res = not ssh.exec(cmd5)
     if not ssh.exec(cmd5)['status']:
+        return {'code': -1, 'msg': 'failure!'}
+    if not ssh.exec(cmd6)['status']:
+        return {'code': -1, 'msg': 'failure!'}
+    if not ssh.exec(cmd7)['status']:
         return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
 
 async def write_datax_remote_crontab_sync(cfg,ssh):
-    v_cmd   = '{0}/datax_sync.sh {1} {2}'.format(cfg['msg']['script_path'],'datax_sync.py', cfg['msg']['sync_tag'])
+
+    print('write_datax_remote_crontab_sync=',cfg)
+
+    if cfg['msg']['sync_type'] == '5':
+        v_cmd = '{0}/datax_sync.sh {1} {2}'.format(cfg['msg']['script_path'], 'datax_sync.py', cfg['msg']['sync_tag'])
+    elif cfg['msg']['sync_type']  == '6':
+        v_cmd = '{0}/datax_sync.sh {1} {2}'.format(cfg['msg']['script_path'], 'datax_sync_es.py', cfg['msg']['sync_tag'])
+    elif cfg['msg']['sync_type']  == '7':
+        v_cmd = '{0}/datax_sync.sh {1} {2}'.format(cfg['msg']['script_path'], 'datax_sync_doris.py', cfg['msg']['sync_tag'])
 
     v_cron  = '''
                 crontab -l > /tmp/config && sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/config

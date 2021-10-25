@@ -29,6 +29,7 @@ class push_script_remote_monitor(tornado.web.RequestHandler):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag = self.get_argument("tag")
+            print('tag=',tag)
             res = await push(tag)
             self.write(json.dumps(res))
         except Exception as e:

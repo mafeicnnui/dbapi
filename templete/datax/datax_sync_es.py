@@ -6,10 +6,8 @@
 # @Software: PyCharm
 
 import json
-import urllib.parse
-import urllib.request
-import ssl
-import os,happybase
+import requests
+import os
 import warnings
 import sys
 import datetime
@@ -18,26 +16,18 @@ from email.mime.text import MIMEText
 import traceback
 import pymysql
 
-def get_ds_hbase(ip,port):
-    conn = happybase.Connection(host=ip,
-                                port=int(port),
-                                timeout=3600000,
-                                autoconnect=True,
-                                table_prefix=None,
-                                table_prefix_separator=b'_',
-                                compat='0.98',
-                                transport='buffered',
-                                protocol='binary')
-    conn.open()
-    return conn
 
-def get_hbase_tab_rows(db,tab):
-    table = db.table(tab)
+def get_es_tab_rows(config):
+    svr = config['es_service']
+    idx = config['es_index_name']
+    tpe = config['es_type_name']
+    url = 'http://{}/{}/{}/_search?pretty'.format(svr,idx,tpe)
+    par = {
+        "size":0
+    }
+    res = requests.post(url,data= par)
+    print('res=',res)
     i_counter =0
-    for key, data in table.scan():
-        i_counter=i_counter+1
-        if i_counter>=1:
-           break
     return i_counter
 
 def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
@@ -132,6 +122,10 @@ def get_config(tag):
                                                            config['db_mysql_sour_service'],
                                                            config['db_mysql_sour_user'],
                                                            config['db_mysql_sour_pass'])
+
+
+
+
 
             return config
         else:
@@ -267,12 +261,11 @@ def get_seconds(b):
     a=datetime.datetime.now()
     return int((a-b).total_seconds())
 
-def get_sync_table_rows(config,hbase_rows):
+def get_sync_table_rows(config,es_rows):
     db     = config['db_mysql_sour']
     cr     = db.cursor()
     tab    = config['sync_table']
     where  = config['sync_incr_where']
-    sql    = ''
     if where  is None or where =='':
        sql  = "select count(0) from {0}".format(tab)
     else:
@@ -296,16 +289,11 @@ def main():
     config = get_config(sync_tag)
     print_dict(config)
 
-    print('config=',config)
-    thrift_host  = config['hbase_thrift'].split(':')[0]
-    thrift_port  = int(config['hbase_thrift'].split(':')[1])
-    hbase_table  = config['sync_hbase_table']
     datax_home   = config['datax_home']
     datax_script = config['script_path']
     datax_incr   = config['sync_incr_col']
     sync_id      = config['id']
-    db           =  get_ds_hbase(thrift_host,thrift_port)
-    hbase_rows   =  get_hbase_tab_rows(db,hbase_table)
+    es_rows     =  get_es_tab_rows(config)
 
     v_full_json  = '{0}/{1}_full.json'.format(datax_script,sync_tag)
     v_incr_json  = '{0}/{1}_incr.json'.format(datax_script,sync_tag)
@@ -330,7 +318,7 @@ def main():
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_full_json))
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_incr_json))
 
-    if hbase_rows == 0:
+    if es_rows == 0:
         print(v_full_scp)
         os.system(v_full_scp)
     else:
@@ -343,10 +331,9 @@ def main():
 
     config['table_name']    = config['sync_table']
     config['sync_duration'] = str(get_seconds(start_time))
-    config['sync_amount']   = str(get_sync_table_rows(config,hbase_rows))
+    config['sync_amount']   = str(get_sync_table_rows(config,es_rows))
     write_datax_sync_log(config)
-    print('hbase_table=', hbase_table)
-    print('hbase_rows=', hbase_rows)
+
 
 
 if __name__ == "__main__":

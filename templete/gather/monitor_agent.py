@@ -598,6 +598,7 @@ def kill_slow_sql(config,p_slow_query_time,flag='master'):
     return v_html
 
 def monitor(config):
+
    for idx in config['templete_monitor_indexes']:
 
        if idx['index_code'] == 'mysql_slow_time':

@@ -18,27 +18,13 @@ from email.mime.text import MIMEText
 import traceback
 import pymysql
 
-def get_ds_hbase(ip,port):
-    conn = happybase.Connection(host=ip,
-                                port=int(port),
-                                timeout=3600000,
-                                autoconnect=True,
-                                table_prefix=None,
-                                table_prefix_separator=b'_',
-                                compat='0.98',
-                                transport='buffered',
-                                protocol='binary')
-    conn.open()
-    return conn
 
-def get_hbase_tab_rows(db,tab):
-    table = db.table(tab)
-    i_counter =0
-    for key, data in table.scan():
-        i_counter=i_counter+1
-        if i_counter>=1:
-           break
-    return i_counter
+def get_doris_tab_rows(cfg):
+    db = cfg['db_mysql_doris']
+    cr = db.cursor()
+    cr.execute('select count(0) from {}'.format(cfg['doris_tab_name']))
+    rs = cr.fetchone()
+    return rs[0]
 
 def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
     to_user=p_to_user.split(",")
@@ -108,14 +94,12 @@ def get_config(tag):
         values = {
             'tag': tag
         }
-        print('values=', values)
         url = 'http://$$API_SERVER$$/read_datax_config_sync'
         context = ssl._create_unverified_context()
         data    = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-        print('data=', data)
-        req = urllib.request.Request(url, data=data)
-        res = urllib.request.urlopen(req, context=context)
-        res = json.loads(res.read())
+        req     = urllib.request.Request(url, data=data)
+        res     = urllib.request.urlopen(req, context=context)
+        res     = json.loads(res.read())
         print(res, res['code'])
         if res['code'] == 200:
             print('read_datax_config_sync:接口调用成功!')
@@ -132,6 +116,14 @@ def get_config(tag):
                                                            config['db_mysql_sour_service'],
                                                            config['db_mysql_sour_user'],
                                                            config['db_mysql_sour_pass'])
+
+            config['db_mysql_doris_pass']   = aes_decrypt(config['doris_password'],config['doris_user'])
+            config['db_mysql_doris']        = get_ds_mysql(config['doris_ip'],
+                                                           config['doris_port'],
+                                                           config['doris_db_name'],
+                                                           config['doris_user'],
+                                                           config['db_mysql_doris_pass'])
+
 
             return config
         else:
@@ -296,16 +288,12 @@ def main():
     config = get_config(sync_tag)
     print_dict(config)
 
-    print('config=',config)
-    thrift_host  = config['hbase_thrift'].split(':')[0]
-    thrift_port  = int(config['hbase_thrift'].split(':')[1])
-    hbase_table  = config['sync_hbase_table']
     datax_home   = config['datax_home']
     datax_script = config['script_path']
     datax_incr   = config['sync_incr_col']
     sync_id      = config['id']
-    db           =  get_ds_hbase(thrift_host,thrift_port)
-    hbase_rows   =  get_hbase_tab_rows(db,hbase_table)
+    doris_rows   =  get_doris_tab_rows(config)
+    print('doris_rows=',doris_rows)
 
     v_full_json  = '{0}/{1}_full.json'.format(datax_script,sync_tag)
     v_incr_json  = '{0}/{1}_incr.json'.format(datax_script,sync_tag)
@@ -330,7 +318,7 @@ def main():
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_full_json))
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_incr_json))
 
-    if hbase_rows == 0:
+    if doris_rows == 0:
         print(v_full_scp)
         os.system(v_full_scp)
     else:
@@ -343,10 +331,8 @@ def main():
 
     config['table_name']    = config['sync_table']
     config['sync_duration'] = str(get_seconds(start_time))
-    config['sync_amount']   = str(get_sync_table_rows(config,hbase_rows))
+    config['sync_amount']   = str(get_sync_table_rows(config,doris_rows))
     write_datax_sync_log(config)
-    print('hbase_table=', hbase_table)
-    print('hbase_rows=', hbase_rows)
 
 
 if __name__ == "__main__":

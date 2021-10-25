@@ -626,6 +626,7 @@ def get_sync_table_total_rows(db,tab,v_where):
     v_sql="select count(0) from `{0}` {1}".format(tab,v_where)
     cr_source.execute(v_sql)
     rs_source=cr_source.fetchone()
+    db.commit()
     cr_source.close()
     return  rs_source[0]
 
@@ -641,6 +642,7 @@ def get_sync_table_pk_names(db,tab):
     rs_source = cr_source.fetchall()
     for i in list(rs_source):
         v_col=v_col+i[0]+','
+    db.commit()
     cr_source.close()
     return v_col[0:-1]
 
@@ -668,6 +670,7 @@ def get_sync_table_cols(config,tab):
         else:
             if i[0].lower().replace('`', '') in v_sync_cols:
                v_col=v_col+i[0]+','
+    db.commit()
     cr_source.close()
     return v_col[0:-1]
 
@@ -690,22 +693,9 @@ def get_sync_table_pk_vals(db,tab):
     rs_source = cr_source.fetchall()
     for i in list(rs_source):
         v_col = v_col + "CAST(" + i[0] + " as char)," + "\'^^^\'" + ","
+    db.commit()
     cr_source.close()
     return 'CONCAT('+v_col[0:-7]+')'
-
-def get_sync_table_pk_vals2(db,tab):
-    cr_source  = db.cursor()
-    v_col=''
-    v_sql="""SELECT column_name FROM information_schema.`COLUMNS`
-             WHERE table_schema=DATABASE()
-               AND table_name='{0}' AND column_key='PRI'  ORDER BY ordinal_position
-          """.format(tab)
-    cr_source.execute(v_sql)
-    rs_source = cr_source.fetchall()
-    for i in list(rs_source):
-        v_col = v_col +  i[0] + ","
-    cr_source.close()
-    return v_col[0:-1]
 
 def get_sync_where(pk_cols,pk_vals):
     v_where=''
@@ -977,6 +967,7 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
             cr_desc          = db_desc.cursor()
             n_tab_total_rows = get_sync_table_total_rows(db_source, tab, v_where)
             v_sql            = """select {0} as 'pk',{1} from `{2}` {3}""".format(v_pk_cols, get_sync_table_cols(config, tab), tab, v_where)
+            print(v_sql)
             n_rows           = 0
             cr_source.execute(v_sql)
             rs_source  = cr_source.fetchmany(n_batch_size)
@@ -989,11 +980,11 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
                        .format(ftab.split(':')[0],ftab.split(':')[2],config['sync_time_type']))
 
             if ftab.split(':')[1] == '':
-               print('DB:{0},delete {1} table data please wait...'.format(config['db_mysql_desc_string'], tab,ftab.split(':')[2]))
-               cr_desc.execute('delete from {0}'.format(tab))
+               print('DB:{0},delete `{1}` table data please wait...'.format(config['db_mysql_desc_string'], tab,ftab.split(':')[2]))
+               cr_desc.execute('delete from `{0}`'.format(tab))
                print('DB:{0},delete {1} table data ok!'.format(config['db_mysql_desc_string'], tab))
             else:
-                print('delete from {0} {1} '.format(tab, v_where))
+                print('delete from `{0}` {1} '.format(tab, v_where))
 
             while rs_source:
                 v_sql = ''
@@ -1044,7 +1035,7 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
                config['sync_amount'] = str(i_counter)
                write_sync_log_detail(config,ftab)
     except Exception as e:
-        print('sync_sqlserver_data_pk exceptiion:' + traceback.format_exc())
+        print('sync_mysql_data_no_pkid exception:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
         exit(0)
 
