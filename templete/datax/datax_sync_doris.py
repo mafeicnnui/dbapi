@@ -26,6 +26,48 @@ def get_doris_tab_rows(cfg):
     rs = cr.fetchone()
     return rs[0]
 
+def check_doris_tab_exists(cfg):
+   db=cfg['db_mysql_doris']
+   cr=db.cursor()
+   sql="""select count(0) from information_schema.tables
+            where table_schema=database() and table_name='{0}'""".format(cfg['doris_tab_name'])
+   cr.execute(sql)
+   rs=cr.fetchone()
+   db.commit()
+   cr.close()
+   return rs[0]
+
+def create_doris_table(cfg):
+    db = cfg['db_mysql_doris']
+    cr = db.cursor()
+    st = get_doris_table_defi(cfg)
+    print('st=',st)
+    cr.execute(st)
+    db.commit()
+    cr.close()
+
+def get_doris_table_defi(cfg):
+    db = cfg['db_mysql_sour']
+    cr = db.cursor()
+    st = """SELECT  `column_name`,data_type
+              FROM information_schema.columns
+              WHERE table_schema=DATABASE() 
+                AND table_name='{}'  ORDER BY ordinal_position""".format(cfg['doris_tab_name'])
+    cr.execute(st)
+    rs = cr.fetchall()
+    st= 'create table `{}` (\n '.format(cfg['doris_tab_name'])
+    for i in rs:
+        if i[1] == 'varchar':
+           st =  st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] == 'timestamp':
+           st = st + ' `{}`  datetime,\n'.format(i[0])
+        else:
+           st = st + '  `{}`  {},\n'.format(i[0],i[1])
+    db.commit()
+    cr.close()
+    st = st[0:-2]+') \n' + cfg['doris_tab_config']
+    return st
+
 def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
     to_user=p_to_user.split(",")
     try:
@@ -292,14 +334,10 @@ def main():
     datax_script = config['script_path']
     datax_incr   = config['sync_incr_col']
     sync_id      = config['id']
-    doris_rows   =  get_doris_tab_rows(config)
-    print('doris_rows=',doris_rows)
-
     v_full_json  = '{0}/{1}_full.json'.format(datax_script,sync_tag)
     v_incr_json  = '{0}/{1}_incr.json'.format(datax_script,sync_tag)
-
-    v_full_scp   = '{0}/bin/datax.py {1}/{2}'.format(datax_home, datax_script, sync_tag + '_full.json')
-    v_incr_scp   = '{0}/bin/datax.py {1}/{2}'.format(datax_home, datax_script, sync_tag + '_incr.json')
+    v_full_scp   = '{}/bin/datax.py --jvm="{}" {}/{}'.format(datax_home, config['doris_jvm'],datax_script, sync_tag + '_full.json')
+    v_incr_scp   = '{}/bin/datax.py --jvm="{}" {}/{}'.format(datax_home, config['doris_jvm'],datax_script, sync_tag + '_incr.json')
 
     v_templete   = get_templete(sync_id)
     start_time   = datetime.datetime.now()
@@ -318,6 +356,14 @@ def main():
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_full_json))
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_incr_json))
 
+
+    # 检测doris库中是否存在同步表
+    if check_doris_tab_exists(config) == 0:
+       create_doris_table(config)
+
+    # 表中行数为0进行全量同步，增量条件不空进行增量同步
+    doris_rows = get_doris_tab_rows(config)
+    print('doris_rows=', doris_rows)
     if doris_rows == 0:
         print(v_full_scp)
         os.system(v_full_scp)
@@ -333,7 +379,6 @@ def main():
     config['sync_duration'] = str(get_seconds(start_time))
     config['sync_amount']   = str(get_sync_table_rows(config,doris_rows))
     write_datax_sync_log(config)
-
 
 if __name__ == "__main__":
      main()

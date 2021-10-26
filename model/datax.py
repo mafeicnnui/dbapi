@@ -59,7 +59,7 @@ SELECT a.id, a.sync_tag,a.sync_ywlx,a.sync_type,
        LOWER(a.sync_table) AS sync_table,a.sync_gap,
        a.sync_time_type,a.script_path,a.comments,a.status,
        b.server_ip,b.server_port,b.server_user,b.server_pass,
-       a.hbase_thrift,a.sync_hbase_table,a.datax_home,a.sync_incr_col,a.sync_table,a.sync_incr_where,
+       a.hbase_thrift,a.sync_hbase_table,a.datax_home,a.sync_incr_col,a.sync_incr_where,
        a.es_service,
        a.es_index_name,
        a.es_type_name,
@@ -73,7 +73,9 @@ SELECT a.id, a.sync_tag,a.sync_ywlx,a.sync_type,
        (select concat(x.ip,':',x.port) from t_db_source x where x.id=a.doris_id) as doris_jbdc_url,
        a.doris_db_name,
        a.doris_tab_name,
-       a.doris_batch_size
+       a.doris_batch_size,
+       a.doris_jvm,
+       a.doris_tab_config
 FROM t_datax_sync_config a,t_server b,t_db_source c
 WHERE a.server_id=b.id 
 AND a.sour_db_id=c.id
