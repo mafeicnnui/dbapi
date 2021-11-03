@@ -41,9 +41,9 @@ select a.sync_tag,a.sync_ywlx,
         a.sync_type,
         (select dmmc from t_dmmx where dm='09' and dmm=a.sync_type) as sync_type_name,
         CASE WHEN c.service='' THEN 
-        CONCAT(c.ip,':',c.port,':',a.sync_schema,':',c.user,':',c.password)
+          CONCAT(c.ip,':',c.port,':',IFNULL(a.sync_schema,'information_schema'),':',c.user,':',c.password)
         ELSE
-        CONCAT(c.ip,':',c.port,':',c.service,':',c.user,':',c.password)
+          CONCAT(c.ip,':',c.port,':',c.service,':',c.user,':',c.password)
         END AS sync_db_sour,                          
         CASE WHEN d.service='' THEN 
         CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,a.sync_schema),':',d.user,':',d.password)

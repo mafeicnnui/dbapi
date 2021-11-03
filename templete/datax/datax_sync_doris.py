@@ -41,7 +41,6 @@ def create_doris_table(cfg):
     db = cfg['db_mysql_doris']
     cr = db.cursor()
     st = get_doris_table_defi(cfg)
-    print('st=',st)
     cr.execute(st)
     db.commit()
     cr.close()
@@ -67,6 +66,33 @@ def get_doris_table_defi(cfg):
     cr.close()
     st = st[0:-2]+') \n' + cfg['doris_tab_config']
     return st
+
+
+def check_tab_exists_pk(cfg):
+    db = cfg['db_mysql_sour']
+    cr = db.cursor()
+    st = """select count(0) from information_schema.columns
+              where table_schema=Database() and table_name='{}' and column_key='PRI'""".format(cfg['doris_tab_name'])
+    cr.execute(st)
+    rs=cr.fetchone()
+    cr.close()
+    return rs[0]
+
+def get_table_pk_names(cfg):
+    db = cfg['db_mysql_sour']
+    cr = db.cursor()
+    v_col=''
+    v_sql="""select column_name 
+              from information_schema.columns
+              where table_schema=Database()
+                and table_name='{}' and column_key='PRI' order by ordinal_position
+          """.format(cfg['doris_tab_name'])
+    cr.execute(v_sql)
+    rs = cr.fetchall()
+    for i in list(rs):
+        v_col = v_col + '`{}`,'.format(i[0])
+    cr.close()
+    return v_col[0:-1]
 
 def send_mail25(p_from_user,p_from_pass,p_to_user,p_title,p_content):
     to_user=p_to_user.split(",")
@@ -142,11 +168,9 @@ def get_config(tag):
         req     = urllib.request.Request(url, data=data)
         res     = urllib.request.urlopen(req, context=context)
         res     = json.loads(res.read())
-        print(res, res['code'])
         if res['code'] == 200:
-            print('read_datax_config_sync:接口调用成功!')
-            print(res['msg'])
             config                          = res['msg']
+            del config['sync_es_columns']
             config['db_mysql_sour_ip']      = config['sync_db_sour'].split(':')[0]
             config['db_mysql_sour_port']    = config['sync_db_sour'].split(':')[1]
             config['db_mysql_sour_service'] = config['sync_db_sour'].split(':')[2]
@@ -165,7 +189,10 @@ def get_config(tag):
                                                            config['doris_db_name'],
                                                            config['doris_user'],
                                                            config['db_mysql_doris_pass'])
-
+            if check_tab_exists_pk(config) >0 :
+               config['doris_tab_config']  = config['doris_tab_config'].replace('$$PK_NAMES$$',get_table_pk_names(config))
+            else:
+               config['doris_tab_config'] = config['doris_tab_config'].replace('$$PK_NAMES$$', '')
 
             return config
         else:
@@ -204,22 +231,17 @@ def get_templete(id):
         values = {
             'id': id
         }
-        print('values=', values)
         url = 'http://$$API_SERVER$$/read_datax_templete'
         context = ssl._create_unverified_context()
         data = urllib.parse.urlencode(values).encode(encoding='UTF-8')
-        print('data=', data)
         req = urllib.request.Request(url, data=data)
         res = urllib.request.urlopen(req, context=context)
         res = json.loads(res.read())
-        print(res, res['code'])
         if res['code'] == 200:
-            print('read_datax_templete:接口调用成功!')
-            print(res['msg'])
             config = res['msg']
             return config
         else:
-            print('read_datax_templete:接口调用失败:'+res['msg'])
+            print('read_datax_templete faulure:'+res['msg'])
             v_title = 'dataX数据同步接口异常[★]'
             v_content = '''<table class='xwtable'>
                                        <tr><td  width="30%">接口地址</td><td  width="70%">$$interface$$</td></tr>
@@ -342,9 +364,6 @@ def main():
     v_templete   = get_templete(sync_id)
     start_time   = datetime.datetime.now()
 
-    print('full_templete=',v_templete['full'])
-    print('incr_templete=',v_templete['incr'])
-
     #替换模板操作
     with open(v_full_json, 'w') as obj_file:
         obj_file.write(v_templete['full'])
@@ -357,28 +376,39 @@ def main():
     os.system('{0}/repstr.sh {1}'.format(datax_script,v_incr_json))
 
 
-    # 检测doris库中是否存在同步表
-    if check_doris_tab_exists(config) == 0:
-       create_doris_table(config)
+    if config['doris_sync_type'] == '1':
 
-    # 表中行数为0进行全量同步，增量条件不空进行增量同步
-    doris_rows = get_doris_tab_rows(config)
-    print('doris_rows=', doris_rows)
-    if doris_rows == 0:
-        print(v_full_scp)
-        os.system(v_full_scp)
-    else:
-        if datax_incr is not None or datax_incr != '':
-            print(v_incr_scp)
-            os.system(v_incr_scp)
+        if check_doris_tab_exists(config) == 0:
+            create_doris_table(config)
+            print('doris table:{}.{} create success!'.format(config['doris_db_name'],config['doris_tab_name']))
         else:
+            print('doris table:{}.{} already exists!'.format(config['doris_db_name'],config['doris_tab_name']))
+
+    if config['doris_sync_type'] in(2,3):
+
+        if check_doris_tab_exists(config) == 0:
+            create_doris_table(config)
+            print('doris table:{}.{} create success!'.format(config['doris_db_name'], config['doris_tab_name']))
+        else:
+            print('doris table:{}.{} already exists!'.format(config['doris_db_name'], config['doris_tab_name']))
+
+        doris_rows = get_doris_tab_rows(config)
+        print('doris_rows=', doris_rows)
+        if doris_rows == 0:
             print(v_full_scp)
             os.system(v_full_scp)
+        else:
+            if datax_incr is not None or datax_incr != '':
+                print(v_incr_scp)
+                os.system(v_incr_scp)
+            else:
+                print(v_full_scp)
+                os.system(v_full_scp)
 
-    config['table_name']    = config['sync_table']
-    config['sync_duration'] = str(get_seconds(start_time))
-    config['sync_amount']   = str(get_sync_table_rows(config,doris_rows))
-    write_datax_sync_log(config)
+        config['table_name']    = config['sync_table']
+        config['sync_duration'] = str(get_seconds(start_time))
+        config['sync_amount']   = str(get_sync_table_rows(config,doris_rows))
+        write_datax_sync_log(config)
 
 if __name__ == "__main__":
      main()

@@ -75,7 +75,8 @@ SELECT a.id, a.sync_tag,a.sync_ywlx,a.sync_type,
        a.doris_tab_name,
        a.doris_batch_size,
        a.doris_jvm,
-       a.doris_tab_config
+       a.doris_tab_config,
+       a.doris_sync_type
 FROM t_datax_sync_config a,t_server b,t_db_source c
 WHERE a.server_id=b.id 
 AND a.sour_db_id=c.id
