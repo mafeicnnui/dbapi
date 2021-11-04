@@ -384,8 +384,7 @@ def main():
         else:
             print('doris table:{}.{} already exists!'.format(config['doris_db_name'],config['doris_tab_name']))
 
-    if config['doris_sync_type'] in(2,3):
-
+    if config['doris_sync_type'] in ('2','3'):
         if check_doris_tab_exists(config) == 0:
             create_doris_table(config)
             print('doris table:{}.{} create success!'.format(config['doris_db_name'], config['doris_tab_name']))

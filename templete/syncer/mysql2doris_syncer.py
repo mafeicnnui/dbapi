@@ -369,7 +369,6 @@ def doris_exec(cfg,batch,flag='N'):
                     if check_doris_tab_exists(cfg, event) == 0:
                        print('create doris table {}.{} success!'.format(get_doris_schema(cfg,event),event['table']))
                        create_doris_table(cfg, event)
-
                     start_time = datetime.datetime.now()
                     cr.execute(st['sql'])
                     print('multi rec:{},time:{}s'.format(st['amount'], get_seconds(start_time)))
@@ -384,7 +383,6 @@ def doris_exec(cfg,batch,flag='N'):
                     if check_doris_tab_exists(cfg, event) == 0:
                         print('create doris table {}.{} success!'.format(get_doris_schema(cfg,event), event['table']))
                         create_doris_table(cfg, event)
-
                     start_time = datetime.datetime.now()
                     print('multi rec:{},time:{}s'.format(st['amount'], get_seconds(start_time)))
                     cr.execute(st['sql'])
@@ -453,6 +451,7 @@ def aes_decrypt(p_password,p_key):
     except:
         print('aes_decrypt api not available!')
 
+
 def get_config_from_db(tag):
     url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
@@ -494,10 +493,7 @@ def get_config_from_db(tag):
         config['binlogpos']             = pos
         config['doris_config']          = DORIS_TAB_CONFIG
         config['batch_size']            = config['batch_size_incr']
-        config['batch_timeout']         = 6
-        config['batch_row_event']       = 300
-        config['apply_timeout']         = 10
-        config['sleep_time']            = 0.3
+        config['sleep_time']            = int(config['sync_gap'])
         return config
     else:
         print('load config failure:{0}'.format(res['msg']))
@@ -541,6 +537,8 @@ def start_syncer(cfg):
         print('batch_size=',cfg['batch_size'])
         print('batch_timeout=',cfg['batch_timeout'])
         print('batch_row_event=',cfg['batch_row_event'])
+        print('apply_timeout=', cfg['apply_timeout'])
+        print('sleep_time=', cfg['sleep_time'])
         print('')
 
         start_time = datetime.datetime.now()
@@ -549,14 +547,16 @@ def start_syncer(cfg):
         for binlogevent in stream:
 
             if get_seconds(apply_time) >= config['apply_timeout']:
+               cfg['db_mysql'].close()
+               cfg['db_doris'].close()
                cfg = get_config_from_db(cfg['sync_tag'])
                apply_time = datetime.datetime.now()
                print("\033[0;31;40mapply config success\033[0m")
 
-               for o in cfg['sync_table'].split(','):
-                   if batch.get(o.split('$')[0]) is None:
-                      batch[o.split('$')[0]] = []
-                      print("\033[0;31;40mbatch['{}'] init success!\033[0m".format(o.split('$')[0]))
+            for o in cfg['sync_table'].split(','):
+               if batch.get(o.split('$')[0]) is None:
+                  batch[o.split('$')[0]] = []
+                  print("\033[0;31;40mbatch['{}'] init success!\033[0m".format(o.split('$')[0]))
 
             if isinstance(binlogevent, RotateEvent):
                 current_master_log_file = binlogevent.next_binlog
