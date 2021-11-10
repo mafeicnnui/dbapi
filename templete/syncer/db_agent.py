@@ -313,6 +313,31 @@ class get_mssql_query_dict(tornado.web.RequestHandler):
         finally:
             db.close()
 
+class get_mysql_databases(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        ds         = get_ds(db_ip,db_port,db_service,db_user,db_pass)
+        st         = """SELECT schema_name FROM information_schema.`SCHEMATA` 
+                          WHERE schema_name NOT IN('mysql','information_schema','performance_schema')  order by 1"""
+        try:
+            rs, _ = await async_processer.query_list_by_ds(ds, st)
+            result['code'] = 200
+            result['msg']  = rs
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg']  = traceback.format_exc()
+            self.write(result)
+
 class get_mysql_tables(tornado.web.RequestHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
@@ -615,6 +640,7 @@ class Application(tornado.web.Application):
             (r"/get_mysql_incr_columns", get_mysql_incr_columns),
             (r"/get_mysql_query",        get_mysql_query),
             (r"/get_mysql_query_dict",   get_mysql_query_dict),
+            (r"/get_mysql_databases",    get_mysql_databases),
 
             # mongo 数据库查询接口
             (r"/get_mongo_databases",    get_mongo_databases),
