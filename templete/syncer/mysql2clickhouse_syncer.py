@@ -151,7 +151,7 @@ def get_db(MYSQL_SETTINGS):
                            charset='utf8',autocommit=True)
     return conn
 
-def get_doris_table_defi(cfg,event):
+def get_ck_table_defi(cfg,event):
     db = cfg['db_mysql']
     cr = db.cursor()
     st = """SELECT  `column_name`,data_type
@@ -163,11 +163,11 @@ def get_doris_table_defi(cfg,event):
     st= 'create table `{}`.`{}` (\n '.format(get_ck_schema(cfg,event),event['table'])
     for i in rs:
         if i[1] == 'tinyint':
-            st = st + ' `{}`  UInt16,\n'.format(i[0])
+            st = st + ' `{}`  Int16,\n'.format(i[0])
         elif i[1] == 'int':
-            st = st + ' `{}`  UInt32,\n'.format(i[0])
+            st = st + ' `{}`  Int32,\n'.format(i[0])
         elif i[1] == 'bigint':
-            st = st + ' `{}`  UInt64,\n'.format(i[0])
+            st = st + ' `{}`  Int64,\n'.format(i[0])
         elif i[1] == 'varchar':
            st =  st + ' `{}`  String,\n'.format(i[0])
         elif i[1] =='timestamp' :
@@ -191,10 +191,70 @@ def get_doris_table_defi(cfg,event):
     st = st[0:-2]+') \n' + cfg['ck_config']
     return st
 
+def get_ck_table_defi_mysql(cfg,event):
+    db = cfg['db_mysql']
+    cr = db.cursor()
+    st = """SELECT  `column_name`,data_type
+              FROM information_schema.columns
+              WHERE table_schema='{}'
+                AND table_name='{}'  ORDER BY ordinal_position""".format(event['schema'],event['table'])
+    cr.execute(st)
+    rs = cr.fetchall()
+    st= 'create table `{}`.`{}` (\n '.format(get_ck_schema(cfg,event),event['table']+'_tmp')
+    for i in rs:
+        if i[1] == 'tinyint':
+            st = st + ' `{}`  Int16,\n'.format(i[0])
+        elif i[1] == 'int':
+            st = st + ' `{}`  Int32,\n'.format(i[0])
+        elif i[1] == 'bigint':
+            st = st + ' `{}`  Int64,\n'.format(i[0])
+        elif i[1] == 'varchar':
+           st =  st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] =='timestamp' :
+           st = st + ' `{}`  DateTime,\n'.format(i[0])
+        elif i[1] == 'datetime':
+            st = st + ' `{}`  DateTime,\n'.format(i[0])
+        elif i[1] == 'date':
+            st = st + ' `{}`  Date,\n'.format(i[0])
+        elif i[1] == 'text':
+            st = st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] == 'longtext':
+            st = st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] == 'float':
+            st = st + ' `{}`  Float32,\n'.format(i[0])
+        elif i[1] == 'double':
+            st = st + ' `{}`  Float64,\n'.format(i[0])
+        else:
+           st = st + '  `{}`  String,\n'.format(i[0])
+    db.commit()
+    cr.close()
+    engine = """ ENGINE = MySQL('{}','{}','{}','{}','{}')"""\
+        .format(cfg['db_mysql_ip']+':'+cfg['db_mysql_port'],
+                event['schema'],
+                event['table'],
+                cfg['db_mysql_user'],
+                cfg['db_mysql_pass']
+                )
+    st = st[0:-2]+') ' + engine
+    return st
+
 def check_ck_tab_exists(cfg,event):
    db=cfg['db_ck']
    sql="""select count(0) from system.tables
             where database='{}' and name='{}'""".format(get_ck_schema(cfg,event),event['table'])
+   rs = db.execute(sql)
+   return rs[0][0]
+
+def check_ck_tab_exists_data(cfg,event):
+   db = cfg['db_ck']
+   st = "select count(0) from {}.{}".format(get_ck_schema(cfg,event),event['table'])
+   rs = db.execute(st)
+   return rs[0][0]
+
+def check_ck_tab_exists_by_param(cfg,event):
+   db=cfg['db_ck']
+   sql="""select count(0) from system.tables
+            where database='{}' and name='{}'""".format(event['schema'],event['table'])
    rs = db.execute(sql)
    return rs[0][0]
 
@@ -224,23 +284,66 @@ def get_table_pk_names(cfg,event):
     cr.close()
     return v_col[0:-1]
 
-def create_doris_table(cfg,event):
+def create_ck_table(cfg,event):
     db = cfg['db_ck']
     if check_tab_exists_pk(cfg,event) >0:
-        st = get_doris_table_defi(cfg,event)
+        st = get_ck_table_defi(cfg,event)
         db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)))
         time.sleep(0.1)
-        log('create clickhouse table `{}` success!'.format(event['table']))
+        log('create clickhouse table `{}.{}` success!'.format(get_ck_schema(cfg, event),event['table']))
     else:
         log('Table `{}` have no primary key,exit sync!'.format(event['table']))
         sys.exit(0)
 
-def replace_table(cfg,event):
+def optimize_table(cfg,event):
     db = cfg['db_ck']
-    if check_ck_tab_exists(cfg,event) >0:
+    if check_ck_tab_exists_by_param(cfg,event) >0:
         st = '''optimize table {}.{} final'''.format(event['schema'],event['table'])
         db.execute(st)
-        log('optimize clickhouse table `{}` complete!'.format(event['table']))
+        log('\033[0;31;40moptimize clickhouse table {}.{} complete!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
+
+def full_sync(cfg,event):
+    '''
+       0. no data or after create  table trigger
+       1.create mergetreeReplicate table
+       2 create mysql engine table
+       3.insert into  mergetreeReplicate select * from mysqlEngine
+       4.optimize table
+    '''
+    db = cfg['db_ck']
+    log('create clickhouse temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event),event['table']+'_tmp'))
+    st = get_ck_table_defi_mysql(cfg,event)
+    db.execute(st)
+
+    log('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event),event['table']))
+    col = get_cols_from_mysql(cfg, event)
+    st = """insert into {}.{} ({}) select {} from {}.{}
+         """.format(get_ck_schema(cfg, event),event['table'], col,col,get_ck_schema(cfg, event),event['table']+'_tmp')
+    db.execute(st)
+
+    log('optimize table {}.{} ...'.format(get_ck_schema(cfg, event),event['table']))
+    st = 'optimize table {}.{} final'.format(get_ck_schema(cfg, event),event['table'])
+    db.execute(st)
+
+    log('drop temp table:{}.{}'.format(get_ck_schema(cfg, event), event['table'] + '_tmp'))
+    st = 'drop table {}.{}'.format(get_ck_schema(cfg, event),event['table']+'_tmp')
+    db.execute(st)
+
+def get_cols_from_mysql(cfg,event):
+    db = cfg['db_mysql']
+    cr = db.cursor()
+    v_col = ''
+    v_sql = """select column_name 
+                 from information_schema.columns
+                 where table_schema='{}'
+                   and table_name='{}'  order by ordinal_position
+             """.format(event['schema'], event['table'])
+    cr.execute(v_sql)
+    rs = cr.fetchall()
+    for i in list(rs):
+        v_col = v_col + '`{}`,'.format(i[0])
+    cr.close()
+    return v_col[0:-1]
 
 def set_column(p_data,p_pk):
     v_set = ' set '
@@ -272,7 +375,6 @@ def get_ins_header(cfg,event):
             v_ddl = v_ddl + '`{0}`'.format(key) + ','
         v_ddl = v_ddl[0:-1] + ')'
     return v_ddl
-
 
 def get_col_type(cfg,event):
     db = cfg['db_mysql']
@@ -348,7 +450,6 @@ def get_binlog_files(p_db):
         files.append(r[0])
     return files
 
-
 def merge_insert(data):
     header = data[0]['sql'].split(' values ')[0]
     body = ''
@@ -405,8 +506,11 @@ def exec_sql(cfg,tab,tab_batch,flag):
                if len(tab_batch) > 0 and st['amount'] % cfg['batch_size'] == 0:
                   event = {'schema': tab.split('.')[0], 'table': tab.split('.')[1]}
                   if check_ck_tab_exists(cfg, event) == 0:
-                     log('create doris table {}.{} success!'.format(get_ck_schema(cfg, event), event['table']))
-                     create_doris_table(cfg, event)
+                     create_ck_table(cfg, event)
+                     full_sync(cfg,event)
+                  elif check_ck_tab_exists_data(cfg, event) == 0:
+                     full_sync(cfg, event)
+
                   start_time = datetime.datetime.now()
                   db.execute(st['sql'])
                   log('Table:{}, multi rec:{},time:{}s'.format(tab,st['amount'], get_seconds(start_time)))
@@ -418,8 +522,11 @@ def exec_sql(cfg,tab,tab_batch,flag):
             for st in tab_batch:
                 event = {'schema': tab.split('.')[0], 'table': tab.split('.')[1]}
                 if check_ck_tab_exists(cfg, event) == 0:
-                    log('create doris table {}.{} success!'.format(get_ck_schema(cfg, event), event['table']))
-                    create_doris_table(cfg, event)
+                    create_ck_table(cfg, event)
+                    full_sync(cfg, event)
+                elif check_ck_tab_exists_data(cfg, event) == 0:
+                    full_sync(cfg, event)
+
                 start_time = datetime.datetime.now()
                 log('Table:{}, multi rec:{},time:{}s'.format(tab,st['amount'], get_seconds(start_time)))
                 db.execute(st['sql'])
@@ -436,8 +543,7 @@ def ck_exec(cfg,batch,flag='N'):
                 if len(nbatch[tab])>0 and len(batch[tab]) % cfg['batch_size'] == 0:
                     event = {'schema':tab.split('.')[0],'table':tab.split('.')[1]}
                     if check_ck_tab_exists(cfg, event) == 0:
-                       log('create doris table {}.{} success!'.format(get_ck_schema(cfg,event),event['table']))
-                       create_doris_table(cfg, event)
+                       create_ck_table(cfg, event)
                     start_time = datetime.datetime.now()
                     db.execute(st['sql'])
                     log('multi rec:{},time:{}s'.format(st['amount'], get_seconds(start_time)))
@@ -450,8 +556,7 @@ def ck_exec(cfg,batch,flag='N'):
                 for st in nbatch[tab]:
                     event = {'schema':tab.split('.')[0],'table':tab.split('.')[1]}
                     if check_ck_tab_exists(cfg, event) == 0:
-                        log('create doris table {}.{} success!'.format(get_ck_schema(cfg,event), event['table']))
-                        create_doris_table(cfg, event)
+                        create_ck_table(cfg, event)
                     start_time = datetime.datetime.now()
                     log('multi rec:{},time:{}s'.format(st['amount'], get_seconds(start_time)))
                     db.execute(st['sql'])
@@ -462,8 +567,9 @@ def check_sync(cfg,event):
     res = False
     for o in cfg['sync_table'].split(','):
         schema,table = o.split('$')[0].split('.')
-        if event['schema'] == schema  and  event['table'] == table:
-            res = True
+        if check_tab_exists_pk(cfg, event) > 0:
+           if event['schema'] == schema  and  event['table'] == table:
+              res = True
     return res
 
 def check_batch_exist_data(batch):
@@ -510,7 +616,7 @@ def get_ds_ck(ip,port,service ,user,password):
                    user=user,
                    password=password,
                    database=service,
-                   send_receive_timeout=5)
+                   send_receive_timeout=600000)
 
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
@@ -568,13 +674,47 @@ def get_config_from_db(tag):
 
         config['binlogfile']            = file
         config['binlogpos']             = pos
-        config['ck_config']          = CK_TAB_CONFIG
+        config['ck_config']            = CK_TAB_CONFIG
         config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = int(config['sync_gap'])
+
+        config = get_sync_tables(config)
+
         return config
     else:
         log('load config failure:{0}'.format(res['msg']))
         return None
+
+def get_tables(cfg,o):
+    db  = cfg['db_mysql']
+    cr  = db.cursor()
+    sdb = o.split('$')[0].split('.')[0]
+    tab = o.split('$')[0].split('.')[1]
+    ddb = o.split('$')[1]
+    if tab.count('*') > 0:
+       tab = tab.replace('*','')
+       st = """select table_name from information_schema.tables
+                  where table_schema='{}' and instr(table_name,'{}')>0 order by table_name""".format(sdb,tab)
+       cr.execute(st)
+       rs = cr.fetchall()
+       vv = ''
+       for i in list(rs):
+           evt = {'schema': o.split('$')[0].split('.')[0], 'table': i[0]}
+           if check_tab_exists_pk(cfg,evt)>0:
+              vv = vv + '{}.{}${},'.format(sdb,i[0],ddb)
+       cr.close()
+       return vv[0:-1]
+    else:
+       return o
+
+
+def get_sync_tables(cfg):
+    v = ''
+    for o in cfg['sync_table'].split(','):
+        v = v + get_tables(cfg,o)
+    cfg['sync_table'] = v
+    return cfg
+
 
 '''
    检查点：
@@ -598,8 +738,11 @@ def start_syncer(cfg):
 
     for o in cfg['sync_table'].split(','):
         evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
-        batch[o.split('$')[0]] = []
-        types[o.split('$')[0]] = get_col_type(cfg, evt)
+        if check_tab_exists_pk(cfg, evt) > 0:
+            batch[o.split('$')[0]] = []
+            types[o.split('$')[0]] = get_col_type(cfg, evt)
+        else:
+            log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
 
     try:
         stream = BinLogStreamReader(
@@ -610,16 +753,6 @@ def start_syncer(cfg):
             resume_stream       = True,
             log_file            = cfg['binlogfile'],
             log_pos             = int(cfg['binlogpos']))
-
-        print('\nSync Configuration:')
-        print('-------------------------------------------------------------')
-        print('batch_size=',cfg['batch_size'])
-        print('batch_timeout=',cfg['batch_timeout'])
-        print('batch_row_event=',cfg['batch_row_event'])
-        print('apply_timeout=', cfg['apply_timeout'])
-        print('sleep_time=', cfg['sleep_time'])
-        print('-------------------------------------------------------------')
-        print('')
 
         start_time = datetime.datetime.now()
         apply_time = datetime.datetime.now()
@@ -635,8 +768,12 @@ def start_syncer(cfg):
             for o in cfg['sync_table'].split(','):
                if batch.get(o.split('$')[0]) is None:
                   evt = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
-                  batch[o.split('$')[0]] = []
-                  types[o.split('$')[0]] = get_col_type(cfg, evt)
+                  if check_tab_exists_pk(cfg, evt) > 0:
+                      batch[o.split('$')[0]] = []
+                      types[o.split('$')[0]] = get_col_type(cfg, evt)
+                  else:
+                      log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".
+                          format(evt['schema'],evt['table']))
 
             if isinstance(binlogevent, RotateEvent):
                 current_master_log_file = binlogevent.next_binlog
@@ -653,7 +790,8 @@ def start_syncer(cfg):
                     event['table'] = get_obj_name(event['query']).lower()
                     if check_sync(cfg,event) and ddl is not None:
                        if check_ck_tab_exists(cfg,event) == 0:
-                          create_doris_table(cfg,event)
+                          create_ck_table(cfg,event)
+                          full_sync(cfg,event)
                           batch[event['schema']+'.'+event['table']] = []
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
 
@@ -719,7 +857,7 @@ def start_syncer(cfg):
                 optimize_time = datetime.datetime.now()
                 for o in cfg['sync_table'].split(','):
                     evt = {'schema':o.split('$')[1],'table':o.split('$')[0].split('.')[1]}
-                    replace_table(cfg,evt)
+                    optimize_table(cfg,evt)
 
 
     except Exception as e:
@@ -728,6 +866,13 @@ def start_syncer(cfg):
     finally:
         stream.close()
 
+def init_full_sync(cfg):
+    log("\033[0;31;40mstart full sync...\033[0m")
+    for o in cfg['sync_table'].split(','):
+        event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
+        if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0:
+            create_ck_table(cfg, event)
+            full_sync(cfg, event)
 
 '''
   1.support single db multi table
@@ -738,6 +883,7 @@ def start_syncer(cfg):
     (1) afetr create table. 
     (2) empty table,no data 
     (3) get binlog ckpt
+  6.mysql support   wildcard character(*)
   
 '''
 
@@ -757,6 +903,9 @@ if __name__ == "__main__":
     if config is None:
        log('load config faulure,exit sync!')
        sys.exit(0)
+
+
+    init_full_sync(config)
 
     start_syncer(config)
 

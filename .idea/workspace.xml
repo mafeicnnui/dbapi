@@ -19,11 +19,9 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="add doris sync support">
-      <change afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer.py" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="add clickhouse sync support">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/db_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/db_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2doris_syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2doris_syncer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,19 +70,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\datax" />
-      <recent name="D:\work\dbapi\templete\gather" />
-      <recent name="D:\work\dbapi\templete\backup" />
-      <recent name="D:\work\dbapi\service" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\work\dbapi" />
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\minio" />
       <recent name="D:\work\dbapi\templete\datax" />
       <recent name="D:\work\dbapi\templete\transfer" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\datax" />
+      <recent name="D:\work\dbapi\templete\gather" />
+      <recent name="D:\work\dbapi\templete\backup" />
+      <recent name="D:\work\dbapi\service" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -401,7 +399,8 @@
       <workItem from="1636352255884" duration="3159000" />
       <workItem from="1636359880422" duration="4744000" />
       <workItem from="1636419709820" duration="14233000" />
-      <workItem from="1636513754244" duration="8696000" />
+      <workItem from="1636513754244" duration="11269000" />
+      <workItem from="1636593178901" duration="16391000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -690,7 +689,14 @@
       <option name="project" value="LOCAL" />
       <updated>1636019260632</updated>
     </task>
-    <option name="localTasksCounter" value="42" />
+    <task id="LOCAL-00042" summary="add clickhouse sync support">
+      <created>1636533468210</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1636533468210</updated>
+    </task>
+    <option name="localTasksCounter" value="43" />
     <servers />
   </component>
   <component name="TodoView">
@@ -718,7 +724,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="db_agent sync interface" />
     <MESSAGE value="workspace update" />
     <MESSAGE value="dbapi.py func update" />
     <MESSAGE value="add docker README.md" />
@@ -743,7 +748,8 @@
     <MESSAGE value="mysql2mysql bug fix" />
     <MESSAGE value="add monitor_agent" />
     <MESSAGE value="add doris sync support" />
-    <option name="LAST_COMMIT_MESSAGE" value="add doris sync support" />
+    <MESSAGE value="add clickhouse sync support" />
+    <option name="LAST_COMMIT_MESSAGE" value="add clickhouse sync support" />
   </component>
   <component name="WindowStateProjectService">
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1636353636873">
@@ -756,44 +762,44 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="759" y="409" key="#com.jetbrains.python.refactoring.move.PyMoveModuleMembersDialog/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635124278146" />
-    <state width="1877" height="547" key="GridCell.Tab.0.bottom" timestamp="1636451032446">
+    <state width="1877" height="141" key="GridCell.Tab.0.bottom" timestamp="1636614582532">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
     <state width="1877" height="2" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="547" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636451032446" />
+    <state width="1877" height="141" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636614582532" />
     <state width="1877" height="2" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1636351189196" />
-    <state width="1877" height="547" key="GridCell.Tab.0.center" timestamp="1636451032446">
+    <state width="1877" height="141" key="GridCell.Tab.0.center" timestamp="1636614582532">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
     <state width="1877" height="2" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="547" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636451032446" />
+    <state width="1877" height="141" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636614582532" />
     <state width="1877" height="2" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1636351189196" />
-    <state width="1877" height="547" key="GridCell.Tab.0.left" timestamp="1636451032445">
+    <state width="1877" height="141" key="GridCell.Tab.0.left" timestamp="1636614582532">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
     <state width="1877" height="2" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="547" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636451032445" />
+    <state width="1877" height="141" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636614582532" />
     <state width="1877" height="2" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1636351189196" />
-    <state width="1877" height="547" key="GridCell.Tab.0.right" timestamp="1636451032446">
+    <state width="1877" height="141" key="GridCell.Tab.0.right" timestamp="1636614582532">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
     <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="547" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636451032446" />
+    <state width="1877" height="141" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636614582532" />
     <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1636351189196" />
     <state x="729" y="232" key="SettingsEditor" timestamp="1636353606900">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="683" y="209" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1633936559064" />
     <state x="729" y="232" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1636353606900" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1636019264975">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1636533472338">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635237222509" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636019264975" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636533472338" />
     <state x="662" y="254" width="596" height="532" key="find.popup" timestamp="1634528673380">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -816,7 +822,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1636513828974" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1636596228785" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
   </component>
 </project>
