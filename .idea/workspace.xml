@@ -21,8 +21,6 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="add clickhouse sync support">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/service/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/syncer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -403,7 +401,7 @@
       <workItem from="1636419709820" duration="14233000" />
       <workItem from="1636513754244" duration="11269000" />
       <workItem from="1636593178901" duration="18725000" />
-      <workItem from="1636679268484" duration="5791000" />
+      <workItem from="1636679268484" duration="21744000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -706,7 +704,14 @@
       <option name="project" value="LOCAL" />
       <updated>1636621361026</updated>
     </task>
-    <option name="localTasksCounter" value="44" />
+    <task id="LOCAL-00044" summary="add clickhouse sync support">
+      <created>1636685078694</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1636685078694</updated>
+    </task>
+    <option name="localTasksCounter" value="45" />
     <servers />
   </component>
   <component name="TodoView">
@@ -800,17 +805,17 @@
     <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
     <state width="1877" height="135" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636681641098" />
     <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1636351189196" />
-    <state x="729" y="232" key="SettingsEditor" timestamp="1636621352811">
+    <state x="669" y="217" key="SettingsEditor" timestamp="1636698017526">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="683" y="209" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1633936559064" />
-    <state x="729" y="232" key="SettingsEditor/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636621352811" />
+    <state x="669" y="217" key="SettingsEditor/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636698017526" />
     <state x="729" y="232" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1636353606900" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1636621362571">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1636685083018">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635237222509" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636621362571" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1636685083018" />
     <state x="662" y="254" width="596" height="532" key="find.popup" timestamp="1634528673380">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
