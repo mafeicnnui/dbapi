@@ -21,25 +21,6 @@ from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
 from clickhouse_driver import Client
 
-META_DS = {
-    "db_ip"        : "10.2.39.18",
-    "db_port"      : "3306",
-    "db_user"      : "puppet",
-    "db_pass"      : "Puppet@123",
-    "db_service"   : "puppet",
-    "db_charset"   : "utf8"
-}
-
-META_DB = pymysql.connect(
-    host       = META_DS['db_ip'],
-    port       = int(META_DS['db_port']),
-    user       = META_DS['db_user'],
-    passwd     = META_DS['db_pass'],
-    db         = META_DS['db_service'],
-    charset    = META_DS['db_charset'],
-    autocommit = True,
-    cursorclass= pymysql.cursors.DictCursor)
-
 CK_TAB_CONFIG = '''ENGINE = ReplacingMergeTree()
    PRIMARY KEY ($$PK_NAMES$$)
    ORDER BY ($$PK_NAMES$$)
@@ -59,33 +40,6 @@ def format_sql(v_sql):
 def log(msg):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
     print("""{} : {}""".format(tm,msg))
-
-def get_ds_by_dsid(p_dsid):
-    sql="""select cast(id as char) as dsid,
-                  db_type,
-                  db_desc,
-                  ip,
-                  port,
-                  service,
-                  user,
-                  password,
-                  status,
-                  date_format(creation_date,'%Y-%m-%d %H:%i:%s') as creation_date,
-                  creator,
-                  date_format(last_update_date,'%Y-%m-%d %H:%i:%s') as last_update_date,
-                  updator ,
-                  db_env,
-                  inst_type,
-                  market_id,
-                  proxy_status,
-                  proxy_server,
-                  id_ro
-           from t_db_source where id={0}""".format(p_dsid)
-    cur = META_DB.cursor()
-    cur.execute(sql)
-    ds = cur.fetchone()
-    ds['password'] = aes_decrypt(ds['password'],ds['user'])
-    return ds
 
 def get_obj_op(p_sql):
     if re.split(r'\s+', p_sql)[0].upper() in('CREATE','DROP') and re.split(r'\s+', p_sql)[1].upper() in('TABLE','INDEX','DATABASE'):
@@ -228,13 +182,20 @@ def get_ck_table_defi_mysql(cfg,event):
            st = st + '  `{}`  String,\n'.format(i[0])
     db.commit()
     cr.close()
-    engine = """ ENGINE = MySQL('{}','{}','{}','{}','{}')"""\
-        .format(cfg['db_mysql_ip']+':'+cfg['db_mysql_port'],
-                event['schema'],
-                event['table'],
-                cfg['db_mysql_user'],
-                cfg['db_mysql_pass']
-                )
+    if cfg.get('ds_ro') is not None and config.get('ds_ro') != '':
+        engine = """ ENGINE = MySQL('{}','{}','{}','{}','{}')""" \
+            .format(cfg['db_mysql_ip_ro'] + ':' + cfg['db_mysql_port_ro'],
+                    event['schema'],
+                    event['table'],
+                    cfg['db_mysql_user'],
+                    cfg['db_mysql_pass'])
+    else:
+        engine = """ ENGINE = MySQL('{}','{}','{}','{}','{}')"""\
+            .format(cfg['db_mysql_ip']+':'+cfg['db_mysql_port'],
+                    event['schema'],
+                    event['table'],
+                    cfg['db_mysql_user'],
+                    cfg['db_mysql_pass'])
     st = st[0:-2]+') ' + engine
     return st
 
@@ -661,6 +622,19 @@ def get_config_from_db(tag):
         config['db_mysql']               = get_ds_mysql(db_mysql_ip, db_mysql_port, db_mysql_service, db_mysql_user, db_mysql_pass)
         config['db_ck']                  = get_ds_ck(db_ck_ip, db_ck_port, db_ck_service, db_ck_user, db_ck_pass)
 
+        if config.get('ds_ro') is not None and config.get('ds_ro') != '':
+            config['db_mysql_ip_ro']      = config['ds_ro']['ip']
+            config['db_mysql_port_ro']    = config['ds_ro']['port']
+            config['db_mysql_service_ro'] = config['ds_ro']['service']
+            config['db_mysql_user_ro']    = config['ds_ro']['user']
+            config['db_mysql_pass_ro']    = aes_decrypt(config['ds_ro']['password'],
+                                                        config['ds_ro']['user'])
+            config['db_mysql_ro']         = get_ds_mysql(config['db_mysql_ip_ro'] ,
+                                                         config['db_mysql_port_ro'],
+                                                         config['db_mysql_service_ro'],
+                                                         config['db_mysql_user_ro'],
+                                                         config['db_mysql_pass_ro'] )
+
         if check_ckpt():
             file, pos = read_ckpt()
             if file not in get_binlog_files(config['db_mysql']):
@@ -674,7 +648,7 @@ def get_config_from_db(tag):
 
         config['binlogfile']            = file
         config['binlogpos']             = pos
-        config['ck_config']            = CK_TAB_CONFIG
+        config['ck_config']             = CK_TAB_CONFIG
         config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = int(config['sync_gap'])
 
@@ -711,8 +685,8 @@ def get_tables(cfg,o):
 def get_sync_tables(cfg):
     v = ''
     for o in cfg['sync_table'].split(','):
-        v = v + get_tables(cfg,o)
-    cfg['sync_table'] = v
+        v = v + get_tables(cfg,o)+','
+    cfg['sync_table'] = v[0:-1]
     return cfg
 
 

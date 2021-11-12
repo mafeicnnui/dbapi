@@ -15,6 +15,7 @@ from model.syncer import get_db_sync_config,\
                          save_sync_log_detail,\
                          update_sync_status,\
                          push
+from utils.common import DateEncoder
 
 class read_config_sync(tornado.web.RequestHandler):
     async def post(self):
@@ -22,7 +23,7 @@ class read_config_sync(tornado.web.RequestHandler):
             self.set_header("Content-Type", "application/json; charset=UTF-8")
             tag  = self.get_argument("tag")
             res  = await get_db_sync_config(tag)
-            self.write(json.dumps(res))
+            self.write(json.dumps(res, cls=DateEncoder))
         except Exception as e:
             traceback.print_exc()
             self.write({'code':-1,'msg':str(e)})

@@ -44,7 +44,8 @@ select a.sync_tag,a.sync_ywlx,
           CONCAT(c.ip,':',c.port,':',IFNULL(a.sync_schema,'information_schema'),':',c.user,':',c.password)
         ELSE
           CONCAT(c.ip,':',c.port,':',c.service,':',c.user,':',c.password)
-        END AS sync_db_sour,                          
+        END AS sync_db_sour,      
+        c.id_ro as id_ro,
         CASE WHEN d.service='' THEN 
         CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,a.sync_schema),':',d.user,':',d.password)
         ELSE
@@ -69,10 +70,16 @@ from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
     try:
         rs = await async_processer.query_dict_one(st)
         rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
+
+        if rs.get('id_ro') is not None and rs.get('id_ro') != '':
+            rs['ds_ro'] = await async_processer.query_dict_one(
+                "select * from t_db_source where id={}".format(rs['id_ro']))
+
         st = "SELECT sync_tag,db_name,schema_name,tab_name,sync_cols,sync_incr_col \
                FROM `t_db_sync_tab_config` \
                WHERE sync_tag='{}' and status='1' ORDER BY id".format(p_tag)
         rs['cols'] = await async_processer.query_dict_list(st)
+
         return {'code':200,'msg':rs}
     except Exception as e:
         return {'code':-1,'msg':str(e)}
