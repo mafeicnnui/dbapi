@@ -16,7 +16,7 @@ import tornado.httpserver
 import tornado.locale
 import traceback
 import pymongo
-
+from clickhouse_driver import Client
 from   tornado.options  import define
 from   aiomysql import create_pool,DictCursor
 
@@ -95,6 +95,14 @@ def get_ds_mysql_dict(ip,port,service ,user,password):
 def get_ds_sqlserver(ip, port, service, user, password):
     conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8',timeout=3)
     return conn
+
+def get_ds_ck(ip,port,service ,user,password):
+    return  Client(host=ip,
+                   port=port,
+                   user=user,
+                   password=password,
+                   database=service,
+                   send_receive_timeout=600000)
 
 async def aes_decrypt(db,p_password,p_key):
     sql="""select aes_decrypt(unhex('{0}'),'{1}') as password """.format(p_password,p_key[::-1])
@@ -337,6 +345,35 @@ class get_mysql_databases(tornado.web.RequestHandler):
             result['code'] = -1
             result['msg']  = traceback.format_exc()
             self.write(result)
+
+class get_ck_databases(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        db         = get_ds_ck(db_ip, db_port, db_service, db_user, db_pass)
+        st         = """select name from system.databases d 
+                        where name not in('information_schema','INFORMATION_SCHEMA','system','default') order by name """
+        try:
+           v_list = []
+           rs = db.execute(st)
+           for r in rs:
+              v_list.append(r[0])
+           result['code'] = 200
+           result['msg'] = rs
+           self.write(result)
+        except:
+           result['code'] = -1
+           result['msg'] = traceback.format_exc()
+           self.write(result)
+
 
 class get_mysql_tables(tornado.web.RequestHandler):
     async def post(self):
@@ -647,7 +684,8 @@ class Application(tornado.web.Application):
             (r"/get_mongo_collections",  get_mongo_collections),
             (r"/get_mongo_query",        get_mongo_query),
 
-
+            # clickhouse 数据库查询接口
+            (r"/get_ck_databases",       get_ck_databases),
         ]
         tornado.web.Application.__init__(self, handlers)
 
