@@ -46,6 +46,8 @@ select a.sync_tag,a.sync_ywlx,
           CONCAT(c.ip,':',c.port,':',c.service,':',c.user,':',c.password)
         END AS sync_db_sour,      
         c.id_ro as id_ro,
+        a.log_db_id as log_db_id,
+        a.log_db_name as log_db_name,
         CASE WHEN d.service='' THEN 
         CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,a.sync_schema),':',d.user,':',d.password)
         ELSE
@@ -54,7 +56,7 @@ select a.sync_tag,a.sync_ywlx,
         a.server_id,b.server_desc,a.run_time,a.api_server,
         LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
         a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
-        a.status,a.batch_timeout,a.batch_row_event,a.apply_timeout,
+        a.status,a.batch_timeout,a.batch_row_event,a.apply_timeout,a.desc_db_prefix,
         b.server_ip,b.server_port,b.server_user,b.server_pass,c.proxy_server,
         (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
         (select `value` from t_sys_settings where `key`='send_server') as send_server,
@@ -74,6 +76,10 @@ from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
         if rs.get('id_ro') is not None and rs.get('id_ro') != '':
             rs['ds_ro'] = await async_processer.query_dict_one(
                 "select * from t_db_source where id={}".format(rs['id_ro']))
+
+        if rs.get('log_db_id') is not None and rs.get('log_db_id') != '':
+            rs['ds_log'] = await async_processer.query_dict_one(
+                "select * from t_db_source where id={}".format(rs['log_db_id']))
 
         st = "SELECT sync_tag,db_name,schema_name,tab_name,sync_cols,sync_incr_col \
                FROM `t_db_sync_tab_config` \
@@ -237,13 +243,20 @@ def transfer_remote_file_sync(cfg,ssh,ftp):
     f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'db_agent.py')
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
+
+    f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2clickhouse_executer.py')
+    if not ftp.transfer(f_local, f_remote):
+        return {'code': -1, 'msg': 'failure!'}
+
     return {'code': 200, 'msg': 'success!'}
+
 
 def run_remote_cmd_sync(cfg,ssh):
     cmd1 = 'mkdir -p {0}'.format(cfg['msg']['script_path'] + '/config')
     cmd2 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
     cmd3 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_sync.sh')
     cmd4 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_agent.sh')
+    cmd4 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_executer.py')
 
     res = ssh.exec(cmd1)
     if not res['status']:
