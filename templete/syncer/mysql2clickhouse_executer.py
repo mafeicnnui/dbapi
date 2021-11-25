@@ -5,6 +5,7 @@
 # @File : schedule.py.py
 # @Software: PyCharm
 
+import os
 import sys
 import time
 import requests
@@ -12,7 +13,6 @@ import pymysql
 import datetime
 import warnings
 import traceback
-import json
 from clickhouse_driver import Client
 from concurrent.futures import ProcessPoolExecutor,wait,as_completed
 
@@ -22,6 +22,10 @@ def log(msg,pos='l'):
        print("""{} : {}""".format(tm,msg))
     else:
        print("""{} : {}""".format(msg,tm))
+
+def get_seconds(b):
+    a=datetime.datetime.now()
+    return int((a-b).total_seconds())
 
 def print_dict(config):
     print('-'.ljust(85,'-'))
@@ -151,6 +155,16 @@ def get_config_from_db(tag):
         config['db_ck_pass']             = db_ck_pass
         config['db_ck_string']           = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
         config['db_ck_string']           = db_ck_ip + ':' + db_ck_port + '/' + db_ck_service
+        config['exec_tag']               = config['sync_tag'].replace('_executer', '')
+        config['sleep_time']             = float(config['sync_gap'])
+
+        if config.get('ds_ro') is not None and config.get('ds_ro') != '':
+            config['db_mysql_ip_ro']      = config['ds_ro']['ip']
+            config['db_mysql_port_ro']    = config['ds_ro']['port']
+            config['db_mysql_service_ro'] = config['ds_ro']['service']
+            config['db_mysql_user_ro']    = config['ds_ro']['user']
+            config['db_mysql_pass_ro']    = aes_decrypt(config['ds_ro']['password'],config['ds_ro']['user'])
+
         if config.get('ds_log') is not None and config.get('ds_log') != '':
             config['db_mysql_ip_log']      = config['ds_log']['ip']
             config['db_mysql_port_log']    = config['ds_log']['port']
@@ -165,31 +179,7 @@ def get_config_from_db(tag):
         return config
     else:
         log('load config failure:{0}'.format(res['msg']))
-        return None
-
-def get_tasks(cfg):
-    db = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
-                          cfg['db_mysql_port_log'],
-                          cfg['log_db_name'],
-                          cfg['db_mysql_user_log'],
-                          cfg['db_mysql_pass_log'])
-    cr = db.cursor()
-    st = "SELECT sync_table,count(0) as amount FROM t_db_sync_log WHERE status='0' GROUP BY sync_table limit 20"
-    cr.execute(st)
-    rs =cr.fetchall()
-    return  rs
-
-def get_ins_header(cfg,event):
-    v_ddl = 'insert into {0}.{1} ('.format(get_ck_schema(cfg,event), event['table'])
-    if event['action'] == 'insert':
-        for key in event['data']:
-            v_ddl = v_ddl + '`{0}`'.format(key) + ','
-        v_ddl = v_ddl[0:-1] + ')'
-    elif event['action'] == 'update':
-        for key in event['after_values']:
-            v_ddl = v_ddl + '`{0}`'.format(key) + ','
-        v_ddl = v_ddl[0:-1] + ')'
-    return v_ddl
+        sys.exit(0)
 
 def get_ck_schema(cfg,event):
     for o in cfg['sync_table'].split(','):
@@ -200,72 +190,123 @@ def get_ck_schema(cfg,event):
          return  cfg['desc_db_prefix']+ck_schema
     return 'test'
 
-def get_ins_values(event):
-    v_tmp=''
-    if event['action'] == 'insert':
-        for key in event['data']:
-            if event['data'][key]==None:
-               v_tmp=v_tmp+"null,"
-            elif event['type'][key] in('tinyint','int','bigint','float','double','decimal'):
-               v_tmp = v_tmp +  str(event['data'][key]) + ","
-            else:
-               v_tmp = v_tmp + "'" + format_sql(str(event['data'][key])) + "',"
-    elif  event['action'] == 'update':
-        for key in event['after_values']:
-            if event['after_values'][key]==None:
-               v_tmp=v_tmp+"null,"
-            elif  event['type'][key] in('tinyint','int','bigint','float','double','decimal'):
-               v_tmp = v_tmp +  str(event['after_values'][key]) + ","
-            else:
-               v_tmp = v_tmp + "'" + format_sql(str(event['after_values'][key])) + "',"
-    return v_tmp[0:-1]
+def check_ck_database(cfg,db,event):
+    sql = """select count(0) from system.databases d 
+                  where name ='{}'""".format(get_ck_schema(cfg, event))
+    rs = db.execute(sql)
+    return rs[0][0]
 
-def set_column(event):
-    v_set = ' '
-    for key in event['after_values']:
-        if event['after_values'][key] is None:
-           v_set = v_set + key + '=null,'
+def check_ck_tab_exists(cfg,db,event):
+   sql="""select count(0) from system.tables
+            where database='{}' and name='{}'""".format(get_ck_schema(cfg,event),event['table'])
+   rs = db.execute(sql)
+   return rs[0][0]
+
+def get_ck_async_task(cfg):
+    db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
+    st = "select count(0) from system.mutations where is_done=0"
+    rs = db.execute(st)
+    return rs[0][0]
+
+
+def check_ck_tab_exists_data(cfg,db,event):
+   st = "select count(0) from {}.{}".format(get_ck_schema(cfg,event),event['table'])
+   rs = db.execute(st)
+   return rs[0][0]
+
+def get_ck_table_defi_mysql(cfg,event):
+    db = get_ds_mysql(cfg['db_mysql_ip'],
+                      cfg['db_mysql_port'],
+                      cfg['db_mysql_service'],
+                      cfg['db_mysql_user'],
+                      cfg['db_mysql_pass'])
+    cr = db.cursor()
+    st = """SELECT  `column_name`,data_type,is_nullable
+              FROM information_schema.columns
+              WHERE table_schema='{}'
+                AND table_name='{}'  ORDER BY ordinal_position""".format(event['schema'],event['table'])
+    cr.execute(st)
+    rs = cr.fetchall()
+    st= 'create table `{}`.`{}` (\n '.format(get_ck_schema(cfg,event),event['table']+'_tmp')
+    for i in rs:
+        if i[1] == 'tinyint':
+            st = st + ' `{}` {},\n'.format(i[0], 'Int16' if i[2] == 'NO' else 'Nullable(Int16)')
+        elif i[1] == 'int':
+            st = st + ' `{}` {},\n'.format(i[0], 'Int32' if i[2] == 'NO' else 'Nullable(Int32)')
+        elif i[1] == 'bigint':
+            st = st + ' `{}` {},\n'.format(i[0], 'Int64' if i[2] == 'NO' else 'Nullable(Int64)')
+        elif i[1] == 'varchar':
+            st = st + ' `{}` {},\n'.format(i[0], 'String' if i[2] == 'NO' else 'Nullable(String)')
+        elif i[1] == 'timestamp':
+            st = st + ' `{}` {},\n'.format(i[0], 'DateTime' if i[2] == 'NO' else 'Nullable(DateTime)')
+        elif i[1] == 'datetime':
+            st = st + ' `{}` {},\n'.format(i[0], 'DateTime' if i[2] == 'NO' else 'Nullable(DateTime)')
+        elif i[1] == 'date':
+            st = st + ' `{}` {},\n'.format(i[0], 'Date' if i[2] == 'NO' else 'Nullable(Date)')
+        elif i[1] == 'text':
+            st = st + ' `{}` {},\n'.format(i[0], 'String' if i[2] == 'NO' else 'Nullable(String)')
+        elif i[1] == 'longtext':
+            st = st + ' `{}` {},\n'.format(i[0], 'String' if i[2] == 'NO' else 'Nullable(String)')
+        elif i[1] == 'float':
+            st = st + ' `{}` {},\n'.format(i[0], 'Float32' if i[2] == 'NO' else 'Nullable(Float32)')
+        elif i[1] == 'double':
+            st = st + ' `{}` {},\n'.format(i[0], 'Float64' if i[2] == 'NO' else 'Nullable(Float64)')
         else:
-           if event['pkn'].count(key)==0:
-               if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double','decimal'):
-                   v_set = v_set + key + '='+ format_sql(str(event['after_values'][key])) + ','
-               else:
-                   v_set = v_set + key + '=\''+ format_sql(str(event['after_values'][key])) + '\','
-    return v_set[0:-1]
+            st = st + ' `{}` {},\n'.format(i[0], 'String' if i[2] == 'NO' else 'Nullable(String)')
+    db.commit()
+    cr.close()
+    if cfg.get('ds_ro') is not None and cfg.get('ds_ro') != '':
+        engine = """ ENGINE = MySQL('{}','{}','{}','{}','{}')""" \
+            .format(cfg['db_mysql_ip_ro'] + ':' + cfg['db_mysql_port_ro'],
+                    event['schema'],
+                    event['table'],
+                    cfg['db_mysql_user'],
+                    cfg['db_mysql_pass'])
+    else:
+        engine = """ ENGINE = MySQL('{}','{}','{}','{}','{}')"""\
+            .format(cfg['db_mysql_ip']+':'+cfg['db_mysql_port'],
+                    event['schema'],
+                    event['table'],
+                    cfg['db_mysql_user'],
+                    cfg['db_mysql_pass'])
+    st = st[0:-2]+') ' + engine
+    return st
 
-def get_where(event):
-    v_where = ' where '
-    if event['action'] == 'delete':
-        for key in event['data']:
-            if event['pks'] :
-                if key in event['pkn']:
-                    if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
-                       v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
-                    else:
-                       v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
-            else:
-               v_where = v_where+ key+' = \''+str(event['data'][key]) + '\' and '
-    elif event['action'] == 'update':
-        for key in event['after_values']:
-            if event['pks'] :
-                if key in event['pkn']:
-                    if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
-                       v_where = v_where + key + ' = ' + str(event['after_values'][key]) + ' and '
-                    else:
-                       v_where = v_where + key + ' = \'' + str(event['after_values'][key]) + '\' and '
-            else:
-               v_where = v_where+ key+' = \''+str(event['after_values'][key]) + '\' and '
-    return v_where[0:-5]
+def get_cols_from_mysql(cfg,event):
+    db = get_ds_mysql(cfg['db_mysql_ip'],
+                      cfg['db_mysql_port'],
+                      cfg['db_mysql_service'],
+                      cfg['db_mysql_user'],
+                      cfg['db_mysql_pass'])
+    cr = db.cursor()
+    v_col = ''
+    v_sql = """select column_name 
+                 from information_schema.columns
+                 where table_schema='{}'
+                   and table_name='{}'  order by ordinal_position
+             """.format(event['schema'], event['table'])
+    cr.execute(v_sql)
+    rs = cr.fetchall()
+    for i in list(rs):
+        v_col = v_col + '`{}`,'.format(i[0])
+    cr.close()
+    return v_col[0:-1]
 
-def gen_sql(cfg,event):
-    if event['action'] in ('insert'):
-        sql  = get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+');'
-    elif event['action'] == 'update':
-        sql = 'alter table {0}.{1} update {2} {3}'.\
-               format(get_ck_schema(cfg, event),event['table'],set_column(event),get_where(event))
-    elif event['action']=='delete':
-        sql  = 'alter table {0}.{1} delete {2}'.format(get_ck_schema(cfg,event),event['table'],get_where(event))
-    return sql
+def full_sync(cfg,event):
+    db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
+    log('create clickhouse temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event),event['table']+'_tmp'))
+    st = get_ck_table_defi_mysql(cfg,event)
+    db.execute(st)
+
+    log('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event),event['table']))
+    col = get_cols_from_mysql(cfg, event)
+    st = """insert into {}.{} ({}) select {} from {}.{}
+         """.format(get_ck_schema(cfg, event),event['table'], col,col,get_ck_schema(cfg, event),event['table']+'_tmp')
+    db.execute(st)
+
+    log('drop temp table:{}.{}'.format(get_ck_schema(cfg, event), event['table'] + '_tmp'))
+    st = 'drop table {}.{}'.format(get_ck_schema(cfg, event),event['table']+'_tmp')
+    db.execute(st)
 
 def write_ck(cfg,tab):
     db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
@@ -274,35 +315,73 @@ def write_ck(cfg,tab):
                                cfg['db_mysql_user_log'],
                                cfg['db_mysql_pass_log'])
     cr_log = db_log.cursor()
-    st_log = "select id,statement from t_db_sync_log where sync_table='{}' and status='0'  order by id".format(tab)
+    st_log = """select id,sync_table,statement
+                   from t_db_sync_log where sync_tag='{}' and sync_table='{}' and status='0'  
+                       order by id limit {}""".format(cfg['exec_tag'],tab,cfg['batch_size_incr'])
     cr_log.execute(st_log)
     rs_log = cr_log.fetchall()
     db_ck  = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
+    ids=''
     for r in rs_log:
-        #print('>>>>>>>>>1:',r['statement'])
-        #print('>>>>>>>>>2:',gen_sql(cfg,json.loads(r['statement'])))
-        #time.sleep(10)
-        #st = gen_sql(cfg,json.loads(r['statement']))
-        db_ck.execute(r['statement'])
-        cr_log.execute("update t_db_sync_log set status='1' where id={}".format(r['id']))
+        # if r['opr'] == 'create_database':
+        #    event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
+        #    if check_ck_database(cfg,db_ck,event) ==0:
+        #       try:
+        #          db_ck.execute(r['statement'])
+        #       except:
+        #          pass
+        #    cr_log.execute("update t_db_sync_log set status='1' where id={}".format(r['id']))
+        # elif r['opr'] == 'create_table':
+        #    event = {'schema':r['sync_table'].split('.')[0],'table':r['sync_table'].split('.')[1]}
+        #    if check_ck_database(cfg,db_ck,event) ==0:
+        #       try:
+        #          db_ck.execute('create database {}'.format(get_ck_schema(cfg, event)))
+        #       except:
+        #          pass
+        #    db_ck.execute(r['statement'])
+        #    cr_log.execute("update t_db_sync_log set status='1' where id={}".format(r['id']))
+        #    full_sync(cfg,event)
+        # else:
+        event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
+        if check_ck_tab_exists_data(cfg,db_ck,event) == 0:
+           full_sync(cfg, event)
+        try:
+           db_ck.execute(r['statement'])
+           ids = ids + '{},'.format(r['id'])
+           if r['statement'].count('alter table')==1:
+              time.sleep(cfg['sleep_time'])
+        except:
+           traceback.print_exc()
+           print('\033[0;36;40m'+r['statement']+'\033[0m')
 
-    # 一批可以更新一次，提升性能
+    upd ="update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
+    cr_log.execute(upd)
     log('Task {} execute complete!'.format(tab))
 
-def main():
-    tag = ""
-    warnings.filterwarnings("ignore")
-    for p in range(len(sys.argv)):
-        if sys.argv[p] == "-tag":
-            tag = sys.argv[p + 1]
+def get_tasks(cfg):
+    db = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
+                           cfg['db_mysql_port_log'],
+                           cfg['log_db_name'],
+                           cfg['db_mysql_user_log'],
+                           cfg['db_mysql_pass_log'])
+    cr = db.cursor()
+    st = """SELECT sync_table,count(0) as amount FROM t_db_sync_log 
+               WHERE sync_tag='{}' and status='0' GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['process_num'])
+    cr.execute(st)
+    rs =cr.fetchall()
+    return  rs
 
-    cfg = get_config_from_db(tag)
+def start_syncer(cfg):
+    apply_time = datetime.datetime.now()
+    sleep_time = datetime.datetime.now()
 
-    print_dict(cfg)
-
-    with ProcessPoolExecutor(max_workers=20) as executor:
+    with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
         while True:
-            # 定时重新加载配置
+
+            if get_seconds(apply_time) >= cfg['apply_timeout']:
+               apply_time = datetime.datetime.now()
+               cfg = get_config_from_db(cfg['sync_tag'])
+               log("\033[1;36;40mapply config success\033[0m")
 
             tasks = get_tasks(cfg)
             if tasks!=():
@@ -311,7 +390,14 @@ def main():
                 for task in tasks:
                     print(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = ', task['amount'])
                 print('-'.ljust(85, '-'))
+                print('\n')
 
+                async_task_amount = get_ck_async_task(cfg)
+                if round(async_task_amount / 500)>=1:
+                   log("\033[1;36;40msleep {}s wait ck async task!\033[0m".format(round(async_task_amount / 500)*3))
+                   time.sleep(round(async_task_amount / 500)*3)
+
+                sleep_time = datetime.datetime.now()
                 all_task = [executor.submit(write_ck,cfg,t['sync_table']) for t in tasks]
 
                 for future in as_completed(all_task):
@@ -319,8 +405,34 @@ def main():
                     if res is not None:
                        log(res)
             else:
-               time.sleep(0.5)
-               print('\nSleepping...'.format(),end='')
+               time.sleep(0.1)
+               print('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))),end='')
+
+
+def get_task_status(cfg):
+    c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
+    r = os.popen(c).read()
+    if int(r) > 2 :
+       log('Executer Task already running!')
+       return True
+    else:
+       return False
+
 
 if __name__=="__main__":
-     main()
+
+    tag = ""
+    warnings.filterwarnings("ignore")
+    for p in range(len(sys.argv)):
+        if sys.argv[p] == "-tag":
+            tag = sys.argv[p + 1]
+
+    # call api get config
+    cfg = get_config_from_db(tag)
+
+    # print cfg
+    print_dict(cfg)
+
+    # check task
+    if not get_task_status(cfg):
+       start_syncer(cfg)

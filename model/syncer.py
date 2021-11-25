@@ -56,7 +56,7 @@ select a.sync_tag,a.sync_ywlx,
         a.server_id,b.server_desc,a.run_time,a.api_server,
         LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
         a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
-        a.status,a.batch_timeout,a.batch_row_event,a.apply_timeout,a.desc_db_prefix,
+        a.status,a.process_num,a.apply_timeout,a.desc_db_prefix,
         b.server_ip,b.server_port,b.server_user,b.server_pass,c.proxy_server,
         (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
         (select `value` from t_sys_settings where `key`='send_server') as send_server,
@@ -73,9 +73,9 @@ from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
         rs = await async_processer.query_dict_one(st)
         rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
 
-        if rs.get('id_ro') is not None and rs.get('id_ro') != '':
+        if rs.get('id_ro') is not None and rs.get('id_ro') != '' and rs.get('id_ro') !='None':
             rs['ds_ro'] = await async_processer.query_dict_one(
-                "select * from t_db_source where id={}".format(rs['id_ro']))
+                "select * from t_db_source where id={}".format(rs.get('id_ro')))
 
         if rs.get('log_db_id') is not None and rs.get('log_db_id') != '':
             rs['ds_log'] = await async_processer.query_dict_one(
@@ -88,6 +88,7 @@ from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
 
         return {'code':200,'msg':rs}
     except Exception as e:
+        traceback.print_exc()
         return {'code':-1,'msg':str(e)}
 
 async def save_sync_log(config):
@@ -277,6 +278,7 @@ def run_remote_cmd_sync(cfg,ssh):
 
 async def push(tag):
     cfg = await get_db_sync_config(tag)
+    print('cfg=',cfg)
     if cfg['code'] != 200:
         return cfg
 
