@@ -155,7 +155,7 @@ def get_config_from_db(tag):
         config['db_ck_pass']             = db_ck_pass
         config['db_ck_string']           = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
         config['db_ck_string']           = db_ck_ip + ':' + db_ck_port + '/' + db_ck_service
-        config['exec_tag']               = config['sync_tag'].replace('_executer', '')
+        config['exec_tag']               = config['sync_tag'].replace('_executer', '_logger')
         config['sleep_time']             = float(config['sync_gap'])
 
         if config.get('ds_ro') is not None and config.get('ds_ro') != '':
@@ -308,6 +308,70 @@ def full_sync(cfg,event):
     st = 'drop table {}.{}'.format(get_ck_schema(cfg, event),event['table']+'_tmp')
     db.execute(st)
 
+
+def merge_buffer(buffer):
+    type = buffer[0]['type']
+    table = buffer[0]['sync_table']
+    if type == 'insert':
+       h = buffer[0]['statement'].split(' values ')[0]
+       b = ''
+       i = ''
+       for o in buffer:
+         b = b + o['statement'].split(' values ')[1]+','
+         i = i + str(o['id'])+','
+       return  [
+           {'sync_table':table,'type': type, 'statement': h + ' values ' + b[0:-1],'id':i[0:-1]}
+       ]
+
+    if type == 'delete':
+        h = buffer[0]['statement'].split(' = ')[0]
+        b = ''
+        i = ''
+        for o in buffer:
+            b = b + o['statement'].split(' = ')[1] + ','
+            i = i + str(o['id']) + ','
+        return [
+            {'sync_table':table,'type': type, 'statement': h + ' in (' + b[0:-1] + ')','id':i[0:-1]}
+        ]
+
+    if type == 'update':
+       hd = buffer[0]['statement'].split('^^^')[0].split(' = ')[0]
+       hi = buffer[0]['statement'].split('^^^')[1].split(' values ')[0]
+
+       bd = ''
+       bi = ''
+       id = ''
+       for o in buffer:
+           bd = bd + o['statement'].split('^^^')[0].split(' = ')[1]+ ','
+           bi = bi + o['statement'].split('^^^')[1].split(' values ')[1]+','
+           id = id + str(o['id']) + ','
+
+       return [
+              { 'sync_table':table,'type': 'delete', 'statement': hd + ' in (' + bd[0:-1] + ')','id': id[0:-1] },
+              { 'sync_table':table,'type': 'insert', 'statement': hi + ' values ' + bi[0:-1],'id': id[0:-1] }
+       ]
+
+
+def process_sql(logs):
+    nbatch = []
+    buffer = []
+    latest_event = logs[0]['type']
+    buffer.append({'sync_table':logs[0]['sync_table'],'type':latest_event,'statement':logs[0]['statement'],'id':logs[0]['id']})
+
+    for log in logs[1:]:
+        if log['type'] == latest_event:
+           buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
+        else:
+           if len(buffer)>0:
+               nbatch.extend(merge_buffer(buffer))
+               buffer = []
+           buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
+           latest_event = log['type']
+
+    if  len(buffer)>0:
+        nbatch.extend(merge_buffer(buffer))
+    return nbatch
+
 def write_ck(cfg,tab):
     db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
                                cfg['db_mysql_port_log'],
@@ -315,33 +379,15 @@ def write_ck(cfg,tab):
                                cfg['db_mysql_user_log'],
                                cfg['db_mysql_pass_log'])
     cr_log = db_log.cursor()
-    st_log = """select id,sync_table,statement
+    st_log = """select id,sync_table,statement,type
                    from t_db_sync_log where sync_tag='{}' and sync_table='{}' and status='0'  
                        order by id limit {}""".format(cfg['exec_tag'],tab,cfg['batch_size_incr'])
     cr_log.execute(st_log)
     rs_log = cr_log.fetchall()
+    rs_log_process=process_sql(rs_log)
     db_ck  = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
     ids=''
-    for r in rs_log:
-        # if r['opr'] == 'create_database':
-        #    event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-        #    if check_ck_database(cfg,db_ck,event) ==0:
-        #       try:
-        #          db_ck.execute(r['statement'])
-        #       except:
-        #          pass
-        #    cr_log.execute("update t_db_sync_log set status='1' where id={}".format(r['id']))
-        # elif r['opr'] == 'create_table':
-        #    event = {'schema':r['sync_table'].split('.')[0],'table':r['sync_table'].split('.')[1]}
-        #    if check_ck_database(cfg,db_ck,event) ==0:
-        #       try:
-        #          db_ck.execute('create database {}'.format(get_ck_schema(cfg, event)))
-        #       except:
-        #          pass
-        #    db_ck.execute(r['statement'])
-        #    cr_log.execute("update t_db_sync_log set status='1' where id={}".format(r['id']))
-        #    full_sync(cfg,event)
-        # else:
+    for r in rs_log_process:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
         if check_ck_tab_exists_data(cfg,db_ck,event) == 0:
            full_sync(cfg, event)
@@ -352,6 +398,9 @@ def write_ck(cfg,tab):
               time.sleep(cfg['sleep_time'])
         except:
            traceback.print_exc()
+           print('---------------------------------------------------------------------------------')
+           print('rs_log===========>', rs_log)
+           print('rs_log_process===========>', rs_log_process)
            print('\033[0;36;40m'+r['statement']+'\033[0m')
 
     upd ="update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])

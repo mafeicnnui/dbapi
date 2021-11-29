@@ -19,12 +19,12 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="add clickhouse sync support">
-      <change afterPath="$PROJECT_DIR$/templete/syncer/pg2mysql_sync.py" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="add pg sync support">
+      <change afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3_bak2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/pg2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/pg2mysql_sync.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -74,19 +74,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi" />
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\minio" />
-      <recent name="D:\work\dbapi\templete\datax" />
-      <recent name="D:\work\dbapi\templete\transfer" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\datax" />
       <recent name="D:\work\dbapi\templete\gather" />
       <recent name="D:\work\dbapi\templete\backup" />
       <recent name="D:\work\dbapi\service" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi" />
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\minio" />
+      <recent name="D:\work\dbapi\templete\datax" />
+      <recent name="D:\work\dbapi\templete\transfer" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -417,7 +417,9 @@
       <workItem from="1637626451631" duration="14393000" />
       <workItem from="1637651159633" duration="3042000" />
       <workItem from="1637712206636" duration="16772000" />
-      <workItem from="1637799069200" duration="22556000" />
+      <workItem from="1637799069200" duration="22588000" />
+      <workItem from="1637848809645" duration="15993000" />
+      <workItem from="1638145372338" duration="7279000" />
     </task>
     <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
       <created>1577068775142</created>
@@ -755,7 +757,14 @@
       <option name="project" value="LOCAL" />
       <updated>1637314417131</updated>
     </task>
-    <option name="localTasksCounter" value="49" />
+    <task id="LOCAL-00049" summary="add pg sync support">
+      <created>1637833214386</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1637833214386</updated>
+    </task>
+    <option name="localTasksCounter" value="50" />
     <servers />
   </component>
   <component name="TodoView">
@@ -783,7 +792,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="workspace update" />
     <MESSAGE value="dbapi.py func update" />
     <MESSAGE value="add docker README.md" />
     <MESSAGE value="add README.md" />
@@ -808,7 +816,8 @@
     <MESSAGE value="add monitor_agent" />
     <MESSAGE value="add doris sync support" />
     <MESSAGE value="add clickhouse sync support" />
-    <option name="LAST_COMMIT_MESSAGE" value="add clickhouse sync support" />
+    <MESSAGE value="add pg sync support" />
+    <option name="LAST_COMMIT_MESSAGE" value="add pg sync support" />
   </component>
   <component name="WindowStateProjectService">
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1637829773573">
@@ -833,33 +842,33 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="740" y="275" key="FileChooserDialogImpl/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637737114907" />
-    <state width="1877" height="298" key="GridCell.Tab.0.bottom" timestamp="1637830257090">
+    <state width="1877" height="203" key="GridCell.Tab.0.bottom" timestamp="1637833231645">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
     <state width="1877" height="2" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="298" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637830257090" />
+    <state width="1877" height="203" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637833231645" />
     <state width="1877" height="135" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131858" />
-    <state width="1877" height="298" key="GridCell.Tab.0.center" timestamp="1637830257089">
+    <state width="1877" height="203" key="GridCell.Tab.0.center" timestamp="1637833231645">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
     <state width="1877" height="2" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="298" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637830257089" />
+    <state width="1877" height="203" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637833231645" />
     <state width="1877" height="135" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131857" />
-    <state width="1877" height="298" key="GridCell.Tab.0.left" timestamp="1637830257088">
+    <state width="1877" height="203" key="GridCell.Tab.0.left" timestamp="1637833231645">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
     <state width="1877" height="2" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="298" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637830257088" />
+    <state width="1877" height="203" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637833231645" />
     <state width="1877" height="135" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131857" />
-    <state width="1877" height="298" key="GridCell.Tab.0.right" timestamp="1637830257089">
+    <state width="1877" height="203" key="GridCell.Tab.0.right" timestamp="1637833231645">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
     <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="298" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637830257089" />
+    <state width="1877" height="203" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637833231645" />
     <state width="1877" height="135" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131858" />
     <state x="564" y="244" key="SettingsEditor" timestamp="1637716308281">
       <screen x="0" y="0" width="1920" height="1040" />
@@ -867,11 +876,11 @@
     <state x="683" y="209" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1633936559064" />
     <state x="564" y="244" key="SettingsEditor/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637716308281" />
     <state x="729" y="232" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1636353606900" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1637314424782">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1637833223620">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635237222509" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637314424782" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637833223620" />
     <state x="662" y="254" width="596" height="532" key="find.popup" timestamp="1634528673380">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>

@@ -686,6 +686,10 @@ def sync_mysql_ddl(config,debug):
                        config['run_sql'] = v_cre_sql
                        cr_desc.execute(v_cre_sql)
                        print("Table:{0} creating success!".format(tab_name))
+                       v_pk_sql = """ALTER TABLE {0} ADD COLUMN pkid INT(11) NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (pkid)
+                                                       """.format(tab_name)
+                       cr_desc.execute(v_pk_sql)
+                       print("Table:{0} add primary key pkid success!".format(tab_name))
                        db_desc.commit()
                 else:
                    v_cre_sql = f_get_table_ddl(config,schema,tab_name)

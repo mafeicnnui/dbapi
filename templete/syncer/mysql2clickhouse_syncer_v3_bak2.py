@@ -56,10 +56,6 @@ def log(msg):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
     print("""{} : {}""".format(tm,msg))
 
-def log2(msg):
-    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-    print("""\r{} : {}""".format(tm,msg),end='')
-
 def get_obj_op(p_sql):
     if re.split(r'\s+', p_sql)[0].upper() in('CREATE','DROP') and re.split(r'\s+', p_sql)[1].upper() in('TABLE','INDEX','DATABASE'):
        return re.split(r'\s+', p_sql)[0].upper()+'_'+re.split(r'\s+', p_sql)[1].upper()
@@ -420,53 +416,12 @@ def get_where(event):
                v_where = v_where+ key+' = \''+str(event['after_values'][key]) + '\' and '
     return v_where[0:-5]
 
-def get_ck_col_type(v_type,v_value):
-    if v_type == 'tinyint':
-        v = 'toInt16({})'.format(v_value)
-    elif v_type == 'int':
-        v = 'toInt32({})'.format(v_value)
-    elif v_type == 'bigint':
-        v = 'toInt64({})'.format(v_value)
-    elif v_type == 'float':
-        v = 'toFloat32({})'.format(v_value)
-    elif v_type == 'double':
-        v = 'toFloat64({})'.format(v_value)
-    else:
-        v = "'{}'".format(v_value)
-    return v
-
-def get_where_upd(event):
-    v_where = ' where '
-    v_pk_name = '('
-    v_pk_value = '(select '
-    if event['action'] == 'update':
-        for key in event['after_values']:
-            if event['pks'] :
-                if key in event['pkn']:
-                    if len(event['pkn']) >= 2:
-                        v_pk_name = v_pk_name + key + ','
-                        v_pk_value = v_pk_value + get_ck_col_type(event['type'][key],str(event['after_values'][key])) + ','
-                    else:
-                        if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
-                           v_where = v_where + key + ' = ' + str(event['after_values'][key]) + ' and '
-                        else:
-                           v_where = v_where + key + ' = \'' + str(event['after_values'][key]) + '\' and '
-            else:
-               v_where = v_where+ key+' = \''+str(event['after_values'][key]) + '\' and '
-
-        if len(event['pkn'])>=2:
-           v_where =  v_where + v_pk_name[0:-1]+') = ' + v_pk_value[0:-1]+')'
-           return v_where
-
-    return v_where[0:-5]
-
 def gen_sql(cfg,event):
     if event['action'] in ('insert'):
-        sql  = get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+')'
+        sql  = get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+');'
     elif event['action'] == 'update':
-        dst = 'alter table {0}.{1} delete {2}'.format(get_ck_schema(cfg,event),event['table'],get_where_upd(event))
-        ist =  get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+')'
-        sql = '{}^^^{}'.format(dst,ist)
+        sql = 'alter table {0}.{1} update {2} {3}'.\
+               format(get_ck_schema(cfg, event),event['table'],set_column(event),get_where(event))
     elif event['action']=='delete':
         sql  = 'alter table {0}.{1} delete {2}'.format(get_ck_schema(cfg,event),event['table'],get_where(event))
     return sql
@@ -838,10 +793,9 @@ def write_event(cfg,event):
     cfg['cr_mysql_log'].execute(st)
 
 def write_sql(cfg,event):
-    st = """insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) 
-              values('{}','{}','{}','{}') """.format(cfg['sync_tag'],event['tab'],format_sql(event['sql']),event['action'])
+    st = """insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`) 
+              values('{}','{}','{}') """.format(cfg['sync_tag'],event['tab'],format_sql(event['sql']))
     cfg['cr_mysql_log'].execute(st)
-    log2('Writing event {} into table {} ...'.format(event['action'],event['tab']))
 
 
 '''
