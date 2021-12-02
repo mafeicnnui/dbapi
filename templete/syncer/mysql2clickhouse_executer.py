@@ -23,17 +23,21 @@ def log(msg,pos='l'):
     else:
        print("""{} : {}""".format(msg,tm))
 
+def log2(msg):
+    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+    print("""\r{} : {}""".format(tm,msg),end='')
+
 def get_seconds(b):
     a=datetime.datetime.now()
     return int((a-b).total_seconds())
 
 def print_dict(config):
-    print('-'.ljust(85,'-'))
-    print(' '.ljust(3,' ')+"name".ljust(20,' ')+'value')
-    print('-'.ljust(85,'-'))
+    print('-'.ljust(85, '-'))
+    print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    print('-'.ljust(85, '-'))
     for key in config:
-      print(' '.ljust(3,' ')+key.ljust(20,' ')+'=',config[key])
-    print('-'.ljust(85,'-'))
+        print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
+    print('-'.ljust(85, '-'))
 
 def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -208,6 +212,10 @@ def get_ck_async_task(cfg):
     rs = db.execute(st)
     return rs[0][0]
 
+def get_ck_async_task_table(cfg,db,event):
+    st = "select count(0) from system.mutations where is_done=0 and database='{}' and table='{}'".format(get_ck_schema(cfg,event),event['table'])
+    rs = db.execute(st)
+    return rs[0][0]
 
 def check_ck_tab_exists_data(cfg,db,event):
    st = "select count(0) from {}.{}".format(get_ck_schema(cfg,event),event['table'])
@@ -308,7 +316,6 @@ def full_sync(cfg,event):
     st = 'drop table {}.{}'.format(get_ck_schema(cfg, event),event['table']+'_tmp')
     db.execute(st)
 
-
 def merge_buffer(buffer):
     type = buffer[0]['type']
     table = buffer[0]['sync_table']
@@ -324,33 +331,51 @@ def merge_buffer(buffer):
        ]
 
     if type == 'delete':
-        h = buffer[0]['statement'].split(' = ')[0]
-        b = ''
-        i = ''
+        hd = buffer[0]['statement'].split(' = ')[0]
+        bd = ''
+        id= ''
         for o in buffer:
-            b = b + o['statement'].split(' = ')[1] + ','
-            i = i + str(o['id']) + ','
-        return [
-            {'sync_table':table,'type': type, 'statement': h + ' in (' + b[0:-1] + ')','id':i[0:-1]}
-        ]
+            if len(hd.split('where')[1].split(',')) > 1:
+                bd = bd + o['statement'].split('^^^')[0].split(' = ')[1] + ' union all '
+            else:
+                bd = bd + o['statement'].split('^^^')[0].split(' = ')[1] + ','
+
+            id = id + str(o['id']) + ','
+
+        if len(hd.split('where')[1].split(',')) > 1:
+            return [
+                {'sync_table': table, 'type': 'delete', 'statement': hd + ' in (' + bd[0:-10] + ')', 'id': id[0:-1]},
+            ]
+        else:
+            return [
+                {'sync_table': table, 'type': 'delete', 'statement': hd + ' in (' + bd[0:-1] + ')', 'id': id[0:-1]},
+            ]
 
     if type == 'update':
-       hd = buffer[0]['statement'].split('^^^')[0].split(' = ')[0]
-       hi = buffer[0]['statement'].split('^^^')[1].split(' values ')[0]
-
        bd = ''
        bi = ''
        id = ''
+       hd = buffer[0]['statement'].split('^^^')[0].split(' = ')[0]
+       hi = buffer[0]['statement'].split('^^^')[1].split(' values ')[0]
        for o in buffer:
-           bd = bd + o['statement'].split('^^^')[0].split(' = ')[1]+ ','
+           if len(hd.split('where')[1].split(','))>1:
+              bd = bd + o['statement'].split('^^^')[0].split(' = ')[1]+ ' union all '
+           else:
+              bd = bd + o['statement'].split('^^^')[0].split(' = ')[1] + ','
+
            bi = bi + o['statement'].split('^^^')[1].split(' values ')[1]+','
            id = id + str(o['id']) + ','
 
-       return [
-              { 'sync_table':table,'type': 'delete', 'statement': hd + ' in (' + bd[0:-1] + ')','id': id[0:-1] },
-              { 'sync_table':table,'type': 'insert', 'statement': hi + ' values ' + bi[0:-1],'id': id[0:-1] }
-       ]
-
+       if  len(hd.split('where')[1].split(','))>1:
+           return [
+                  { 'sync_table':table,'type': 'delete', 'statement': hd + ' in (' + bd[0:-10] + ')','id': id[0:-1] },
+                  { 'sync_table':table,'type': 'insert', 'statement': hi + ' values ' + bi[0:-1],'id': id[0:-1] }
+           ]
+       else:
+           return [
+               {'sync_table': table, 'type': 'delete', 'statement': hd + ' in (' + bd[0:-1] + ')', 'id': id[0:-1]},
+               {'sync_table': table, 'type': 'insert', 'statement': hi + ' values ' + bi[0:-1], 'id': id[0:-1]}
+           ]
 
 def process_sql(logs):
     nbatch = []
@@ -372,6 +397,84 @@ def process_sql(logs):
         nbatch.extend(merge_buffer(buffer))
     return nbatch
 
+def get_mysql_columns(cfg,schema,table,ck_cols):
+    db = get_ds_mysql_dict(cfg['db_mysql_ip'],
+                           cfg['db_mysql_port'],
+                           cfg['db_mysql_service'],
+                           cfg['db_mysql_user'],
+                           cfg['db_mysql_pass'])
+    cr = db.cursor()
+    st = """select table_name,column_name,data_type,is_nullable,datetime_precision
+            from information_schema.columns  
+             where table_schema='{}' and table_name='{}' and column_name not in ({})""".format(schema,table,ck_cols)
+    cr.execute(st)
+    rs =cr.fetchall()
+    return rs
+
+def get_ck_columns(cfg,schema,table):
+    db = get_ds_ck(cfg['db_ck_ip'],
+                   cfg['db_ck_port'],
+                   cfg['db_ck_service'],
+                   cfg['db_ck_user'],
+                   cfg['db_ck_pass'])
+    event = {'schema': schema, 'table': table}
+    st = """select name from system.columns where database='{}' and table='{}'""".format(get_ck_schema(cfg, event), event['table'])
+    print('get_ck_columns=',st)
+    rs = db.execute(st)
+    v = ''
+    for i in rs:
+       v = v + "'{}',".format(i[0])
+    print('v=',v)
+    return v[0:-1]
+
+def mysql_type_convert_ck(p_type,p_is_null,p_datetime_precision):
+    if p_type == 'tinyint':
+        return 'Int16' if p_is_null == 'NO' else 'Nullable(Int16)'
+    elif p_type == 'int':
+       return 'Int32' if p_is_null == 'NO' else 'Nullable(Int32)'
+    elif p_type == 'bigint':
+       return 'Int64' if p_is_null == 'NO' else 'Nullable(Int64)'
+    elif p_type == 'varchar':
+       return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+    elif p_type == 'timestamp':
+        return 'DateTime' if p_is_null == 'NO' else 'Nullable(DateTime)'
+    elif p_type == 'datetime':
+        if p_datetime_precision == 6:
+            return 'DateTime64' if p_is_null == 'NO' else 'Nullable(DateTime64)'
+        else:
+            return 'DateTime' if p_is_null == 'NO' else 'Nullable(DateTime)'
+    elif p_type== 'date':
+        return 'Date' if p_is_null == 'NO' else 'Nullable(Date)'
+    elif p_type == 'text':
+        return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+    elif p_type == 'longtext':
+        return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+    elif p_type == 'float':
+        return 'Float32' if p_is_null == 'NO' else 'Nullable(Float32)'
+    elif p_type == 'double':
+        return 'Float64' if p_is_null == 'NO' else 'Nullable(Float64)'
+    else:
+        return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+
+def sync_alter(cfg,schema,table):
+    db_ck = get_ds_ck(cfg['db_ck_ip'],
+                   cfg['db_ck_port'],
+                   cfg['db_ck_service'],
+                   cfg['db_ck_user'],
+                   cfg['db_ck_pass'])
+    ck_cols = get_ck_columns(cfg,schema,table)
+    mysql_cols = get_mysql_columns(cfg,schema,table,ck_cols)
+    event = {'schema': schema, 'table': table}
+    for m in mysql_cols:
+        v ="""alter table {}.{} add column {} {}
+           """.format(get_ck_schema(cfg, event),
+                      event['table'],
+                      m['column_name'],
+                      mysql_type_convert_ck(m['data_type'],m['is_nullable'],m['datetime_precision']))
+        print(v)
+        db_ck.execute(v)
+
+
 def write_ck(cfg,tab):
     db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
                                cfg['db_mysql_port_log'],
@@ -389,23 +492,43 @@ def write_ck(cfg,tab):
     ids=''
     for r in rs_log_process:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-        if check_ck_tab_exists_data(cfg,db_ck,event) == 0:
-           full_sync(cfg, event)
+        if check_ck_tab_exists(cfg,db_ck,event) == 0:
+           log('Table:{}.{} not exists,skip incr sync!'.format(get_ck_schema(cfg,event),event['table']))
+           continue
+
         try:
+           log2('wait ck async task complete...')
+           while True:
+               evt = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
+               if get_ck_async_task_table(cfg,db_ck,evt) == 0:
+                  break
+               time.sleep(0.1)
            db_ck.execute(r['statement'])
            ids = ids + '{},'.format(r['id'])
-           if r['statement'].count('alter table')==1:
-              time.sleep(cfg['sleep_time'])
         except:
-           traceback.print_exc()
-           print('---------------------------------------------------------------------------------')
-           print('rs_log===========>', rs_log)
-           print('rs_log_process===========>', rs_log_process)
-           print('\033[0;36;40m'+r['statement']+'\033[0m')
+           if traceback.format_exc().count('No such column')>0:
+              sync_alter(cfg,event['schema'],event['table'])
+              # execute current i['statement']
+           else :
+              traceback.print_exc()
+              print('\033[1;36;40mrs_log\033[0m', rs_log)
+              print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
+              print('\033[0;36;40m'+r['statement']+'\033[0m')
+              sys.exit(0)
+           #continue
 
-    upd ="update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
-    cr_log.execute(upd)
-    log('Task {} execute complete!'.format(tab))
+    if ids != '':
+        upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
+        try:
+          cr_log.execute(upd)
+          print('Task {} execute complete!'.format(tab))
+        except:
+          traceback.print_exc()
+          print('\033[1;36;40mrs_log\033[0m', rs_log)
+          print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
+          print('\033[1;36;40mids\033[0m', ids)
+          print('\033[1;36;40mupd===========>\033[0m', upd)
+
 
 def get_tasks(cfg):
     db = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
@@ -423,14 +546,12 @@ def get_tasks(cfg):
 def start_syncer(cfg):
     apply_time = datetime.datetime.now()
     sleep_time = datetime.datetime.now()
-
     with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
         while True:
-
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()
                cfg = get_config_from_db(cfg['sync_tag'])
-               log("\033[1;36;40mapply config success\033[0m")
+               log("\033[1;36;40\nmapply config success\033[0m")
 
             tasks = get_tasks(cfg)
             if tasks!=():
@@ -469,7 +590,6 @@ def get_task_status(cfg):
 
 
 if __name__=="__main__":
-
     tag = ""
     warnings.filterwarnings("ignore")
     for p in range(len(sys.argv)):

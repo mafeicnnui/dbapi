@@ -19,12 +19,12 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="add pg sync support">
-      <change afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3_bak2.py" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="ck sync update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/backup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/db_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/db_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/pg2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/pg2mysql_sync.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,6 +60,8 @@
     <option name="showMembers" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file://C:/dbapi/templete/gather_agent.py" />
     <property name="WebServerToolWindowFactoryState" value="true" />
     <property name="WebServerToolWindowPanel.toolwindow.highlight.mappings" value="true" />
@@ -419,14 +421,12 @@
       <workItem from="1637712206636" duration="16772000" />
       <workItem from="1637799069200" duration="22588000" />
       <workItem from="1637848809645" duration="15993000" />
-      <workItem from="1638145372338" duration="7279000" />
-    </task>
-    <task id="LOCAL-00001" summary="数据库自动化平台API-Server">
-      <created>1577068775142</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1577068775142</updated>
+      <workItem from="1638145372338" duration="26830000" />
+      <workItem from="1638232446226" duration="5208000" />
+      <workItem from="1638254802032" duration="1883000" />
+      <workItem from="1638266101992" duration="354000" />
+      <workItem from="1638348044825" duration="2564000" />
+      <workItem from="1638404033179" duration="22513000" />
     </task>
     <task id="LOCAL-00002" summary="数据库自动化平台API-Server">
       <created>1577078185060</created>
@@ -764,7 +764,14 @@
       <option name="project" value="LOCAL" />
       <updated>1637833214386</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="ck sync update">
+      <created>1638152792962</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1638152792963</updated>
+    </task>
+    <option name="localTasksCounter" value="51" />
     <servers />
   </component>
   <component name="TodoView">
@@ -792,7 +799,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="dbapi.py func update" />
     <MESSAGE value="add docker README.md" />
     <MESSAGE value="add README.md" />
     <MESSAGE value="add requirements.txt" />
@@ -817,7 +823,8 @@
     <MESSAGE value="add doris sync support" />
     <MESSAGE value="add clickhouse sync support" />
     <MESSAGE value="add pg sync support" />
-    <option name="LAST_COMMIT_MESSAGE" value="add pg sync support" />
+    <MESSAGE value="ck sync update" />
+    <option name="LAST_COMMIT_MESSAGE" value="ck sync update" />
   </component>
   <component name="WindowStateProjectService">
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1637829773573">

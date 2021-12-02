@@ -16,7 +16,6 @@ from model.backup import get_db_config,\
                          run_remote_backup_task,\
                          stop_remote_backup_task,\
                          push
-
 class read_config_backup(tornado.web.RequestHandler):
     async def post(self):
         try:
@@ -27,6 +26,7 @@ class read_config_backup(tornado.web.RequestHandler):
         except Exception as e:
             traceback.print_exc()
             self.write({'code':-1,'msg':str(e)})
+
 
 
 class write_backup_status(tornado.web.RequestHandler):

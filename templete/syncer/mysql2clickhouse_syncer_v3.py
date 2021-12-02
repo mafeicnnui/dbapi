@@ -54,7 +54,7 @@ def format_sql(v_sql):
 
 def log(msg):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-    print("""{} : {}""".format(tm,msg))
+    print("""\n{} : {}""".format(tm,msg))
 
 def log2(msg):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
@@ -402,12 +402,25 @@ def get_where(event):
         for key in event['data']:
             if event['pks'] :
                 if key in event['pkn']:
-                    if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
-                       v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
+                    if len(event['pkn']) >= 2:
+                        v_pk_name = v_pk_name + key + ','
+                        v_pk_value = v_pk_value + get_ck_col_type(event['type'][key],str(event['data'][key])) + ','
                     else:
-                       v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
+                        if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
+                           v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
+                        else:
+                           v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
             else:
                v_where = v_where+ key+' = \''+str(event['data'][key]) + '\' and '
+        # for key in event['data']:
+        #     if event['pks'] :
+        #         if key in event['pkn']:
+        #             if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
+        #                v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
+        #             else:
+        #                v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
+        #     else:
+        #        v_where = v_where+ key+' = \''+str(event['data'][key]) + '\' and '
     elif event['action'] == 'update':
         for key in event['after_values']:
             if event['pks'] :
@@ -672,14 +685,14 @@ def write_ckpt(cfg):
         'binlogfile':file,
         'binlogpos' :pos
     }
-    with open('{}.json'.format(cfg['sync_tag']), 'w') as f:
+    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
 
 def check_ckpt(cfg):
-    return os.path.isfile('{}.json'.format(cfg['sync_tag']))
+    return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
 
 def read_ckpt(cfg):
-    with open('{}.json'.format(cfg['sync_tag']), 'r') as f:
+    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'r') as f:
         contents = f.read()
     if  contents == '':
         return ''
@@ -781,12 +794,8 @@ def get_config_from_db(tag):
             file, pos = read_ckpt(config)
             if file not in get_binlog_files(config['db_mysql']):
                file, pos = get_file_and_pos(config['db_mysql'])[0:2]
-               log('from mysql database read binlog...')
-            else:
-               log('from mysqlbinlog.json read ckpt...')
         else:
             file, pos = get_file_and_pos(config['db_mysql'])[0:2]
-            log('from mysql database read binlog...')
 
         config['binlogfile']            = file
         config['binlogpos']             = pos
@@ -841,7 +850,7 @@ def write_sql(cfg,event):
     st = """insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) 
               values('{}','{}','{}','{}') """.format(cfg['sync_tag'],event['tab'],format_sql(event['sql']),event['action'])
     cfg['cr_mysql_log'].execute(st)
-    log2('Writing event {} into table {} ...'.format(event['action'],event['tab']))
+    log2('Writing event into table ...')
 
 
 '''
@@ -915,6 +924,7 @@ def start_incr_syncer(cfg):
                           if check_ck_tab_exists(cfg, evt) == 0:
                              evt['tab'] = event['schema'] + '.' + event['table']
                              create_ck_table(cfg, evt)
+                             full_sync(cfg, evt)
                        else:
                           log("\033[0;36;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
                           pks[o.split('$')[0]] = False
@@ -939,6 +949,7 @@ def start_incr_syncer(cfg):
                     if check_sync(cfg,event,pks) and ddl is not None:
                        if check_ck_tab_exists(cfg,event) == 0:
                           create_ck_table(cfg,event)
+                          full_sync(cfg, event)
                           batch[event['schema']+'.'+event['table']] = []
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
 
@@ -954,6 +965,7 @@ def start_incr_syncer(cfg):
                         if check_ck_tab_exists(cfg, event) == 0:
                             event['tab'] = event['schema'] + '.' + event['table']
                             create_ck_table(cfg, event)
+                            full_sync(cfg, event)
                             batch[event['schema'] + '.' + event['table']] = []
                             types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
 

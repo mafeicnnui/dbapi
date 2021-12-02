@@ -16,7 +16,7 @@ import tornado.httpserver
 import tornado.locale
 import traceback
 import pymongo
-from clickhouse_driver import Client
+from clickhouse_driver import connect
 from   tornado.options  import define
 from   aiomysql import create_pool,DictCursor
 
@@ -97,12 +97,8 @@ def get_ds_sqlserver(ip, port, service, user, password):
     return conn
 
 def get_ds_ck(ip,port,service ,user,password):
-    return  Client(host=ip,
-                   port=port,
-                   user=user,
-                   password=password,
-                   database=service,
-                   send_receive_timeout=600000)
+    return connect('clickhouse://{}:{}@{}:{}/{}'.format(user,password,ip,port,service))
+
 
 async def aes_decrypt(db,p_password,p_key):
     sql="""select aes_decrypt(unhex('{0}'),'{1}') as password """.format(p_password,p_key[::-1])
@@ -345,35 +341,6 @@ class get_mysql_databases(tornado.web.RequestHandler):
             result['code'] = -1
             result['msg']  = traceback.format_exc()
             self.write(result)
-
-class get_ck_databases(tornado.web.RequestHandler):
-    async def post(self):
-        self.set_header("Content-Type", "application/json; charset=UTF-8")
-        self.set_header("Access-Control-Allow-Origin", '*')
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-        result     = {}
-        db_ip      = self.get_argument("db_ip")
-        db_port    = self.get_argument("db_port")
-        db_service = self.get_argument("db_service")
-        db_user    = self.get_argument("db_user")
-        db_pass    = self.get_argument("db_pass")
-        db         = get_ds_ck(db_ip, db_port, db_service, db_user, db_pass)
-        st         = """select name from system.databases d 
-                        where name not in('information_schema','INFORMATION_SCHEMA','system','default') order by name """
-        try:
-           v_list = []
-           rs = db.execute(st)
-           for r in rs:
-              v_list.append(r[0])
-           result['code'] = 200
-           result['msg'] = rs
-           self.write(result)
-        except:
-           result['code'] = -1
-           result['msg'] = traceback.format_exc()
-           self.write(result)
-
 
 class get_mysql_tables(tornado.web.RequestHandler):
     async def post(self):
@@ -660,6 +627,166 @@ class get_mysql_query_dict(tornado.web.RequestHandler):
             result['column'] = ''
             self.write(result)
 
+class get_ck_databases(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        db         = get_ds_ck(db_ip, db_port, db_service, db_user, db_pass)
+        print('db=',db)
+        cr         = db.cursor()
+        st         = """select name from system.databases d 
+                        where name not in('information_schema','INFORMATION_SCHEMA','system','default') order by name """
+        try:
+           v_list = []
+           cr.execute(st)
+           rs = cr.fetchall()
+           print('get_ck_databases=',rs)
+           for r in rs:
+              v_list.append(r[0])
+           result['code'] = 200
+           result['msg'] = rs
+           cr.close()
+           self.write(result)
+        except:
+           result['code'] = -1
+           result['msg'] = traceback.format_exc()
+           self.write(result)
+
+class get_ck_tables(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        db         = get_ds_ck(db_ip, db_port, db_service, db_user, db_pass)
+        cr         = db.cursor()
+        st         = '''select
+                            lower(database) as db_name,
+                            '' as schema_name,    
+                            lower(name) as table_name
+                        from system.tables  where database='{}' order by 3'''.format(db_service)
+        try:
+            cr.execute(st)
+            rs = cr.fetchall()
+            print('rs=',rs)
+            result['code'] = 200
+            result['msg']  = rs
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg']  = traceback.format_exc()
+            self.write(result)
+
+class get_ck_query(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        db_sql     = self.get_argument("db_sql")
+        columns    = []
+        data       = []
+        try:
+            db   = get_ds_ck(db_ip, db_port, db_service, db_user, db_pass)
+            cr   = db.cursor()
+            cr.execute(db_sql)
+            rs   = cr.fetchall()
+            desc = cr.description
+            print('rs=',rs)
+            print('desc=',desc)
+            for i in range(len(desc)):
+                columns.append({"title": desc[i][0]})
+
+            # process data
+            for i in rs:
+                tmp = []
+                for j in range(len(desc)):
+                    if i[j] is None:
+                        tmp.append('')
+                    else:
+                        tmp.append(str(i[j]))
+                data.append(tmp)
+
+            result['code'] = 200
+            result['msg'] = ''
+            result['data'] = data
+            result['column'] = columns
+            print('get_mysql_query=',result)
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg'] = traceback.format_exc()
+            result['data'] = ''
+            result['column'] = ''
+            self.write(result)
+
+class get_ck_query_dict(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Access-Control-Allow-Origin", '*')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        result     = {}
+        db_ip      = self.get_argument("db_ip")
+        db_port    = self.get_argument("db_port")
+        db_service = self.get_argument("db_service")
+        db_user    = self.get_argument("db_user")
+        db_pass    = self.get_argument("db_pass")
+        db_sql     = self.get_argument("db_sql")
+        columns    = []
+        data       = []
+        try:
+            db   = get_ds_ck(db_ip, db_port, db_service, db_user, db_pass)
+            cr   = db.cursor()
+            cr.execute(db_sql)
+            rs   = cr.fetchall()
+            desc = cr.description
+            for i in range(len(desc)):
+                columns.append({"title": desc[i][0]})
+
+            # process data
+            for i in rs:
+                tmp = []
+                for j in range(len(desc)):
+                    if i[j] is None:
+                        tmp.append('')
+                    else:
+                        tmp.append(str(i[j]))
+                    data.append(dict(zip([d[0] for d in desc],tmp)))
+
+            result['code'] = 200
+            result['msg'] = ''
+            result['data'] = data
+            result['column'] = columns
+            print('get_mysql_query=',result)
+            self.write(result)
+        except:
+            result['code'] = -1
+            result['msg'] = traceback.format_exc()
+            result['data'] = ''
+            result['column'] = ''
+            self.write(result)
+
 define("port", default=sys.argv[1], help="run on the given port", type=int)
 class Application(tornado.web.Application):
     def __init__(self):
@@ -686,6 +813,9 @@ class Application(tornado.web.Application):
 
             # clickhouse 数据库查询接口
             (r"/get_ck_databases",       get_ck_databases),
+            (r"/get_ck_tables",          get_ck_tables),
+            (r"/get_ck_query",           get_ck_query),
+            (r"/get_ck_query_dict",      get_ck_query_dict),
         ]
         tornado.web.Application.__init__(self, handlers)
 
