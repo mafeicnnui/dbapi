@@ -398,6 +398,8 @@ def get_ins_values(event):
 
 def get_where(event):
     v_where = ' where '
+    v_pk_name = '('
+    v_pk_value = '(select '
     if event['action'] == 'delete':
         for key in event['data']:
             if event['pks'] :
@@ -412,15 +414,11 @@ def get_where(event):
                            v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
             else:
                v_where = v_where+ key+' = \''+str(event['data'][key]) + '\' and '
-        # for key in event['data']:
-        #     if event['pks'] :
-        #         if key in event['pkn']:
-        #             if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
-        #                v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
-        #             else:
-        #                v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
-        #     else:
-        #        v_where = v_where+ key+' = \''+str(event['data'][key]) + '\' and '
+
+        if len(event['pkn']) >= 2:
+            v_where = v_where + v_pk_name[0:-1] + ') = ' + v_pk_value[0:-1] + ')'
+            return v_where
+
     elif event['action'] == 'update':
         for key in event['after_values']:
             if event['pks'] :
@@ -444,9 +442,14 @@ def get_ck_col_type(v_type,v_value):
         v = 'toFloat32({})'.format(v_value)
     elif v_type == 'double':
         v = 'toFloat64({})'.format(v_value)
+    elif v_type == 'date':
+        v= "toDate('{}')".format(v_value)
+    elif v_type == 'datetime':
+        v= "toDateTime('{}')".format(v_value)
     else:
         v = "'{}'".format(v_value)
     return v
+
 
 def get_where_upd(event):
     v_where = ' where '
