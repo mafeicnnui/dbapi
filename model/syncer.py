@@ -102,6 +102,24 @@ async def save_sync_log(config):
         traceback.print_exc()
         return {'code': -1, 'msg': str(e)}
 
+async def save_sync_real_log(config):
+    print('save_sync_real_log=',config)
+    st = '''insert into t_db_sync_real_log(sync_tag,create_date,event_amount,insert_amount,update_amount,delete_amount,ddl_amount) 
+             values('{0}','{1}','{2}','{3}','{4}','{5}','{6}')
+           '''.format(config['sync_tag'],
+                      config['create_date'],
+                      config['event_amount'],
+                      config['insert_amount'],
+                      config['update_amount'],
+                      config['delete_amount'],
+                      config['ddl_amount'])
+    try:
+        await async_processer.exec_sql(st)
+        return {'code': 200, 'msg': 'success'}
+    except Exception as e:
+        traceback.print_exc()
+        return {'code': -1, 'msg': str(e)}
+
 async def save_sync_log_detail(config):
     st = '''insert into t_db_sync_tasks_log_detail(sync_tag,create_date,sync_table,sync_amount,duration) 
               values('{0}','{1}','{2}','{3}','{4}')

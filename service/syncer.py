@@ -8,13 +8,13 @@
 import json
 import tornado
 import traceback
-from model.syncer import get_db_sync_config,\
-                         run_remote_sync_task,\
-                         stop_remote_sync_task,\
-                         save_sync_log,\
-                         save_sync_log_detail,\
-                         update_sync_status,\
-                         push
+from model.syncer import get_db_sync_config, \
+    run_remote_sync_task, \
+    stop_remote_sync_task, \
+    save_sync_log, \
+    save_sync_log_detail, \
+    update_sync_status, \
+    push, save_sync_real_log
 from utils.common import DateEncoder
 
 class read_config_sync(tornado.web.RequestHandler):
@@ -74,6 +74,15 @@ class write_sync_log(tornado.web.RequestHandler):
         tag = self.get_argument("tag")
         res = await save_sync_log(json.loads(tag))
         self.write(json.dumps(res))
+
+
+class write_sync_real_log(tornado.web.RequestHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        tag = self.get_argument("tag")
+        res = await save_sync_real_log(json.loads(tag))
+        self.write(json.dumps(res))
+
 
 class write_sync_log_detail(tornado.web.RequestHandler):
     async def post(self):

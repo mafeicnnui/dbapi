@@ -60,6 +60,10 @@ def log2(msg):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
     print("""\r{} : {}""".format(tm,msg),end='')
 
+def log3(msg):
+    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+    print("""{} : {}""".format(tm,msg))
+
 def get_obj_op(p_sql):
     if re.split(r'\s+', p_sql)[0].upper() in('CREATE','DROP') and re.split(r'\s+', p_sql)[1].upper() in('TABLE','INDEX','DATABASE'):
        return re.split(r'\s+', p_sql)[0].upper()+'_'+re.split(r'\s+', p_sql)[1].upper()
@@ -683,13 +687,26 @@ def check_batch_full_data(batch,cfg):
     return False
 
 def write_ckpt(cfg):
-    file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
-    ckpt = {
-        'binlogfile':file,
-        'binlogpos' :pos
-    }
+    if check_ckpt(cfg):
+        last_file,last_pos = read_ckpt(cfg)
+        if last_file == cfg['binlogfile']:
+          if cfg['binlogpos'] < last_pos:
+             cfg['binlogfile'] =last_file.split('.')[0]+'.'+str(int(last_file.split('.')[1])+1).rjust(6,'0')
+
+        ckpt = {
+            'binlogfile':cfg['binlogfile'],
+            'binlogpos' :cfg['binlogpos']
+        }
+    else:
+       file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
+       ckpt = {
+           'binlogfile': file,
+           'binlogpos': pos
+       }
+
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
+
 
 def check_ckpt(cfg):
     return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
@@ -728,7 +745,7 @@ def get_db_ck(cfg):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://$$API_SERVER$$/read_db_decrypt'
+        url = 'http://124.127.103.190:65480/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -739,7 +756,7 @@ def aes_decrypt(p_password,p_key):
         log('aes_decrypt api not available!')
 
 def get_config_from_db(tag):
-    url = 'http://$$API_SERVER$$/read_config_sync'
+    url = 'http://124.127.103.190:65480/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -805,6 +822,9 @@ def get_config_from_db(tag):
         config['ck_config']             = CK_TAB_CONFIG
         config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = float(config['sync_gap'])
+        
+        config['sync_event']            = []
+        config['sync_event_timeout']    = datetime.datetime.now()
 
         config = get_sync_tables(config)
 
@@ -844,17 +864,90 @@ def get_sync_tables(cfg):
     return cfg
 
 def write_event(cfg,event):
-    print('write_event=', event)
     st = """insert into clickhouse_log.t_db_sync_log(`sync_table`,`statement`) 
               values('{}','{}') """.format(event['tab'],json.dumps(event,cls=DateEncoder))
     cfg['cr_mysql_log'].execute(st)
 
-def write_sql(cfg,event):
-    st = """insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) 
-              values('{}','{}','{}','{}') """.format(cfg['sync_tag'],event['tab'],format_sql(event['sql']),event['action'])
-    cfg['cr_mysql_log'].execute(st)
-    log2('Writing event into table ...')
 
+def merge_insert(data):
+   s = "insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) values "
+   for row in data:
+     t = '('
+     for col in row:
+       if col == 'statement':
+          t = t + "'{}',".format(format_sql(row[col]))
+       else:
+          t = t + "'{}',".format(row[col])
+     s = s + t[0:-1]+'),'
+   return s[0:-1]
+
+def write_sql(cfg,event):
+    cfg['sync_event'].append(
+      {
+         'sync_tag'   : cfg['sync_tag'],
+         'sync_table' : event['tab'],
+         'statement'  : event['sql'],
+         'type'       : event['action']      
+      }
+    )
+    log2('[{}] writing event {} into buffer[{}/{}]!'.format(cfg['sync_tag'].split('_')[0],event['action'],int(cfg['batch_size_incr']),len(cfg['sync_event'])))
+
+    if get_seconds(cfg['sync_event_timeout']) >= int(cfg['sync_gap']):
+       st = merge_insert(cfg['sync_event'])
+       cfg['cr_mysql_log'].execute(st)
+       log('[{}] writing buffer into log table(timeout:{})!'.format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
+       cfg['sync_event'] = []
+       cfg['sync_event_timeout'] = datetime.datetime.now()
+
+ 
+    if len(cfg['sync_event']) == int(cfg['batch_size_incr']): 
+       st = merge_insert(cfg['sync_event'])
+       cfg['cr_mysql_log'].execute(st)
+       log('[{}] writing buffer into log server(full:{})!'.format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
+       cfg['sync_event'] = []
+       cfg['sync_event_timeout'] = datetime.datetime.now()
+
+def get_time():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def write_sync_log(config):
+    par = {
+            'sync_tag'       : config['sync_tag'],
+            'event_amount'   : config['event_amount'],
+            'insert_amount'  : config['insert_amount'],
+            'update_amount'  : config['update_amount'],
+            'delete_amount'  : config['delete_amount'],
+            'ddl_amount'     : config['ddl_amount'],
+            'create_date'    : get_time()
+    }
+    try:
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
+        if res.status_code != 200:
+           print('Interface write_sync_log call failed!')
+    except:
+         traceback.print_exc()
+         sys.exit(0)
+
+def init_cfg(cfg):
+    types = {}
+    pks   = {}
+    pkn   = {}
+    for o in cfg['sync_table'].split(','):
+        evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
+        if check_tab_exists_pk(cfg, evt) > 0:
+            #batch[o.split('$')[0]] = []
+            types[o.split('$')[0]] = get_col_type(cfg, evt)
+            pks[o.split('$')[0]]   = True
+            pkn[o.split('$')[0]]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
+
+        else:
+            log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
+            types[o.split('$')[0]] = None
+            pks[o.split('$')[0]] = False
+            pkn[o.split('$')[0]] = ''
+
+    return types,pks,pkn
 
 '''
    检查点：
@@ -863,7 +956,7 @@ def write_sql(cfg,event):
     3.上一次执行后，缓存未满，达到超时时间                        
 '''
 def start_incr_syncer(cfg):
-    log("\033[0;36;40mstart incr sync...\033[0m")
+    log3("\033[0;36;40m[{}] start incr sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     MYSQL_SETTINGS = {
         "host"   : cfg['db_mysql_ip'],
         "port"   : int(cfg['db_mysql_port']),
@@ -871,25 +964,7 @@ def start_incr_syncer(cfg):
         "passwd" : "canal@Hopson2018",
     }
 
-    logging.info("MYSQL_SETTINGS=",MYSQL_SETTINGS)
-    batch = {}
-    types = {}
-    pks   = {}
-    pkn   = {}
-    row_event_count = 0
-
-    for o in cfg['sync_table'].split(','):
-        evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
-        if check_tab_exists_pk(cfg, evt) > 0:
-            batch[o.split('$')[0]] = []
-            types[o.split('$')[0]] = get_col_type(cfg, evt)
-            pks[o.split('$')[0]]   = True
-            pkn[o.split('$')[0]]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
-
-        else:
-            log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
-            pks[o.split('$')[0]] = False
-            pkn[o.split('$')[0]] = ''
+    types,pks,pkn = init_cfg(cfg)
 
     try:
         stream = BinLogStreamReader(
@@ -903,46 +978,49 @@ def start_incr_syncer(cfg):
             auto_position       = False
         )
 
-        apply_time = datetime.datetime.now()
+        insert_amount = 0
+        update_amount = 0
+        delete_amount = 0
+        ddl_amount    = 0
+        apply_time    = datetime.datetime.now()
+        gather_time   = datetime.datetime.now()
+
         for binlogevent in stream:
 
-            if get_seconds(apply_time) >= cfg['apply_timeout']:
-               cfg = get_config_from_db(cfg['sync_tag'])
-               apply_time = datetime.datetime.now()
-               log("\033[1;36;40mapply config success\033[0m")
+            if get_seconds(gather_time) >= 10:
+               cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
+               cfg['insert_amount'] = insert_amount
+               cfg['update_amount'] = update_amount
+               cfg['delete_amount'] = delete_amount
+               cfg['ddl_amount']    = ddl_amount
+               write_sync_log(cfg)
+               log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               insert_amount = 0
+               update_amount = 0
+               delete_amount = 0
+               ddl_amount = 0
+               gather_time = datetime.datetime.now()
                write_ckpt(cfg)
-               batch = { k : v  for k,v in batch.items()
-                            if k in [ tab.split('$')[0] for tab in cfg['sync_table'].split(',')] }
+               log("\033[1;36;40m[{}] update ckpt file: {},{}!\033[0m".format(cfg['sync_tag'].split('_')[0],cfg['binlogfile'],cfg['binlogpos']))
 
-               pks = {}
-               for o in cfg['sync_table'].split(','):
-                    evt = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
-                    if batch.get(o.split('$')[0]) is None:
-                       if check_tab_exists_pk(cfg, evt) > 0 :
-                          log("\033[0;36;40mfind table:{}.{} auto config sync...\033[0m".format(evt['schema'],evt['table']))
-                          batch[o.split('$')[0]] = []
-                          types[o.split('$')[0]] = get_col_type(cfg, evt)
-                          pks[o.split('$')[0]]   = True
-                          pkn[o.split('$')[0]]   = get_table_pk_names(cfg, evt).replace('`','').split(',')
-                          if check_ck_tab_exists(cfg, evt) == 0:
-                             evt['tab'] = event['schema'] + '.' + event['table']
-                             create_ck_table(cfg, evt)
-                             full_sync(cfg, evt)
-                       else:
-                          log("\033[0;36;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
-                          pks[o.split('$')[0]] = False
-                          pkn[o.split('$')[0]] = ''
-                    else:
-                        if check_tab_exists_pk(cfg, evt) > 0:
-                           pks[o.split('$')[0]] = True
-                           pkn[o.split('$')[0]] = get_table_pk_names(cfg, evt).replace('`','').split(',')
-                        else:
-                           pks[o.split('$')[0]] = False
-                           pkn[o.split('$')[0]] = ''
+            if get_seconds(apply_time) >= cfg['apply_timeout']:
+               sync_event = cfg['sync_event']
+               sync_event_timeout = cfg['sync_event_timeout']
+               cfg = get_config_from_db(cfg['sync_tag'])
+               cfg['sync_event'] = sync_event
+               cfg['sync_event_timeout'] = sync_event_timeout
+               types,pks,pkn = init_cfg(cfg)               
+               apply_time = datetime.datetime.now()
+               write_ckpt(cfg)
+               log("\033[1;36;40m[{}] apply config success!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
-            row_event_count = row_event_count + 1
+            if isinstance(binlogevent, RotateEvent):
+                cfg['binlogfile'] = binlogevent.next_binlog
+                write_ckpt(cfg)
+                log("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, QueryEvent):
+                cfg['binlogpos'] = binlogevent.packet.log_pos
                 event = {"schema": bytes.decode(binlogevent.schema), "query": binlogevent.query.lower()}
                 if 'create' in event['query'] or 'drop' in event['query']  or 'alter' in event['query'] or 'truncate' in event['query']:
                     ddl = gen_ddl_sql(event['query'])
@@ -953,14 +1031,15 @@ def start_incr_syncer(cfg):
                        if check_ck_tab_exists(cfg,event) == 0:
                           create_ck_table(cfg,event)
                           full_sync(cfg, event)
-                          batch[event['schema']+'.'+event['table']] = []
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
+                          ddl_amount = ddl_amount +1
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
                     isinstance(binlogevent, UpdateRowsEvent) or \
                         isinstance(binlogevent, WriteRowsEvent):
 
                 for row in binlogevent.rows:
+                    cfg['binlogpos'] = binlogevent.packet.log_pos
                     event = {"schema": binlogevent.schema.lower(), "table": binlogevent.table.lower()}
 
                     if check_sync(cfg, event,pks):
@@ -969,7 +1048,6 @@ def start_incr_syncer(cfg):
                             event['tab'] = event['schema'] + '.' + event['table']
                             create_ck_table(cfg, event)
                             full_sync(cfg, event)
-                            batch[event['schema'] + '.' + event['table']] = []
                             types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
 
                         if isinstance(binlogevent, DeleteRowsEvent):
@@ -981,6 +1059,7 @@ def start_incr_syncer(cfg):
                             event['tab']    = event['schema']+'.'+event['table']
                             event['sql']    = gen_sql(cfg,event)
                             write_sql(cfg,event)
+                            delete_amount = delete_amount +1
 
                         elif isinstance(binlogevent, UpdateRowsEvent):
                             event["action"]        = "update"
@@ -992,6 +1071,7 @@ def start_incr_syncer(cfg):
                             event['tab']           = event['schema'] + '.' + event['table']
                             event['sql']           = gen_sql(cfg, event)
                             write_sql(cfg, event)
+                            update_amount = update_amount +1
 
                         elif isinstance(binlogevent, WriteRowsEvent):
                             event["action"] = "insert"
@@ -1002,25 +1082,26 @@ def start_incr_syncer(cfg):
                             event['tab']    = event['schema'] + '.' + event['table']
                             event['sql']    = gen_sql(cfg, event)
                             write_sql(cfg, event)
+                            insert_amount = insert_amount +1
 
     except Exception as e:
-        write_ckpt(cfg)
         traceback.print_exc()
     finally:
         write_ckpt(cfg)
         stream.close()
-        log("\033[0;31;40mreboot start_incr_syncer...\033[0m")
-        start_incr_syncer(cfg)
+        #log("\033[0;31;40mreboot start_incr_syncer...\033[0m")
+        #start_incr_syncer(cfg)
+        
 
 def start_full_sync(cfg):
-    log("\033[0;36;40mstart full sync...\033[0m")
+    log("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     for o in cfg['sync_table'].split(','):
         event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
         if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0:
             event['tab'] = event['schema']+'.'+event['table']
             create_ck_table(cfg, event)
             full_sync(cfg,event)
-    write_ckpt(cfg)
+    #write_ckpt(cfg)
 
 
 def get_task_status(cfg):
