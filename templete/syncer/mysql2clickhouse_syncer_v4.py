@@ -54,6 +54,14 @@ def format_sql(v_sql):
 
 def log(msg):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+    print("""\n{} : {}""".format(tm,msg))
+
+def log2(msg):
+    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+    print("""\r{} : {}""".format(tm,msg),end='')
+
+def log3(msg):
+    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
     print("""{} : {}""".format(tm,msg))
 
 def get_obj_op(p_sql):
@@ -337,7 +345,7 @@ def set_column(event):
     return v_set[0:-1]
 
 def get_ck_schema(cfg,event):
-    for o in cfg['sync_table'].split(','):
+    for o in cfg['sync_table']:
       mysql_schema = o.split('.')[0]
       mysql_table  = o.split('$')[0].split('.')[1]
       ck_schema    = o.split('$')[1] if o.split('$')[1] !='auto' else mysql_schema
@@ -394,16 +402,27 @@ def get_ins_values(event):
 
 def get_where(event):
     v_where = ' where '
+    v_pk_name = '('
+    v_pk_value = '(select '
     if event['action'] == 'delete':
         for key in event['data']:
             if event['pks'] :
                 if key in event['pkn']:
-                    if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
-                       v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
+                    if len(event['pkn']) >= 2:
+                        v_pk_name = v_pk_name + key + ','
+                        v_pk_value = v_pk_value + get_ck_col_type(event['type'][key],str(event['data'][key])) + ','
                     else:
-                       v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
+                        if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
+                           v_where = v_where + key + ' = ' + str(event['data'][key]) + ' and '
+                        else:
+                           v_where = v_where + key + ' = \'' + str(event['data'][key]) + '\' and '
             else:
                v_where = v_where+ key+' = \''+str(event['data'][key]) + '\' and '
+
+        if len(event['pkn']) >= 2:
+            v_where = v_where + v_pk_name[0:-1] + ') = ' + v_pk_value[0:-1] + ')'
+            return v_where
+
     elif event['action'] == 'update':
         for key in event['after_values']:
             if event['pks'] :
@@ -416,12 +435,58 @@ def get_where(event):
                v_where = v_where+ key+' = \''+str(event['after_values'][key]) + '\' and '
     return v_where[0:-5]
 
+def get_ck_col_type(v_type,v_value):
+    if v_type == 'tinyint':
+        v = 'toInt16({})'.format(v_value)
+    elif v_type == 'int':
+        v = 'toInt32({})'.format(v_value)
+    elif v_type == 'bigint':
+        v = 'toInt64({})'.format(v_value)
+    elif v_type == 'float':
+        v = 'toFloat32({})'.format(v_value)
+    elif v_type == 'double':
+        v = 'toFloat64({})'.format(v_value)
+    elif v_type == 'date':
+        v= "toDate('{}')".format(v_value)
+    elif v_type == 'datetime':
+        v= "toDateTime('{}')".format(v_value)
+    else:
+        v = "'{}'".format(v_value)
+    return v
+
+
+def get_where_upd(event):
+    v_where = ' where '
+    v_pk_name = '('
+    v_pk_value = '(select '
+    if event['action'] == 'update':
+        for key in event['after_values']:
+            if event['pks'] :
+                if key in event['pkn']:
+                    if len(event['pkn']) >= 2:
+                        v_pk_name = v_pk_name + key + ','
+                        v_pk_value = v_pk_value + get_ck_col_type(event['type'][key],str(event['after_values'][key])) + ','
+                    else:
+                        if event['type'][key] in ('tinyint', 'int', 'bigint', 'float', 'double'):
+                           v_where = v_where + key + ' = ' + str(event['after_values'][key]) + ' and '
+                        else:
+                           v_where = v_where + key + ' = \'' + str(event['after_values'][key]) + '\' and '
+            else:
+               v_where = v_where+ key+' = \''+str(event['after_values'][key]) + '\' and '
+
+        if len(event['pkn'])>=2:
+           v_where =  v_where + v_pk_name[0:-1]+') = ' + v_pk_value[0:-1]+')'
+           return v_where
+
+    return v_where[0:-5]
+
 def gen_sql(cfg,event):
     if event['action'] in ('insert'):
-        sql  = get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+');'
+        sql  = get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+')'
     elif event['action'] == 'update':
-        sql = 'alter table {0}.{1} update {2} {3}'.\
-               format(get_ck_schema(cfg, event),event['table'],set_column(event),get_where(event))
+        dst = 'alter table {0}.{1} delete {2}'.format(get_ck_schema(cfg,event),event['table'],get_where_upd(event))
+        ist =  get_ins_header(cfg,event)+ ' values ('+get_ins_values(event)+')'
+        sql = '{}^^^{}'.format(dst,ist)
     elif event['action']=='delete':
         sql  = 'alter table {0}.{1} delete {2}'.format(get_ck_schema(cfg,event),event['table'],get_where(event))
     return sql
@@ -454,9 +519,6 @@ def merge_insert(data):
         body = body +d['sql'].split(' values ')[1][0:-1]+','
     sql = header+' values '+body[0:-1]
     return {'event':'insert','sql': sql ,'amount':len(data)}
-
-def merge_delete(data):
-    pass
 
 def process_batch(batch):
     # delete [] batch
@@ -602,11 +664,16 @@ def check_sync(cfg,event,pks):
     res = False
     if pks.get(event['schema'] + '.' + event['table']) is None:
        return False
-    for o in cfg['sync_table'].split(','):
-        schema,table = o.split('$')[0].split('.')
-        if pks[event['schema'] + '.' + event['table']] :
-            if event['schema'] == schema  and  event['table'] == table:
-               res = True
+    #for o in cfg['sync_table']:
+    #    schema,table = o.split('$')[0].split('.')
+    #    if pks[event['schema'] + '.' + event['table']] :
+    #        if event['schema'] == schema  and  event['table'] == table:
+    #           res = True
+    
+    if pks[event['schema'] + '.' + event['table']] :
+       if  event['schema']+'.'+event['table'] in cfg['sync_check']:
+           return True 
+
     return res
 
 def check_batch_exist_data(batch):
@@ -622,19 +689,19 @@ def check_batch_full_data(batch,cfg):
     return False
 
 def write_ckpt(cfg):
-    file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
     ckpt = {
-        'binlogfile':file,
-        'binlogpos' :pos
+        'binlogfile': cfg['binlogfile'],
+        'binlogpos': cfg['binlogpos']
     }
-    with open('{}.json'.format(cfg['sync_tag']), 'w') as f:
+
+    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
 
 def check_ckpt(cfg):
-    return os.path.isfile('{}.json'.format(cfg['sync_tag']))
+    return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
 
 def read_ckpt(cfg):
-    with open('{}.json'.format(cfg['sync_tag']), 'r') as f:
+    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'r') as f:
         contents = f.read()
     if  contents == '':
         return ''
@@ -736,18 +803,16 @@ def get_config_from_db(tag):
             file, pos = read_ckpt(config)
             if file not in get_binlog_files(config['db_mysql']):
                file, pos = get_file_and_pos(config['db_mysql'])[0:2]
-               log('from mysql database read binlog...')
-            else:
-               log('from mysqlbinlog.json read ckpt...')
         else:
             file, pos = get_file_and_pos(config['db_mysql'])[0:2]
-            log('from mysql database read binlog...')
 
         config['binlogfile']            = file
         config['binlogpos']             = pos
         config['ck_config']             = CK_TAB_CONFIG
         config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = float(config['sync_gap'])
+        config['sync_event']            = []
+        config['sync_event_timeout']    = datetime.datetime.now()
 
         config = get_sync_tables(config)
 
@@ -768,35 +833,124 @@ def get_tables(cfg,o):
                   where table_schema='{}' and instr(table_name,'{}')>0 order by table_name""".format(sdb,tab)
        cr.execute(st)
        rs = cr.fetchall()
-       vv = ''
+       vv1 = ''
+       vv2 = ''
+       vv3 = ''
+       vv4 = ''
        for i in list(rs):
            evt = {'schema': o.split('$')[0].split('.')[0], 'table': i[0]}
            if check_tab_exists_pk(cfg,evt)>0:
-              vv = vv + '{}.{}${},'.format(sdb,i[0],ddb)
+              vv1 = vv1 + '{}.{}${},'.format(sdb,i[0],ddb)
+              vv2 = vv2 + '{}.{},'.format(sdb,i[0])
+              vv3 = vv3 + '{},'.format(sdb,)
+              vv4 = vv4 + '{},'.format(i[0])
        cr.close()
-       return vv[0:-1]
+       return vv1[0:-1],vv2[0:-1],vv3[0:-1],vv4[0:-1]
     else:
        return o
 
 def get_sync_tables(cfg):
-    v = ''
+    v1 = ''
+    v2 = ''
+    v3 = ''
+    v4 = ''
     for o in cfg['sync_table'].split(','):
         if o !='':
-           v = v + get_tables(cfg,o)+','
-    cfg['sync_table'] = v[0:-1]
+           t1,t2,t3,t4 = get_tables(cfg,o)
+           v1 = v1 + t1+','
+           v2 = v2 + t2+','
+           v3 = v3 + t3 + ','
+           v4 = v4 + t4 + ','
+    cfg['sync_table']   = v1[0:-1].split(',')
+    cfg['sync_check']   = v2[0:-1].split(',')
+    cfg['sync_schemas'] = v3[0:-1].split(',')
+    cfg['sync_tables']  = v4[0:-1].split(',')
     return cfg
 
 def write_event(cfg,event):
-    print('write_event=', event)
     st = """insert into clickhouse_log.t_db_sync_log(`sync_table`,`statement`) 
               values('{}','{}') """.format(event['tab'],json.dumps(event,cls=DateEncoder))
     cfg['cr_mysql_log'].execute(st)
 
-def write_sql(cfg,event):
-    st = """insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`) 
-              values('{}','{}','{}') """.format(cfg['sync_tag'],event['tab'],format_sql(event['sql']))
-    cfg['cr_mysql_log'].execute(st)
+def merge_insert(data):
+   s = "insert into clickhouse_log.t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) values "
+   for row in data:
+     t = '('
+     for col in row:
+       if col == 'statement':
+          t = t + "'{}',".format(format_sql(row[col]))
+       else:
+          t = t + "'{}',".format(row[col])
+     s = s + t[0:-1]+'),'
+   return s[0:-1]
 
+def write_sql(cfg,event):
+    cfg['sync_event'].append(
+      {
+         'sync_tag'   : cfg['sync_tag'],
+         'sync_table' : event['tab'],
+         'statement'  : event['sql'],
+         'type'       : event['action']      
+      }
+    )
+    log2('[{}] writing event {} into buffer[{}/{}]!'.format(cfg['sync_tag'].split('_')[0],event['action'],int(cfg['batch_size_incr']),len(cfg['sync_event'])))
+
+    if get_seconds(cfg['sync_event_timeout']) >= int(cfg['sync_gap']):
+       st = merge_insert(cfg['sync_event'])
+       cfg['cr_mysql_log'].execute(st)
+       log('[{}] writing buffer into log table(timeout:{})!'.format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
+       cfg['sync_event'] = []
+       cfg['sync_event_timeout'] = datetime.datetime.now()
+
+ 
+    if len(cfg['sync_event']) == int(cfg['batch_size_incr']): 
+       st = merge_insert(cfg['sync_event'])
+       cfg['cr_mysql_log'].execute(st)
+       log('[{}] writing buffer into log server(full:{})!'.format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
+       cfg['sync_event'] = []
+       cfg['sync_event_timeout'] = datetime.datetime.now()
+
+def get_time():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def write_sync_log(config):
+    par = {
+            'sync_tag'       : config['sync_tag'],
+            'event_amount'   : config['event_amount'],
+            'insert_amount'  : config['insert_amount'],
+            'update_amount'  : config['update_amount'],
+            'delete_amount'  : config['delete_amount'],
+            'ddl_amount'     : config['ddl_amount'],
+            'create_date'    : get_time()
+    }
+    try:
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
+        if res.status_code != 200:
+           print('Interface write_sync_log call failed!')
+    except:
+         traceback.print_exc()
+         sys.exit(0)
+
+def init_cfg(cfg):
+    types = {}
+    pks   = {}
+    pkn   = {}
+    for o in cfg['sync_table']:
+        evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
+        if check_tab_exists_pk(cfg, evt) > 0:
+            #batch[o.split('$')[0]] = []
+            types[o.split('$')[0]] = get_col_type(cfg, evt)
+            pks[o.split('$')[0]]   = True
+            pkn[o.split('$')[0]]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
+
+        else:
+            log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
+            types[o.split('$')[0]] = None
+            pks[o.split('$')[0]] = False
+            pkn[o.split('$')[0]] = ''
+
+    return types,pks,pkn
 
 '''
    检查点：
@@ -805,7 +959,7 @@ def write_sql(cfg,event):
     3.上一次执行后，缓存未满，达到超时时间                        
 '''
 def start_incr_syncer(cfg):
-    log("\033[0;36;40mstart incr sync...\033[0m")
+    log3("\033[0;36;40m[{}] start incr sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     MYSQL_SETTINGS = {
         "host"   : cfg['db_mysql_ip'],
         "port"   : int(cfg['db_mysql_port']),
@@ -813,30 +967,14 @@ def start_incr_syncer(cfg):
         "passwd" : "canal@Hopson2018",
     }
 
-    logging.info("MYSQL_SETTINGS=",MYSQL_SETTINGS)
-    batch = {}
-    types = {}
-    pks   = {}
-    pkn   = {}
-    row_event_count = 0
-
-    for o in cfg['sync_table'].split(','):
-        evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
-        if check_tab_exists_pk(cfg, evt) > 0:
-            batch[o.split('$')[0]] = []
-            types[o.split('$')[0]] = get_col_type(cfg, evt)
-            pks[o.split('$')[0]]   = True
-            pkn[o.split('$')[0]]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
-
-        else:
-            log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
-            pks[o.split('$')[0]] = False
-            pkn[o.split('$')[0]] = ''
+    types,pks,pkn = init_cfg(cfg)
 
     try:
         stream = BinLogStreamReader(
             connection_settings = MYSQL_SETTINGS,
             only_events         = (QueryEvent, DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent),
+            only_schemas        = cfg['sync_schemas'],
+            only_tables         = cfg['sync_tables'],
             server_id           = 9999,
             blocking            = True,
             resume_stream       = True,
@@ -845,121 +983,123 @@ def start_incr_syncer(cfg):
             auto_position       = False
         )
 
-        apply_time = datetime.datetime.now()
+        insert_amount = 0
+        update_amount = 0
+        delete_amount = 0
+        ddl_amount    = 0
+        apply_time    = datetime.datetime.now()
+        gather_time   = datetime.datetime.now()
+
         for binlogevent in stream:
+            if get_seconds(gather_time) >= int(cfg['sync_gap'])/2:
+               cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
+               cfg['insert_amount'] = insert_amount
+               cfg['update_amount'] = update_amount
+               cfg['delete_amount'] = delete_amount
+               cfg['ddl_amount']    = ddl_amount
+               write_sync_log(cfg)
+               log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               insert_amount = 0
+               update_amount = 0
+               delete_amount = 0
+               ddl_amount = 0
+               gather_time = datetime.datetime.now()
+               cfg['binlogfile'] = stream.log_file
+               cfg['binlogpos'] = stream.log_pos
+               write_ckpt(cfg)
+               file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
+               log("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlogfile'],cfg['binlogpos']))
 
             if get_seconds(apply_time) >= cfg['apply_timeout']:
+               sync_event = cfg['sync_event']
+               sync_event_timeout = cfg['sync_event_timeout']
                cfg = get_config_from_db(cfg['sync_tag'])
+               cfg['sync_event'] = sync_event
+               cfg['sync_event_timeout'] = sync_event_timeout
+               types,pks,pkn = init_cfg(cfg)               
                apply_time = datetime.datetime.now()
-               log("\033[1;36;40mapply config success\033[0m")
+               cfg['binlogfile'] = stream.log_file
+               cfg['binlogpos'] = stream.log_pos
                write_ckpt(cfg)
-               batch = { k : v  for k,v in batch.items()
-                            if k in [ tab.split('$')[0] for tab in cfg['sync_table'].split(',')] }
+               log("\033[1;36;40m[{}] apply config success!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
-               pks = {}
-               for o in cfg['sync_table'].split(','):
-                    evt = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
-                    if batch.get(o.split('$')[0]) is None:
-                       if check_tab_exists_pk(cfg, evt) > 0 :
-                          log("\033[0;36;40mfind table:{}.{} auto config sync...\033[0m".format(evt['schema'],evt['table']))
-                          batch[o.split('$')[0]] = []
-                          types[o.split('$')[0]] = get_col_type(cfg, evt)
-                          pks[o.split('$')[0]]   = True
-                          pkn[o.split('$')[0]]   = get_table_pk_names(cfg, evt).replace('`','').split(',')
-                          if check_ck_tab_exists(cfg, evt) == 0:
-                             evt['tab'] = event['schema'] + '.' + event['table']
-                             create_ck_table(cfg, evt)
-                       else:
-                          log("\033[0;36;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
-                          pks[o.split('$')[0]] = False
-                          pkn[o.split('$')[0]] = ''
-                    else:
-                        if check_tab_exists_pk(cfg, evt) > 0:
-                           pks[o.split('$')[0]] = True
-                           pkn[o.split('$')[0]] = get_table_pk_names(cfg, evt).replace('`','').split(',')
-                        else:
-                           pks[o.split('$')[0]] = False
-                           pkn[o.split('$')[0]] = ''
-
-            row_event_count = row_event_count + 1
+            if isinstance(binlogevent, RotateEvent):
+                cfg['binlogfile'] = binlogevent.next_binlog
+                write_ckpt(cfg)
+                log("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, QueryEvent):
+                cfg['binlogpos'] = binlogevent.packet.log_pos
                 event = {"schema": bytes.decode(binlogevent.schema), "query": binlogevent.query.lower()}
                 if 'create' in event['query'] or 'drop' in event['query']  or 'alter' in event['query'] or 'truncate' in event['query']:
                     ddl = gen_ddl_sql(event['query'])
                     event['table'] = get_obj_name(event['query']).lower()
                     event['tab'] = event['schema']+'.'+event['table']
 
-                    if check_sync(cfg,event,pks) and ddl is not None:
+                    if  ddl is not None:
                        if check_ck_tab_exists(cfg,event) == 0:
                           create_ck_table(cfg,event)
-                          batch[event['schema']+'.'+event['table']] = []
+                          full_sync(cfg, event)
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
+                          ddl_amount = ddl_amount +1
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
                     isinstance(binlogevent, UpdateRowsEvent) or \
                         isinstance(binlogevent, WriteRowsEvent):
 
                 for row in binlogevent.rows:
+                    cfg['binlogpos'] = binlogevent.packet.log_pos
                     event = {"schema": binlogevent.schema.lower(), "table": binlogevent.table.lower()}
 
-                    if check_sync(cfg, event,pks):
+                    if isinstance(binlogevent, DeleteRowsEvent):
+                        event["action"] = "delete"
+                        event["data"]   = row["values"]
+                        event['type']   = types[event['schema']+'.'+event['table']]
+                        event['pks']    = pks[event['schema'] + '.' + event['table']]
+                        event['pkn']    = pkn[event['schema']+'.'+event['table']]
+                        event['tab']    = event['schema']+'.'+event['table']
+                        event['sql']    = gen_sql(cfg,event)
+                        write_sql(cfg,event)
+                        delete_amount = delete_amount +1
 
-                        if check_ck_tab_exists(cfg, event) == 0:
-                            event['tab'] = event['schema'] + '.' + event['table']
-                            create_ck_table(cfg, event)
-                            batch[event['schema'] + '.' + event['table']] = []
-                            types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
+                    elif isinstance(binlogevent, UpdateRowsEvent):
+                        event["action"]        = "update"
+                        event["after_values"]  = row["after_values"]
+                        event["before_values"] = row["before_values"]
+                        event['type']          = types[event['schema'] + '.' + event['table']]
+                        event['pks']           = pks[event['schema'] + '.' + event['table']]
+                        event['pkn']           = pkn[event['schema'] + '.' + event['table']]
+                        event['tab']           = event['schema'] + '.' + event['table']
+                        event['sql']           = gen_sql(cfg, event)
+                        write_sql(cfg, event)
+                        update_amount = update_amount +1
 
-                        if isinstance(binlogevent, DeleteRowsEvent):
-                            event["action"] = "delete"
-                            event["data"]   = row["values"]
-                            event['type']   = types[event['schema']+'.'+event['table']]
-                            event['pks']    = pks[event['schema'] + '.' + event['table']]
-                            event['pkn']    = pkn[event['schema']+'.'+event['table']]
-                            event['tab']    = event['schema']+'.'+event['table']
-                            event['sql']    = gen_sql(cfg,event)
-                            write_sql(cfg,event)
-
-                        elif isinstance(binlogevent, UpdateRowsEvent):
-                            event["action"]        = "update"
-                            event["after_values"]  = row["after_values"]
-                            event["before_values"] = row["before_values"]
-                            event['type']          = types[event['schema'] + '.' + event['table']]
-                            event['pks']           = pks[event['schema'] + '.' + event['table']]
-                            event['pkn']           = pkn[event['schema'] + '.' + event['table']]
-                            event['tab']           = event['schema'] + '.' + event['table']
-                            event['sql']           = gen_sql(cfg, event)
-                            write_sql(cfg, event)
-
-                        elif isinstance(binlogevent, WriteRowsEvent):
-                            event["action"] = "insert"
-                            event["data"]   = row["values"]
-                            event['type']   = types[event['schema'] + '.' + event['table']]
-                            event['pks']    = pks[event['schema'] + '.' + event['table']]
-                            event['pkn']    = pkn[event['schema'] + '.' + event['table']]
-                            event['tab']    = event['schema'] + '.' + event['table']
-                            event['sql']    = gen_sql(cfg, event)
-                            write_sql(cfg, event)
+                    elif isinstance(binlogevent, WriteRowsEvent):
+                        event["action"] = "insert"
+                        event["data"]   = row["values"]
+                        event['type']   = types[event['schema'] + '.' + event['table']]
+                        event['pks']    = pks[event['schema'] + '.' + event['table']]
+                        event['pkn']    = pkn[event['schema'] + '.' + event['table']]
+                        event['tab']    = event['schema'] + '.' + event['table']
+                        event['sql']    = gen_sql(cfg, event)
+                        write_sql(cfg, event)
+                        insert_amount = insert_amount +1
 
     except Exception as e:
-        write_ckpt(cfg)
         traceback.print_exc()
     finally:
         write_ckpt(cfg)
         stream.close()
-        log("\033[0;31;40mreboot start_incr_syncer...\033[0m")
-        start_incr_syncer(cfg)
+
 
 def start_full_sync(cfg):
-    log("\033[0;36;40mstart full sync...\033[0m")
-    for o in cfg['sync_table'].split(','):
+    log("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
+    for o in cfg['sync_table']:
         event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
         if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0:
             event['tab'] = event['schema']+'.'+event['table']
             create_ck_table(cfg, event)
             full_sync(cfg,event)
-    write_ckpt(cfg)
 
 
 def get_task_status(cfg):

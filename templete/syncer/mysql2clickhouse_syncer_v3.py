@@ -345,7 +345,7 @@ def set_column(event):
     return v_set[0:-1]
 
 def get_ck_schema(cfg,event):
-    for o in cfg['sync_table'].split(','):
+    for o in cfg['sync_table']:
       mysql_schema = o.split('.')[0]
       mysql_table  = o.split('$')[0].split('.')[1]
       ck_schema    = o.split('$')[1] if o.split('$')[1] !='auto' else mysql_schema
@@ -667,11 +667,16 @@ def check_sync(cfg,event,pks):
     res = False
     if pks.get(event['schema'] + '.' + event['table']) is None:
        return False
-    for o in cfg['sync_table'].split(','):
-        schema,table = o.split('$')[0].split('.')
-        if pks[event['schema'] + '.' + event['table']] :
-            if event['schema'] == schema  and  event['table'] == table:
-               res = True
+    #for o in cfg['sync_table']:
+    #    schema,table = o.split('$')[0].split('.')
+    #    if pks[event['schema'] + '.' + event['table']] :
+    #        if event['schema'] == schema  and  event['table'] == table:
+    #           res = True
+    
+    if pks[event['schema'] + '.' + event['table']] :
+       if  event['schema']+'.'+event['table'] in cfg['sync_table2']:
+           return True 
+
     return res
 
 def check_batch_exist_data(batch):
@@ -745,7 +750,7 @@ def get_db_ck(cfg):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://124.127.103.190:65480/read_db_decrypt'
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -756,7 +761,7 @@ def aes_decrypt(p_password,p_key):
         log('aes_decrypt api not available!')
 
 def get_config_from_db(tag):
-    url = 'http://124.127.103.190:65480/read_config_sync'
+    url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -845,22 +850,29 @@ def get_tables(cfg,o):
                   where table_schema='{}' and instr(table_name,'{}')>0 order by table_name""".format(sdb,tab)
        cr.execute(st)
        rs = cr.fetchall()
-       vv = ''
+       vv1 = ''
+       vv2 = ''
        for i in list(rs):
            evt = {'schema': o.split('$')[0].split('.')[0], 'table': i[0]}
            if check_tab_exists_pk(cfg,evt)>0:
-              vv = vv + '{}.{}${},'.format(sdb,i[0],ddb)
+              vv1 = vv1 + '{}.{}${},'.format(sdb,i[0],ddb)
+              vv2 = vv2 + '{}.{},'.format(sdb,i[0])
        cr.close()
-       return vv[0:-1]
+       return vv1[0:-1],vv2[0:-1]
     else:
        return o
 
 def get_sync_tables(cfg):
-    v = ''
+    v1 = ''
+    v2 = ''
     for o in cfg['sync_table'].split(','):
         if o !='':
-           v = v + get_tables(cfg,o)+','
-    cfg['sync_table'] = v[0:-1]
+           t1,t2 = get_tables(cfg,o)
+           v1 = v1 + t1+','
+           v2 = v2 + t2+',' 
+            
+    cfg['sync_table'] = v1[0:-1].split(',')
+    cfg['sync_table2'] = v2[0:-1].split(',')
     return cfg
 
 def write_event(cfg,event):
@@ -933,7 +945,7 @@ def init_cfg(cfg):
     types = {}
     pks   = {}
     pkn   = {}
-    for o in cfg['sync_table'].split(','):
+    for o in cfg['sync_table']:
         evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
         if check_tab_exists_pk(cfg, evt) > 0:
             #batch[o.split('$')[0]] = []
@@ -987,7 +999,7 @@ def start_incr_syncer(cfg):
 
         for binlogevent in stream:
 
-            if get_seconds(gather_time) >= 10:
+            if get_seconds(gather_time) >= int(cfg['sync_gap'])/5:
                cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
                cfg['insert_amount'] = insert_amount
                cfg['update_amount'] = update_amount
@@ -1001,7 +1013,8 @@ def start_incr_syncer(cfg):
                ddl_amount = 0
                gather_time = datetime.datetime.now()
                write_ckpt(cfg)
-               log("\033[1;36;40m[{}] update ckpt file: {},{}!\033[0m".format(cfg['sync_tag'].split('_')[0],cfg['binlogfile'],cfg['binlogpos']))
+               file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
+               log("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlogfile'],cfg['binlogpos']))
 
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                sync_event = cfg['sync_event']
@@ -1095,7 +1108,7 @@ def start_incr_syncer(cfg):
 
 def start_full_sync(cfg):
     log("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
-    for o in cfg['sync_table'].split(','):
+    for o in cfg['sync_table']:
         event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
         if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0:
             event['tab'] = event['schema']+'.'+event['table']
