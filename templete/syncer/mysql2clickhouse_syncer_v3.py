@@ -764,6 +764,7 @@ def get_config_from_db(tag):
     url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
+        print_dict(res)
         config                           = res['msg']
         db_mysql_ip                      = config['sync_db_sour'].split(':')[0]
         db_mysql_port                    = config['sync_db_sour'].split(':')[1]
@@ -836,7 +837,7 @@ def get_config_from_db(tag):
         return config
     else:
         log('load config failure:{0}'.format(res['msg']))
-        return None
+        sys.exit(0)
 
 def get_tables(cfg,o):
     db  = cfg['db_mysql']
@@ -999,7 +1000,7 @@ def start_incr_syncer(cfg):
 
         for binlogevent in stream:
 
-            if get_seconds(gather_time) >= int(cfg['sync_gap'])/5:
+            if get_seconds(gather_time) >= int(cfg['sync_gap']):
                cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
                cfg['insert_amount'] = insert_amount
                cfg['update_amount'] = update_amount

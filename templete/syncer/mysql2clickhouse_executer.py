@@ -8,6 +8,7 @@
 import os
 import sys
 import time
+import json
 import requests
 import pymysql
 import datetime
@@ -474,6 +475,28 @@ def sync_alter(cfg,schema,table):
         print(v)
         db_ck.execute(v)
 
+def get_time():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def write_sync_log(config):
+    par = {
+            'sync_tag'       : config['sync_tag'],
+            'event_amount'   : config['event_amount'],
+            'insert_amount'  : config['insert_amount'],
+            'update_amount'  : config['update_amount'],
+            'delete_amount'  : config['delete_amount'],
+            'ddl_amount'     : config['ddl_amount'],
+            'create_date'    : get_time()
+    }
+    try:
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
+        if res.status_code != 200:
+           print('Interface write_sync_log call failed!')
+    except:
+         traceback.print_exc()
+         sys.exit(0)
+
 
 def write_ck(cfg,tab):
     db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
@@ -487,6 +510,15 @@ def write_ck(cfg,tab):
                        order by id limit {}""".format(cfg['exec_tag'],tab,cfg['batch_size_incr'])
     cr_log.execute(st_log)
     rs_log = cr_log.fetchall()
+
+    cfg['event_amount'] = len(rs_log)
+    cfg['insert_amount'] = 0
+    cfg['update_amount'] = 0
+    cfg['delete_amount'] = 0
+    cfg['ddl_amount'] = 0
+    write_sync_log(cfg)
+    log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+
     rs_log_process=process_sql(rs_log)
     db_ck  = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
     ids=''

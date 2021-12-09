@@ -819,7 +819,7 @@ def get_config_from_db(tag):
         return config
     else:
         log('load config failure:{0}'.format(res['msg']))
-        return None
+        sys.exit(0)
 
 def get_tables(cfg,o):
     db  = cfg['db_mysql']
