@@ -8,13 +8,16 @@
 import json
 import tornado
 import traceback
-from model.syncer import get_db_sync_config, \
+from model.syncer import \
+    get_db_sync_config, \
     run_remote_sync_task, \
     stop_remote_sync_task, \
     save_sync_log, \
     save_sync_log_detail, \
     update_sync_status, \
-    push, save_sync_real_log
+    push, save_sync_real_log, \
+    get_real_sync_status, set_real_sync_status
+
 from utils.common import DateEncoder
 
 class read_config_sync(tornado.web.RequestHandler):
@@ -27,6 +30,29 @@ class read_config_sync(tornado.web.RequestHandler):
         except Exception as e:
             traceback.print_exc()
             self.write({'code':-1,'msg':str(e)})
+
+class read_real_sync_status(tornado.web.RequestHandler):
+    async def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            res  = await get_real_sync_status()
+            self.write(json.dumps(res, cls=DateEncoder))
+        except Exception as e:
+            traceback.print_exc()
+            self.write({'code':-1,'msg':str(e)})
+
+class write_real_sync_status(tornado.web.RequestHandler):
+    async def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            status = self.get_argument("status")
+            print('status=',status)
+            res = await set_real_sync_status(status)
+            self.write(json.dumps(res, cls=DateEncoder))
+        except Exception as e:
+            traceback.print_exc()
+            self.write({'code': -1, 'msg': str(e)})
+
 
 class run_script_remote_sync(tornado.web.RequestHandler):
     async def post(self):

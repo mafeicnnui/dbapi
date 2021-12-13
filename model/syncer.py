@@ -25,6 +25,25 @@ async def check_sync_task_status(p_tag):
     rs = await async_processer.query_one(st)
     return rs[0]
 
+async def get_real_sync_status():
+    try:
+        st = "select `value` from t_sys_settings where `key`='REAL_SYNC_STATUS'"
+        rs = await async_processer.query_dict_one(st)
+        return {'code':200,'msg':rs}
+    except Exception as e:
+        traceback.print_exc()
+        return {'code':-1,'msg':str(e)}
+
+async def set_real_sync_status(p_status):
+    try:
+        st = "update t_sys_settings set `value`='{}' where `key`='REAL_SYNC_STATUS'".format(p_status)
+        rs = await async_processer.exec_sql(st)
+        return {'code':200,'msg':'success'}
+    except Exception as e:
+        traceback.print_exc()
+        return {'code':-1,'msg':str(e)}
+
+
 async def get_db_sync_config(p_tag):
     if await check_server_sync_status(p_tag)>0:
        return {'code': -1, 'msg': '同步服务器已禁用!'}
@@ -63,7 +82,8 @@ select a.sync_tag,a.sync_ywlx,
         (select `value` from t_sys_settings where `key`='send_port') as send_port,
         (select `value` from t_sys_settings where `key`='sender') as sender,
         (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
-        (select `value` from t_sys_settings where `key`='receiver') as receiver
+        (select `value` from t_sys_settings where `key`='receiver') as receiver,
+        (select `value` from t_sys_settings where `key`='REAL_SYNC_STATUS') as real_sync_status
 from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
   where a.server_id=b.id AND a.sour_db_id=c.id  AND a.desc_db_id=d.id 
     and a.sync_tag ='{0}' ORDER BY a.id,a.sync_ywlx

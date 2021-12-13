@@ -506,7 +506,7 @@ def write_ck(cfg,tab):
                                cfg['db_mysql_pass_log'])
     cr_log = db_log.cursor()
     st_log = """select id,sync_table,statement,type
-                   from t_db_sync_log where sync_tag='{}' and sync_table='{}' and status='0'  
+                   from t_db_sync_log where  status='0' and sync_tag='{}' and sync_table='{}' 
                        order by id limit {}""".format(cfg['exec_tag'],tab,cfg['batch_size_incr'])
     cr_log.execute(st_log)
     rs_log = cr_log.fetchall()
@@ -540,14 +540,14 @@ def write_ck(cfg,tab):
         except:
            if traceback.format_exc().count('No such column')>0:
               sync_alter(cfg,event['schema'],event['table'])
-              # execute current i['statement']
+              db_ck.execute(r['statement'])
            else :
               traceback.print_exc()
               print('\033[1;36;40mrs_log\033[0m', rs_log)
               print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
               print('\033[0;36;40m'+r['statement']+'\033[0m')
               sys.exit(0)
-           #continue
+
 
     if ids != '':
         upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
@@ -570,7 +570,7 @@ def get_tasks(cfg):
                            cfg['db_mysql_pass_log'])
     cr = db.cursor()
     st = """SELECT sync_table,count(0) as amount FROM t_db_sync_log 
-               WHERE sync_tag='{}' and status='0' GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['process_num'])
+               WHERE  status='0' and sync_tag='{}' GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['process_num'])
     cr.execute(st)
     rs =cr.fetchall()
     return  rs

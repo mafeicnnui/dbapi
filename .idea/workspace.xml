@@ -20,10 +20,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="ck sync update">
+      <change afterPath="$PROJECT_DIR$/templete/syncer/schedule_clear_sync_log.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/syncer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v4.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v4.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/urls/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/urls/syncer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,19 +79,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi" />
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\minio" />
-      <recent name="D:\work\dbapi\templete\datax" />
-      <recent name="D:\work\dbapi\templete\transfer" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\datax" />
       <recent name="D:\work\dbapi\templete\gather" />
       <recent name="D:\work\dbapi\templete\backup" />
       <recent name="D:\work\dbapi\service" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi" />
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\minio" />
+      <recent name="D:\work\dbapi\templete\datax" />
+      <recent name="D:\work\dbapi\templete\transfer" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -437,14 +441,11 @@
       <workItem from="1638949928603" duration="1049000" />
       <workItem from="1638956136078" duration="17000" />
       <workItem from="1639013136245" duration="2345000" />
-      <workItem from="1639028536077" duration="2237000" />
-    </task>
-    <task id="LOCAL-00007" summary="db_agent sync interface">
-      <created>1613308578152</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1613308578152</updated>
+      <workItem from="1639028536077" duration="2545000" />
+      <workItem from="1639032768454" duration="1407000" />
+      <workItem from="1639106289123" duration="1220000" />
+      <workItem from="1639123936549" duration="2261000" />
+      <workItem from="1639353756844" duration="19809000" />
     </task>
     <task id="LOCAL-00008" summary="workspace update">
       <created>1613308595429</created>
@@ -782,7 +783,14 @@
       <option name="project" value="LOCAL" />
       <updated>1638956143028</updated>
     </task>
-    <option name="localTasksCounter" value="56" />
+    <task id="LOCAL-00056" summary="ck sync update">
+      <created>1639032068868</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1639032068869</updated>
+    </task>
+    <option name="localTasksCounter" value="57" />
     <servers />
   </component>
   <component name="TodoView">
@@ -838,11 +846,11 @@
     <option name="LAST_COMMIT_MESSAGE" value="ck sync update" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1637829773573">
+    <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1639380109512">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1633658697361" />
-    <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637829773573" />
+    <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639380109512" />
     <state x="414" y="175" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1636353636873" />
     <state x="759" y="409" key="#com.jetbrains.python.refactoring.move.PyMoveModuleMembersDialog" timestamp="1635124278146">
       <screen x="0" y="0" width="1920" height="1040" />
@@ -860,45 +868,61 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="740" y="275" key="FileChooserDialogImpl/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637737114907" />
-    <state width="1877" height="2" key="GridCell.Tab.0.bottom" timestamp="1639020297659">
+    <state width="1877" height="435" key="GridCell.Tab.0.bottom" timestamp="1639380174381">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
     <state width="1877" height="2" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="2" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639020297659" />
+    <state width="1877" height="435" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639380174381" />
     <state width="1877" height="135" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131858" />
-    <state width="1877" height="2" key="GridCell.Tab.0.center" timestamp="1639020297659">
+    <state width="1877" height="435" key="GridCell.Tab.0.center" timestamp="1639380174381">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
     <state width="1877" height="2" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="2" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639020297659" />
+    <state width="1877" height="435" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639380174381" />
     <state width="1877" height="135" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131857" />
-    <state width="1877" height="2" key="GridCell.Tab.0.left" timestamp="1639020297659">
+    <state width="1877" height="435" key="GridCell.Tab.0.left" timestamp="1639380174381">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763190" />
     <state width="1877" height="2" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="2" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639020297659" />
+    <state width="1877" height="435" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639380174381" />
     <state width="1877" height="135" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131857" />
-    <state width="1877" height="2" key="GridCell.Tab.0.right" timestamp="1639020297659">
+    <state width="1877" height="435" key="GridCell.Tab.0.right" timestamp="1639380174381">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="168" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@-1920.-134.1920.1040" timestamp="1632379763191" />
     <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635316882606" />
-    <state width="1877" height="2" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639020297659" />
+    <state width="1877" height="435" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639380174381" />
     <state width="1877" height="135" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1636710131858" />
+    <state width="1877" height="174" key="GridCell.Tab.1.bottom" timestamp="1639359985700">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="174" key="GridCell.Tab.1.bottom/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639359985700" />
+    <state width="1877" height="174" key="GridCell.Tab.1.center" timestamp="1639359985700">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="174" key="GridCell.Tab.1.center/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639359985700" />
+    <state width="1877" height="174" key="GridCell.Tab.1.left" timestamp="1639359985700">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="174" key="GridCell.Tab.1.left/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639359985700" />
+    <state width="1877" height="174" key="GridCell.Tab.1.right" timestamp="1639359985700">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="174" key="GridCell.Tab.1.right/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639359985700" />
     <state x="564" y="244" key="SettingsEditor" timestamp="1637716308281">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="683" y="209" key="SettingsEditor/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1633936559064" />
     <state x="564" y="244" key="SettingsEditor/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637716308281" />
     <state x="729" y="232" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1636353606900" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1638956148972">
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1639032072335">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635237222509" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1638956148972" />
+    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1639032072335" />
     <state x="662" y="254" width="596" height="532" key="find.popup" timestamp="1634528673380">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -921,7 +945,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1639013149556" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1639380174371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
   </component>
 </project>

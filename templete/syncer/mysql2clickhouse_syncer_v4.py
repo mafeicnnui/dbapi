@@ -492,7 +492,7 @@ def gen_sql(cfg,event):
     return sql
 
 def gen_ddl_sql(p_ddl):
-    if p_ddl.find('create table')>=0:
+    if p_ddl.find('create table')>=0 or p_ddl.find('drop table')>=0  or p_ddl.find('truncate table')>=0:
        return p_ddl
     else:
        return None
@@ -885,6 +885,38 @@ def merge_insert(data):
    return s[0:-1]
 
 def write_sql(cfg,event):
+
+    if cfg['real_sync_status'] in ('PAUSE', 'STOP'):
+        sync_event = cfg['sync_event']
+        sync_event_timeout = cfg['sync_event_timeout']
+        cfg = get_config_from_db(cfg['sync_tag'])
+        cfg['sync_event'] = sync_event
+        cfg['sync_event_timeout'] = sync_event_timeout
+        types, pks, pkn = init_cfg(cfg)
+
+        if cfg['real_sync_status'] == 'PAUSE':
+            while True:
+                time.sleep(1)
+                sync_event = cfg['sync_event']
+                sync_event_timeout = cfg['sync_event_timeout']
+                cfg = get_config_from_db(cfg['sync_tag'])
+                cfg['sync_event'] = sync_event
+                cfg['sync_event_timeout'] = sync_event_timeout
+                types, pks, pkn = init_cfg(cfg)
+
+                if cfg['real_sync_status'] == 'PAUSE':
+                    log2("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                    continue
+                elif cfg['real_sync_status'] == 'STOP':
+                    log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                    sys.exit(0)
+                else:
+                    break
+        elif cfg['real_sync_status'] == 'STOP':
+            log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+            sys.exit(0)
+
+
     cfg['sync_event'].append(
       {
          'sync_tag'   : cfg['sync_tag'],
@@ -932,6 +964,15 @@ def write_sync_log(config):
          traceback.print_exc()
          sys.exit(0)
 
+def read_real_sync_status():
+    try:
+        url = 'http://$$API_SERVER$$/get_real_sync_status'
+        res = requests.post(url,timeout=3).json()
+        return res
+    except:
+         traceback.print_exc()
+         sys.exit(0)
+
 def init_cfg(cfg):
     types = {}
     pks   = {}
@@ -939,7 +980,6 @@ def init_cfg(cfg):
     for o in cfg['sync_table']:
         evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
         if check_tab_exists_pk(cfg, evt) > 0:
-            #batch[o.split('$')[0]] = []
             types[o.split('$')[0]] = get_col_type(cfg, evt)
             pks[o.split('$')[0]]   = True
             pkn[o.split('$')[0]]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
@@ -989,8 +1029,27 @@ def start_incr_syncer(cfg):
         ddl_amount    = 0
         apply_time    = datetime.datetime.now()
         gather_time   = datetime.datetime.now()
+        sync_time     = datetime.datetime.now()
 
         for binlogevent in stream:
+            if get_seconds(sync_time) >= 3:
+                sync_time = datetime.datetime.now()
+                if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                    while True:
+                        time.sleep(1)
+                        if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                            log2("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                            continue
+                        elif read_real_sync_status()['msg']['value'] == 'STOP':
+                            log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                            sys.exit(0)
+                        else:
+                            break
+                elif read_real_sync_status()['msg']['value'] == 'STOP':
+                    log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                    sys.exit(0)
+
+
             if get_seconds(gather_time) >= int(cfg['sync_gap'])/2:
                cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
                cfg['insert_amount'] = insert_amount
@@ -1047,6 +1106,23 @@ def start_incr_syncer(cfg):
                     isinstance(binlogevent, UpdateRowsEvent) or \
                         isinstance(binlogevent, WriteRowsEvent):
 
+                if get_seconds(sync_time) >= 3:
+                    sync_time = datetime.datetime.now()
+                    if  read_real_sync_status()['msg']['value'] == 'PAUSE':
+                        while True:
+                            time.sleep(1)
+                            if  read_real_sync_status()['msg']['value'] == 'PAUSE':
+                                log2("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                                continue
+                            elif read_real_sync_status()['msg']['value']== 'STOP':
+                                log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                                sys.exit(0)
+                            else:
+                                break
+                    elif  read_real_sync_status()['msg']['value'] == 'STOP':
+                        log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                        sys.exit(0)
+
                 for row in binlogevent.rows:
                     cfg['binlogpos'] = binlogevent.packet.log_pos
                     event = {"schema": binlogevent.schema.lower(), "table": binlogevent.table.lower()}
@@ -1084,6 +1160,7 @@ def start_incr_syncer(cfg):
                         event['sql']    = gen_sql(cfg, event)
                         write_sql(cfg, event)
                         insert_amount = insert_amount +1
+
 
     except Exception as e:
         traceback.print_exc()
