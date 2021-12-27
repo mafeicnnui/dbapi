@@ -23,7 +23,7 @@ from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
 from clickhouse_driver import Client
 
-CK_TAB_CONFIG = '''ENGINE = MergeTree()
+CK_TAB_CONFIG = '''ENGINE = MergeTree() $$PARTITION$$
    PRIMARY KEY ($$PK_NAMES$$)
    ORDER BY ($$PK_NAMES$$)
 '''
@@ -263,6 +263,64 @@ def check_tab_exists_pk(cfg,event):
    cr.close()
    return rs[0]
 
+def get_table_part_col(cfg,event):
+    db = cfg['db_mysql']
+    cr = db.cursor()
+    ob = """PARTITION BY toYYYYMM({})"""
+    st ="""SELECT COUNT(0)
+                FROM information_schema.columns
+                WHERE table_schema='{}'
+                AND table_name='{}' 
+                AND data_type IN('timestamp','datetime')
+                AND column_name  = ('{}')
+          """.format(event['schema'],event['table'])
+
+    st2 = """SELECT COUNT(0)
+                    FROM information_schema.columns
+                    WHERE table_schema='{}'
+                    AND table_name='{}' 
+                    AND data_type IN('timestamp','datetime')
+                    AND column_name  not in ('create_time','create_dt','update_time','update_dt')
+              """.format(event['schema'], event['table'])
+
+    st3 = """SELECT column_name
+                       FROM information_schema.columns
+                       WHERE table_schema='{}'
+                       AND table_name='{}' 
+                       AND data_type IN('timestamp','datetime')
+                       AND column_name  not in ('create_time','create_dt','update_time','update_dt') limit 1
+                 """.format(event['schema'], event['table'])
+
+    cr.execute(st.format('create_time'))
+    rs = cr.fetchone()
+    if rs[0] >0 :
+       return ob.format('create_time')
+
+    cr.execute(st.format('create_dt'))
+    rs = cr.fetchone()
+    if rs[0] > 0:
+        return ob.format('create_dt')
+
+    cr.execute(st.format('update_time'))
+    rs = cr.fetchone()
+    if rs[0] > 0:
+        return ob.format('update_time')
+
+    cr.execute(st.format('update_dt'))
+    rs = cr.fetchone()
+    if rs[0] > 0:
+        return ob.format('update_dt')
+
+    cr.execute(st2)
+    rs = cr.fetchone()
+    if rs[0] > 0:
+        cr.execute(st3)
+        rs = cr.fetchone()
+        return ob.format(rs[0])
+    cr.close()
+
+    return ''
+
 def get_table_pk_names(cfg,event):
     db = cfg['db_mysql']
     cr = db.cursor()
@@ -286,7 +344,7 @@ def create_ck_table(cfg,event):
            db.execute('create database {}'.format(get_ck_schema(cfg, event)))
            log('\033[0;36;40mclickhouse => create  database `{}` success!\033[0m'.format(get_ck_schema(cfg, event)))
         st = get_ck_table_defi(cfg,event)
-        db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)))
+        db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
         log('\033[0;36;40mclickhouse => create  table `{}.{}` success!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
     else:
         log('Table `{}` have no primary key,exit sync!'.format(event['table']))
