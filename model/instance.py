@@ -131,9 +131,11 @@ async def transfer_remote_file_inst(v_inst_id):
     f_local, f_remote = gen_transfer_file(cfg, 'instance', 'db_creator.sh')
     if not ftp.transfer(f_local, f_remote):
        return {'code': -1, 'msg': 'failure!'}
+
     ssh.close()
     ftp.close()
     return {'code': 200, 'msg': 'success!'}
+
 
 async def run_remote_cmd_inst(v_inst_id):
     cfg = await get_db_inst_config(v_inst_id)
@@ -160,14 +162,13 @@ async def run_remote_cmd_inst(v_inst_id):
     ssh.close()
     return {'code': 200, 'msg': 'success!'}
 
-async def mgr_remote_cmd_inst(v_inst_id,v_flag):
+async def set_remote_cmd_inst(v_inst_id):
     cfg = await get_db_inst_config(v_inst_id)
     if cfg['code'] != 200:
         return cfg
 
-    cmd1 = '{0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
-    cmd2 = '{0}/{1}'.format(cfg['msg']['script_path'], 'db_creator.sh')
-    cmd3 = 'nohup {0}/db_creator.sh {1} &>/tmp/db_manager.log &'.format(cfg['msg']['script_path'], v_flag)
+    cmd1 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], cfg['msg']['script_file'])
+    cmd2 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_creator.sh')
 
     ssh = ssh_helper(cfg)
     res = ssh.exec(cmd1)
@@ -178,10 +179,18 @@ async def mgr_remote_cmd_inst(v_inst_id,v_flag):
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = ssh.exec(cmd3)
+    ssh.close()
+    return {'code': 200, 'msg': 'success!'}
+
+async def mgr_remote_cmd_inst(v_inst_id,v_flag):
+    cfg = await get_db_inst_config(v_inst_id)
+    if cfg['code'] != 200:
+        return cfg
+    cmd = 'nohup {0}/db_creator.sh {1} &>/tmp/db_manager.log &'.format(cfg['msg']['script_path'], v_flag)
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd)
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
-
     ssh.close()
     return {'code': 200, 'msg': 'success!'}
 

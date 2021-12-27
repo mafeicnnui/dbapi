@@ -435,7 +435,7 @@ def set_db_status(config):
         db_service = ''
         db_user    = config['db_user']
         db_pass    = config['db_pass']
-        db         = get_ds_mysql_test('127.0.0.1', db_port, db_service, db_user, db_pass)
+        db         = get_ds_mysql_test(db_ip, db_port, db_service, db_user, db_pass)
         cr         = db.cursor()
         cr.execute("SELECT 1")
         db.commit()
@@ -525,7 +525,7 @@ def autostart(config):
             write_inst_log(config, s['message'] + '时发生错误!')
             print(traceback.print_exc())
 
-def cancel_autostart(config):
+def  cancel_autostart(config):
     # write config file
     parameter = write_config(config)
     print_dict(config)

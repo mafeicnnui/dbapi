@@ -9,15 +9,16 @@ import json
 import tornado
 import traceback
 
-from model.instance import get_db_inst_config,\
-                           save_inst_log,\
-                           upd_inst_status,\
-                           upd_inst_reboot_status,\
-                           transfer_remote_file_inst,\
-                           write_remote_crontab_inst,\
-                           run_remote_cmd_inst,\
-                           mgr_remote_cmd_inst,\
-                           destroy_remote_cmd_inst
+from model.instance import get_db_inst_config, \
+    save_inst_log, \
+    upd_inst_status, \
+    upd_inst_reboot_status, \
+    transfer_remote_file_inst, \
+    write_remote_crontab_inst, \
+    run_remote_cmd_inst, \
+    mgr_remote_cmd_inst, \
+    destroy_remote_cmd_inst, set_remote_cmd_inst
+
 
 class read_db_inst_config(tornado.web.RequestHandler):
     async def post(self):
@@ -63,7 +64,7 @@ class create_remote_inst(tornado.web.RequestHandler):
                 self.write(json.dumps(res))
                 raise Exception('transfer_remote_file_inst error!')
 
-            res = await write_remote_crontab_inst(id)
+            res = await write_remote_crontab_inst(id,'create')
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('write_remote_crontab_inst error!')
@@ -72,6 +73,32 @@ class create_remote_inst(tornado.web.RequestHandler):
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('run_remote_cmd_inst error!')
+            self.write(json.dumps(res))
+
+        except Exception as e:
+            traceback.print_exc()
+            self.write({'code': -1, 'msg': str(e)})
+
+class push_remote_inst(tornado.web.RequestHandler):
+    async def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            id  = self.get_argument("inst_id")
+
+            res = await transfer_remote_file_inst(id)
+            if res['code'] != 200:
+                self.write(json.dumps(res))
+                raise Exception('transfer_remote_file_inst error!')
+
+            res = await write_remote_crontab_inst(id,'push')
+            if res['code'] != 200:
+                self.write(json.dumps(res))
+                raise Exception('write_remote_crontab_inst error!')
+
+            res = await set_remote_cmd_inst(id)
+            if res['code'] != 200:
+                self.write(json.dumps(res))
+                raise Exception('set_remote_cmd_inst error!')
             self.write(json.dumps(res))
 
         except Exception as e:
@@ -94,7 +121,9 @@ class manager_remote_inst(tornado.web.RequestHandler):
             if res['code'] != 200:
                 self.write(json.dumps(res))
                 raise Exception('mgr_remote_cmd_inst error!')
+
             self.write(json.dumps(res))
+
         except Exception as e:
             traceback.print_stack()
             self.write({'code': -1, 'msg': str(e)})
