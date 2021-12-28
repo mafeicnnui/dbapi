@@ -129,10 +129,16 @@ def get_db(MYSQL_SETTINGS):
                            autocommit=True)
     return conn
 
+def is_col_null(is_nullable):
+    if is_nullable == 'NO':
+       return False
+    else:
+       return True
+
 def get_ck_table_defi(cfg,event):
     db = cfg['db_mysql']
     cr = db.cursor()
-    st = """SELECT  `column_name`,data_type,is_nullable,datetime_precision
+    st = """SELECT  `column_name`,data_type,is_nullable,datetime_precision,column_default
               FROM information_schema.columns
               WHERE table_schema='{}'
                 AND table_name='{}'  ORDER BY ordinal_position""".format(event['schema'],event['table'])
@@ -141,32 +147,32 @@ def get_ck_table_defi(cfg,event):
     st= 'create table `{}`.`{}` (\n '.format(get_ck_schema(cfg,event),event['table'])
     for i in rs:
         if i[1] == 'tinyint':
-            st = st + ' `{}` {},\n'.format(i[0],'Int16' if i[2]=='NO' else 'Nullable(Int16)')
+            st = st + ' `{}` {},\n'.format(i[0],'Int16'   if not is_col_null(i[2])  else 'Nullable(Int16)')
         elif i[1] == 'int':
-            st = st + ' `{}` {},\n'.format(i[0],'Int32' if i[2]=='NO' else 'Nullable(Int32)' )
+            st = st + ' `{}` {},\n'.format(i[0],'Int32'   if not is_col_null(i[2])  else 'Nullable(Int32)' )
         elif i[1] == 'bigint':
-            st = st + ' `{}` {},\n'.format(i[0],'Int64' if i[2]=='NO' else 'Nullable(Int64)' )
+            st = st + ' `{}` {},\n'.format(i[0],'Int64'   if not is_col_null(i[2])  else 'Nullable(Int64)' )
         elif i[1] == 'varchar':
-           st =  st + ' `{}` {},\n'.format(i[0],'String' if i[2]=='NO' else 'Nullable(String)' )
+           st =  st + ' `{}` {},\n'.format(i[0],'String'  if not is_col_null(i[2])   else 'Nullable(String)' )
         elif i[1] =='timestamp' :
-           st = st + ' `{}` {},\n'.format(i[0],'DateTime' if i[2]=='NO' else 'Nullable(DateTime)' )
+           st = st + ' `{}` {},\n'.format(i[0],'DateTime' if not is_col_null(i[2])  else 'Nullable(DateTime)' )
         elif i[1] == 'datetime':
             if i[3] == 6 :
-               st = st + ' `{}` {},\n'.format(i[0], 'DateTime64' if i[2] == 'NO' else 'Nullable(DateTime64)')
+               st = st + ' `{}` {},\n'.format(i[0], 'DateTime64' if not is_col_null(i[2])  else 'Nullable(DateTime64)')
             else:
-               st = st + ' `{}` {},\n'.format(i[0],'DateTime' if i[2]=='NO' else 'Nullable(DateTime)' )
+               st = st + ' `{}` {},\n'.format(i[0],'DateTime' if not is_col_null(i[2])  else 'Nullable(DateTime)' )
         elif i[1] == 'date':
-            st = st + ' `{}` {},\n'.format(i[0],'Date' if i[2]=='NO' else 'Nullable(Date)' )
+            st = st + ' `{}` {},\n'.format(i[0],'Date'    if not is_col_null(i[2])  else 'Nullable(Date)' )
         elif i[1] == 'text':
-            st = st + ' `{}` {},\n'.format(i[0],'String' if i[2]=='NO' else 'Nullable(String)' )
+            st = st + ' `{}` {},\n'.format(i[0],'String'  if not is_col_null(i[2])  else 'Nullable(String)' )
         elif i[1] == 'longtext':
-            st = st + ' `{}` {},\n'.format(i[0],'String' if i[2]=='NO' else 'Nullable(String)' )
+            st = st + ' `{}` {},\n'.format(i[0],'String'  if not is_col_null(i[2]) else 'Nullable(String)' )
         elif i[1] == 'float':
-            st = st + ' `{}` {},\n'.format(i[0],'Float32' if i[2]=='NO' else 'Nullable(Float32)' )
+            st = st + ' `{}` {},\n'.format(i[0],'Float32' if not is_col_null(i[2]) else 'Nullable(Float32)' )
         elif i[1] == 'double':
-            st = st + ' `{}` {},\n'.format(i[0],'Float64' if i[2]=='NO' else 'Nullable(Float64)' )
+            st = st + ' `{}` {},\n'.format(i[0],'Float64' if not is_col_null(i[2]) else 'Nullable(Float64)' )
         else:
-            st = st + ' `{}` {},\n'.format(i[0],'String' if i[2]=='NO' else 'Nullable(String)' )
+            st = st + ' `{}` {},\n'.format(i[0],'String'  if not is_col_null(i[2]) else 'Nullable(String)' )
     db.commit()
     cr.close()
     st = st[0:-2]+') \n' + cfg['ck_config']
@@ -272,14 +278,16 @@ def get_table_part_col(cfg,event):
                 WHERE table_schema='{}'
                 AND table_name='{}' 
                 AND data_type IN('timestamp','datetime')
-                AND column_name  = ('{}')
-          """.format(event['schema'],event['table'])
+                AND is_nullable='NO'
+                AND column_name  = '{}'
+          """
 
     st2 = """SELECT COUNT(0)
                     FROM information_schema.columns
                     WHERE table_schema='{}'
                     AND table_name='{}' 
                     AND data_type IN('timestamp','datetime')
+                    AND is_nullable='NO'
                     AND column_name  not in ('create_time','create_dt','update_time','update_dt')
               """.format(event['schema'], event['table'])
 
@@ -288,25 +296,26 @@ def get_table_part_col(cfg,event):
                        WHERE table_schema='{}'
                        AND table_name='{}' 
                        AND data_type IN('timestamp','datetime')
+                       AND is_nullable='NO'
                        AND column_name  not in ('create_time','create_dt','update_time','update_dt') limit 1
                  """.format(event['schema'], event['table'])
 
-    cr.execute(st.format('create_time'))
+    cr.execute(st.format(event['schema'],event['table'],'create_time'))
     rs = cr.fetchone()
     if rs[0] >0 :
        return ob.format('create_time')
 
-    cr.execute(st.format('create_dt'))
+    cr.execute(st.format(event['schema'],event['table'],'create_dt'))
     rs = cr.fetchone()
     if rs[0] > 0:
         return ob.format('create_dt')
 
-    cr.execute(st.format('update_time'))
+    cr.execute(st.format(event['schema'],event['table'],'update_time'))
     rs = cr.fetchone()
     if rs[0] > 0:
         return ob.format('update_time')
 
-    cr.execute(st.format('update_dt'))
+    cr.execute(st.format(event['schema'],event['table'],'update_dt'))
     rs = cr.fetchone()
     if rs[0] > 0:
         return ob.format('update_dt')
@@ -318,7 +327,6 @@ def get_table_part_col(cfg,event):
         rs = cr.fetchone()
         return ob.format(rs[0])
     cr.close()
-
     return ''
 
 def get_table_pk_names(cfg,event):
@@ -344,7 +352,12 @@ def create_ck_table(cfg,event):
            db.execute('create database {}'.format(get_ck_schema(cfg, event)))
            log('\033[0;36;40mclickhouse => create  database `{}` success!\033[0m'.format(get_ck_schema(cfg, event)))
         st = get_ck_table_defi(cfg,event)
-        db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
+        if event['column'] =='auto' or event.get('column') is None:
+           print('>>>1',st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
+           db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
+        else:
+           print('>>>2',st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',event['column']))
+           db.execute(st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',event['column']))
         log('\033[0;36;40mclickhouse => create  table `{}.{}` success!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
     else:
         log('Table `{}` have no primary key,exit sync!'.format(event['table']))
@@ -901,24 +914,27 @@ def get_tables(cfg,o):
     cr  = db.cursor()
     sdb = o.split('$')[0].split('.')[0]
     tab = o.split('$')[0].split('.')[1]
+    col = o.split('$')[0].split('.')[2]
     ddb = o.split('$')[1]
     if tab.count('*') > 0:
        tab = tab.replace('*','')
        st = """select table_name from information_schema.tables
                   where table_schema='{}' and instr(table_name,'{}')>0 order by table_name""".format(sdb,tab)
-       cr.execute(st)
-       rs = cr.fetchall()
-       vv1 = ''
-       vv2 = ''
-       for i in list(rs):
-           evt = {'schema': o.split('$')[0].split('.')[0], 'table': i[0]}
-           if check_tab_exists_pk(cfg,evt)>0:
-              vv1 = vv1 + '{}.{}${},'.format(sdb,i[0],ddb)
-              vv2 = vv2 + '{}.{},'.format(sdb,i[0])
-       cr.close()
-       return vv1[0:-1],vv2[0:-1]
     else:
-       return o
+       st = """select table_name from information_schema.tables
+                            where table_schema='{}' and table_name='{}' order by table_name""".format(sdb, tab)
+    cr.execute(st)
+    rs = cr.fetchall()
+    vv1 = ''
+    vv2 = ''
+    for i in list(rs):
+        evt = {'schema': o.split('$')[0].split('.')[0], 'table': i[0]}
+        if check_tab_exists_pk(cfg,evt)>0:
+           vv1 = vv1 + '{}.{}.{}${},'.format(sdb, i[0], col, ddb)
+           vv2 = vv2 + '{}.{},'.format(sdb,i[0])
+    cr.close()
+    return vv1[0:-1],vv2[0:-1]
+
 
 def get_sync_tables(cfg):
     v1 = ''
@@ -1014,17 +1030,17 @@ def init_cfg(cfg):
     pkn   = {}
     for o in cfg['sync_table']:
         evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
+        tab = evt['schema']+'.'+evt['table']
         if check_tab_exists_pk(cfg, evt) > 0:
-            types[o.split('$')[0]] = get_col_type(cfg, evt)
-            pks[o.split('$')[0]]   = True
-            pkn[o.split('$')[0]]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
+            types[tab] = get_col_type(cfg, evt)
+            pks[tab]   = True
+            pkn[tab]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
 
         else:
             log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
-            types[o.split('$')[0]] = None
-            pks[o.split('$')[0]] = False
-            pkn[o.split('$')[0]] = ''
-
+            types[tab] = None
+            pks[tab] = False
+            pkn[tab] = ''
     return types,pks,pkn
 
 '''
@@ -1210,7 +1226,7 @@ def start_incr_syncer(cfg):
 def start_full_sync(cfg):
     log("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     for o in cfg['sync_table']:
-        event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
+        event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
         if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0:
             event['tab'] = event['schema']+'.'+event['table']
             create_ck_table(cfg, event)
