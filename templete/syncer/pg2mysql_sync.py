@@ -489,14 +489,14 @@ def get_tab_header_pkid(config,tab):
     desc=cr.description
     s1="insert into `"+tab.lower()+"` ("
     s2=" values "
-    s1=s1+cols+")"
+    s1=s1+cols+ ',' + config['sync_col_name']+")"
     cr.close()
     return s1+s2
 
 def get_tab_header(config,schema,tab):
     s1="insert into `"+tab.lower()+"` ("
     s2=" values "
-    s1=s1+get_sync_table_cols(config,schema,tab)+")"
+    s1=s1+get_sync_table_cols(config,schema,tab)+','+ config['sync_col_name']+")"
     return s1+s2
 
 def check_mysql_tab_exists(config, tab):
@@ -686,6 +686,12 @@ def sync_mysql_ddl(config,debug):
                        config['run_sql'] = v_cre_sql
                        cr_desc.execute(v_cre_sql)
                        print("Table:{0} creating success!".format(tab_name))
+
+                       for ac in config['sync_col_name'].split(','):
+                           config['run_sql'] = 'alter table {0} add {1} varchar(50)'.format(tab_name, ac)
+                           cr_desc.execute('alter table {0} add {1} varchar(50)'.format(tab_name, ac))
+                           print("Table:{0} add column {1} success!".format(tab_name, ac))
+
                        v_pk_sql = """ALTER TABLE {0} ADD COLUMN pkid INT(11) NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (pkid)
                                                        """.format(tab_name)
                        cr_desc.execute(v_pk_sql)
@@ -699,7 +705,14 @@ def sync_mysql_ddl(config,debug):
                       config['run_sql'] = v_cre_sql
                       cr_desc.execute(v_cre_sql)
                       print("Table:{0} creating success!".format(tab_name))
+
+                      for ac in config['sync_col_name'].split(','):
+                          config['run_sql'] = 'alter table {0} add {1} varchar(50)'.format(tab_name, ac)
+                          cr_desc.execute('alter table {0} add {1} varchar(50)'.format(tab_name, ac))
+                          print("Table:{0} add column {1} success!".format(tab_name, ac))
                       db_desc.commit()
+
+
         cr_source.close()
         cr_desc.close()
     except Exception as e:
@@ -835,10 +848,11 @@ def sync_mysql_init(config,debug):
                 config_init[tab] = True
                 i_counter        = 0
                 ins_sql_header   = get_tab_header(config,schema,tab)
-                print('ins_sql_header=',ins_sql_header)
                 n_batch_size     = int(config['batch_size'])
                 db_source        = config['db_pg_sour']
                 db_desc          = config['db_mysql_desc']
+                v_pk_names       = get_sync_table_pk_names(db_source, schema, tab)
+                v_pk_cols        = get_sync_table_pk_vals(db_source, schema, tab)
                 cr_source        = db_source.cursor()
                 cr_desc          = db_desc.cursor()
 
@@ -847,26 +861,26 @@ def sync_mysql_init(config,debug):
                 print('delete table:{0} all data ok!'.format(tab))
 
                 n_tab_total_rows = get_sync_table_total_rows(db_source, schema,tab, '')
-                v_sql = "select {} from {}.{}".format(get_sync_table_cols(config, schema,tab),schema,tab)
+                v_sql = "select  {} as pk,{} from {}.{}".format(v_pk_cols,get_sync_table_cols(config, schema,tab),schema,tab)
                 cr_source.execute(v_sql)
                 rs_source = cr_source.fetchmany(n_batch_size)
                 while rs_source:
                     v_sql = ''
-                    for i in range(len(rs_source)):
+                    for r in list(rs_source):
                         rs_source_desc = cr_source.description
                         ins_val = ""
-                        for j in range(len(rs_source[i])):
+                        for j in range(1,len(r)):
                             col_type = str(rs_source_desc[j][1])
-                            #print(rs_source[i][j],col_type)
-                            if  rs_source[i][j] is None:
+                            if  r[j] is None:
                                 ins_val = ins_val + "null,"
                             elif col_type in ('23','700'):  # int,decimal
-                                ins_val = ins_val + "'"+ str(rs_source[i][j]) + "',"
+                                ins_val = ins_val + "'"+ str(r[j]) + "',"
                             elif col_type == '1114':  # datetime
-                                ins_val = ins_val + "'"+ str(rs_source[i][j]).split('.')[0] + "',"
+                                ins_val = ins_val + "'"+ str(r[j]).split('.')[0] + "',"
                             else:
-                                ins_val = ins_val + "'"+ format_sql(str(rs_source[i][j])) + "',"
-                        v_sql = v_sql +'('+ins_val[0:-1]+'),'
+                                ins_val = ins_val + "'"+ format_sql(str(r[j])) + "',"
+                        v_sql = v_sql +'('+ins_val+config['sync_col_val'].replace('$PK$',r[0].replace('^^^', '_'))+'),'
+
                     batch_sql = ins_sql_header + v_sql[0:-1]
 
                     #noinspection PyBroadException
@@ -974,7 +988,7 @@ def sync_mysql_data_pk(config, ftab,config_init):
                         ins_val = ins_val + "'" + str(r[j]) + "',"
                     else:
                         ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
-                v_sql = v_sql + '(' + ins_val[0:-1] + '),'
+                v_sql = v_sql + '(' + ins_val+config['sync_col_val'].replace('$PK$',r[0].replace('^^^', '_')) + '),'
                 v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
             batch_sql = ins_sql_header + v_sql[0:-1]
 
