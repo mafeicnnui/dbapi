@@ -124,15 +124,20 @@ async def save_sync_log(config):
 
 async def save_sync_real_log(config):
     print('save_sync_real_log=',config)
-    st = '''insert into t_db_sync_real_log(sync_tag,create_date,event_amount,insert_amount,update_amount,delete_amount,ddl_amount) 
-             values('{0}','{1}','{2}','{3}','{4}','{5}','{6}')
+    st = '''insert into t_db_sync_real_log(sync_tag,create_date,event_amount,insert_amount,update_amount,delete_amount,ddl_amount,binlogfile,binlogpos,c_binlogfile,c_binlogpos) 
+             values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}')
            '''.format(config['sync_tag'],
                       config['create_date'],
                       config['event_amount'],
                       config['insert_amount'],
                       config['update_amount'],
                       config['delete_amount'],
-                      config['ddl_amount'])
+                      config['ddl_amount'],
+                      config['binlogfile'],
+                      config['binlogpos'],
+                      config['c_binlogfile'],
+                      config['c_binlogpos']
+                      )
     try:
         await async_processer.exec_sql(st)
         return {'code': 200, 'msg': 'success'}

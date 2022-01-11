@@ -58,13 +58,24 @@ def get_doris_table_defi(cfg):
     for i in rs:
         if i[1] == 'varchar':
            st =  st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] == 'longtext':
+           st =  st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] == 'int':
+           st = st + ' `{}`  int,\n'.format(i[0])
+        elif i[1] == 'tinyint':
+           st = st + ' `{}`  int,\n'.format(i[0])
+        elif i[1] == 'time':
+           st = st + ' `{}`  String,\n'.format(i[0])
+        elif i[1] == 'year':
+            st = st + ' `{}`  String,\n'.format(i[0])
         elif i[1] == 'timestamp':
-           st = st + ' `{}`  datetime,\n'.format(i[0])
+            st = st + ' `{}`  datetime,\n'.format(i[0])
         else:
            st = st + '  `{}`  {},\n'.format(i[0],i[1])
     db.commit()
     cr.close()
     st = st[0:-2]+') \n' + cfg['doris_tab_config']
+    print('get_doris_table_defi=',st)
     return st
 
 

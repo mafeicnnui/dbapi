@@ -486,6 +486,10 @@ def write_sync_log(config):
             'update_amount'  : config['update_amount'],
             'delete_amount'  : config['delete_amount'],
             'ddl_amount'     : config['ddl_amount'],
+            'binlogfile'     : '',
+            'binlogpos'      : '',
+            'c_binlogfile'   : '',
+            'c_binlogpos'    : '',
             'create_date'    : get_time()
     }
     try:

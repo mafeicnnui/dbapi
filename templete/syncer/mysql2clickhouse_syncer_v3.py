@@ -4,6 +4,7 @@
 # @Author : ma.fei
 # @File : mysql2doris_syncer.py.py
 # @Software: PyCharm
+# @Func : 修改同步配置后需要重启服务，性能较v4差
 
 import sys
 import time
@@ -738,14 +739,9 @@ def check_sync(cfg,event,pks):
     res = False
     if pks.get(event['schema'] + '.' + event['table']) is None:
        return False
-    #for o in cfg['sync_table']:
-    #    schema,table = o.split('$')[0].split('.')
-    #    if pks[event['schema'] + '.' + event['table']] :
-    #        if event['schema'] == schema  and  event['table'] == table:
-    #           res = True
     
     if pks[event['schema'] + '.' + event['table']] :
-       if  event['schema']+'.'+event['table'] in cfg['sync_table2']:
+       if  event['schema']+'.'+event['table'] in cfg['sync_check']:
            return True 
 
     return res
@@ -764,15 +760,10 @@ def check_batch_full_data(batch,cfg):
 
 def write_ckpt(cfg):
     if check_ckpt(cfg):
-        last_file,last_pos = read_ckpt(cfg)
-        if last_file == cfg['binlogfile']:
-          if cfg['binlogpos'] < last_pos:
-             cfg['binlogfile'] =last_file.split('.')[0]+'.'+str(int(last_file.split('.')[1])+1).rjust(6,'0')
-
-        ckpt = {
+       ckpt = {
             'binlogfile':cfg['binlogfile'],
             'binlogpos' :cfg['binlogpos']
-        }
+       }
     else:
        file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
        ckpt = {
@@ -821,7 +812,7 @@ def get_db_ck(cfg):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://$$API_SERVER$$/read_db_decrypt'
+        url = 'http://124.127.103.190:20080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -832,7 +823,7 @@ def aes_decrypt(p_password,p_key):
         log('aes_decrypt api not available!')
 
 def get_config_from_db(tag):
-    url = 'http://$$API_SERVER$$/read_config_sync'
+    url = 'http://124.127.103.190:20080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -946,7 +937,7 @@ def get_sync_tables(cfg):
            v2 = v2 + t2+',' 
             
     cfg['sync_table'] = v1[0:-1].split(',')
-    cfg['sync_table2'] = v2[0:-1].split(',')
+    cfg['sync_check'] = v2[0:-1].split(',')
     return cfg
 
 def write_event(cfg,event):
@@ -997,6 +988,7 @@ def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def write_sync_log(config):
+    cfile, cpos = get_file_and_pos(config['db_mysql'])[0:2]
     par = {
             'sync_tag'       : config['sync_tag'],
             'event_amount'   : config['event_amount'],
@@ -1004,10 +996,14 @@ def write_sync_log(config):
             'update_amount'  : config['update_amount'],
             'delete_amount'  : config['delete_amount'],
             'ddl_amount'     : config['ddl_amount'],
+            'binlogfile'     : config['binlogfile'],
+            'binlogpos'      : config['binlogpos'],
+            'c_binlogfile'   : cfile,
+            'c_binlogpos'    : cpos,
             'create_date'    : get_time()
     }
     try:
-        url = 'http://$$API_SERVER$$/write_sync_real_log'
+        url = 'http://124.127.103.190:20080/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
            print('Interface write_sync_log call failed!')
@@ -1017,7 +1013,7 @@ def write_sync_log(config):
 
 def read_real_sync_status():
     try:
-        url = 'http://$$API_SERVER$$/get_real_sync_status'
+        url = 'http://124.127.103.190:20080/get_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -1028,20 +1024,22 @@ def init_cfg(cfg):
     types = {}
     pks   = {}
     pkn   = {}
+    col   = {}
     for o in cfg['sync_table']:
-        evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1]}
+        evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
         tab = evt['schema']+'.'+evt['table']
         if check_tab_exists_pk(cfg, evt) > 0:
             types[tab] = get_col_type(cfg, evt)
             pks[tab]   = True
             pkn[tab]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
-
+            col[tab]   = evt['column']
         else:
             log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
             types[tab] = None
             pks[tab] = False
             pkn[tab] = ''
-    return types,pks,pkn
+            col[tab] = ''
+    return types,pks,pkn,col
 
 '''
    检查点：
@@ -1058,7 +1056,7 @@ def start_incr_syncer(cfg):
         "passwd" : "canal@Hopson2018",
     }
 
-    types,pks,pkn = init_cfg(cfg)
+    types,pks,pkn,col = init_cfg(cfg)
 
     try:
         stream = BinLogStreamReader(
@@ -1081,6 +1079,10 @@ def start_incr_syncer(cfg):
         sync_time     = datetime.datetime.now()
 
         for binlogevent in stream:
+            cfg['binlogfile'] = stream.log_file
+            cfg['binlogpos'] = stream.log_pos
+            write_ckpt(cfg)
+
             if get_seconds(sync_time) >= 3:
                 sync_time = datetime.datetime.now()
                 if read_real_sync_status()['msg']['value'] == 'PAUSE':
@@ -1111,7 +1113,7 @@ def start_incr_syncer(cfg):
                delete_amount = 0
                ddl_amount = 0
                gather_time = datetime.datetime.now()
-               write_ckpt(cfg)
+              # write_ckpt(cfg)
                file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
                log("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlogfile'],cfg['binlogpos']))
 
@@ -1121,14 +1123,14 @@ def start_incr_syncer(cfg):
                cfg = get_config_from_db(cfg['sync_tag'])
                cfg['sync_event'] = sync_event
                cfg['sync_event_timeout'] = sync_event_timeout
-               types,pks,pkn = init_cfg(cfg)               
+               types,pks,pkn,col = init_cfg(cfg)               
                apply_time = datetime.datetime.now()
-               write_ckpt(cfg)
+               #write_ckpt(cfg)
                log("\033[1;36;40m[{}] apply config success!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, RotateEvent):
                 cfg['binlogfile'] = binlogevent.next_binlog
-                write_ckpt(cfg)
+                #write_ckpt(cfg)
                 log("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, QueryEvent):
@@ -1138,6 +1140,7 @@ def start_incr_syncer(cfg):
                     ddl = gen_ddl_sql(event['query'])
                     event['table'] = get_obj_name(event['query']).lower()
                     event['tab'] = event['schema']+'.'+event['table']
+                    event['column'] = col[event['tab']]
 
                     if check_sync(cfg,event,pks) and ddl is not None:
                        if check_ck_tab_exists(cfg,event) == 0:
@@ -1176,6 +1179,7 @@ def start_incr_syncer(cfg):
 
                         if check_ck_tab_exists(cfg, event) == 0:
                             event['tab'] = event['schema'] + '.' + event['table']
+                            event['column'] = col[event['tab']]
                             create_ck_table(cfg, event)
                             full_sync(cfg, event)
                             types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
@@ -1217,7 +1221,7 @@ def start_incr_syncer(cfg):
     except Exception as e:
         traceback.print_exc()
     finally:
-        write_ckpt(cfg)
+        #write_ckpt(cfg)
         stream.close()
         #log("\033[0;31;40mreboot start_incr_syncer...\033[0m")
         #start_incr_syncer(cfg)

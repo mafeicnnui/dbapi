@@ -8,6 +8,8 @@
 import os
 import json
 import datetime
+import time
+
 import pymysql
 import tornado
 import traceback
@@ -179,7 +181,7 @@ def ftp_transfer_file(p_cfg,p_local,p_remote):
         return False
 
 class ssh_helper:
-    def __init__(self,cfg,timeout=6):
+    def __init__(self,cfg,timeout=600):
         self.server_ip   = cfg['msg']['server_ip']
         self.server_port = int(cfg['msg']['server_port'])
         self.username    = cfg['msg']['server_user']
@@ -200,6 +202,7 @@ class ssh_helper:
             if stdout.channel.recv_exit_status() != 0:
                raise paramiko.SSHException()
             print('Execute remote cmd: {}'.format(cmd))
+            time.sleep(1000)
         except paramiko.SSHException as e:
             print("Failed to execute the command on '{}': {}".format(self.server_ip, str(e)))
             if len(stderr_lines) > 0:

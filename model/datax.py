@@ -6,6 +6,7 @@
 # @Software: PyCharm
 
 import json
+import time
 import traceback
 from utils.common import gen_transfer_file,aes_decrypt,get_mysql_columns
 from utils.mysql_async import async_processer
@@ -88,7 +89,11 @@ AND a.sync_tag ='{0}' ORDER BY a.id,a.sync_ywlx
 
 async def run_remote_datax_task(v_tag):
     cfg = await get_datax_sync_config(v_tag)
-    cmd = 'nohup {0}/datax_sync.sh {1} {2} &>/dev/null &'.format(cfg['msg']['script_path'], 'datax_sync.py', v_tag)
+    if cfg['msg']['sync_type'] == '7':
+       cmd = '{0}/datax_sync.sh {1} {2}'.format(cfg['msg']['script_path'], 'datax_sync_doris.py', v_tag)
+    else:
+       cmd = 'nohup {0}/datax_sync.sh {1} {2} &>/dev/null &'.format(cfg['msg']['script_path'], 'datax_sync.py', v_tag)
+    print('cmd=',cmd)
     if cfg['code']!=200:
        return cfg
     ssh = ssh_helper(cfg)
