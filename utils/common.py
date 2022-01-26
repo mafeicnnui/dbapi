@@ -202,7 +202,6 @@ class ssh_helper:
             if stdout.channel.recv_exit_status() != 0:
                raise paramiko.SSHException()
             print('Execute remote cmd: {}'.format(cmd))
-            time.sleep(1000)
         except paramiko.SSHException as e:
             print("Failed to execute the command on '{}': {}".format(self.server_ip, str(e)))
             if len(stderr_lines) > 0:

@@ -186,7 +186,7 @@ def get_config_from_db(tag):
             config['db_string'] = db_ip + ':' + db_port + '/' + db_service
             config['db_mysql']  = get_ds_mysql(db_ip, db_port, db_service, db_user, db_pass)
             config['db_mysql_dict'] = get_ds_mysql_dict(db_ip, db_port, db_service, db_user, db_pass)
-            if config.get('id_ro') is not None:
+            if config.get('id_ro') is not None and config.get('id_ro') !='':
                 db_ip_ro      = config['ds_ro']['ip']
                 db_port_ro    = config['ds_ro']['port']
                 db_service_ro = config['ds_ro']['service']
@@ -601,7 +601,7 @@ def monitor(config):
 
    for idx in config['templete_monitor_indexes']:
 
-       if idx['index_code'] == 'mysql_slow_time':
+       if idx['index_code'] in ['mysql_slow_time','mysql_slow_time_2','mysql_slow_time_3'] :
            # check master
            print('mysql_slow_time...')
            content = get_slow_sql(config,idx['index_threshold'],'master')
@@ -610,7 +610,7 @@ def monitor(config):
                send_mail_param(config.get('send_server'),config.get('sender'),config.get('sendpass'),config.get('receiver'),title, content)
                print("master slow query mail send success!")
            # check slave
-           if config.get('id_ro') is not None:
+           if config.get('id_ro') is not None and config.get('id_ro') !='':
                content = get_slow_sql(config, idx['index_threshold'],'slave')
                title = config.get('db_desc_ro') + '慢查询告警'
                if content != '':
@@ -618,7 +618,7 @@ def monitor(config):
                                    config.get('receiver'), title, content)
                    print("slave slow query mail send success!")
 
-       if idx['index_code'] == 'mysql_tran_time':
+       if idx['index_code'] in ['mysql_tran_time','mysql_tran_time_2','mysql_tran_time_3']:
            # check master
            print('mysql_tran_time...')
            content = get_big_tran(config, idx['index_threshold'], 'master')
@@ -628,7 +628,7 @@ def monitor(config):
                                config.get('receiver'), title, content)
                print("master big transaction  mail send success!")
            # check slave
-           if config.get('id_ro') is not None:
+           if config.get('id_ro') is not None and config.get('id_ro') !='':
                content = get_big_tran(config, idx['index_threshold'], 'slave')
                title = config.get('db_desc_ro') + '大事务告警'
                if content != '':
@@ -636,7 +636,7 @@ def monitor(config):
                                    config.get('receiver'), title, content)
                    print("slave big transaction mail send success!")
 
-       if idx['index_code'] == 'mysql_lock_block_time':
+       if idx['index_code'] in ['mysql_lock_block_time','mysql_lock_block_time_2','mysql_lock_block_time_3']:
            print('mysql_lock_block_time...')
            # check master
            content = get_block_txn(config, idx['index_threshold'], 'master')
@@ -648,7 +648,7 @@ def monitor(config):
                                config.get('receiver'), title, content)
                print("master lock wait  mail send success!")
            # check slave
-           if config.get('id_ro') is not None:
+           if config.get('id_ro') is not None and config.get('id_ro') !='':
                content = get_block_txn(config, idx['index_threshold'], 'slave')
                title = config.get('db_desc_ro') + '锁等待告警'
                if content != '':
@@ -658,7 +658,7 @@ def monitor(config):
                                    config.get('receiver'), title, content)
                    print("slave lock wait  mail send success!")
 
-       if idx['index_code'] == 'mysql_kill_time':
+       if idx['index_code'] in ['mysql_kill_time','mysql_kill_time_2','mysql_kill_time_3']:
            # check master
            print('mysql_kill_time...')
            content = kill_slow_sql(config, idx['index_threshold'], 'master')
@@ -669,7 +669,7 @@ def monitor(config):
                print("master kill slow query mail send success!")
 
            # check slave
-           if config.get('id_ro') is not None:
+           if config.get('id_ro') is not None and config.get('id_ro') !='':
                content = kill_slow_sql(config, idx['index_threshold'], 'slave')
                title = config.get('db_desc_ro') + '杀会话告警'
                if content != '':

@@ -143,7 +143,6 @@ async def transfer_remote_file_monitor(cfg,ssh,ftp):
     f_local, f_remote = gen_transfer_file(cfg, 'gather', cfg['msg']['script_file'])
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
-
     f_local, f_remote = gen_transfer_file(cfg, 'monitor', 'db_monitor.sh')
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}

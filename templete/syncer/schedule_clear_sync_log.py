@@ -10,11 +10,30 @@ import time
 import traceback
 import requests
 import pymysql
+from clickhouse_driver import Client
+
+def get_ds_ck(ip,port,service ,user,password):
+    return  Client(host=ip,
+                   port=port,
+                   user=user,
+                   password=password,
+                   database=service,
+                   send_receive_timeout=600000)
 
 def clear_real_sync_log(cfg):
    db = cfg['db_log']
    cr = db.cursor()
    cr.execute("truncate table`t_db_sync_log`")
+
+def clear_ck_log(cfg):
+    db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
+    db.execute('truncate table system.query_thread_log')
+    db.execute('truncate table system.query_log')
+    db.execute('truncate table system.part_log')
+    db.execute('truncate table system.trace_log')
+    db.execute('truncate table system.asynchronous_metric_log')
+    db.execute('truncate table system.metric_log')
+    db.execute('truncate table system.session_log')
 
 def get_real_sync_log_num(cfg):
    db = cfg['db_log']
@@ -64,6 +83,18 @@ def get_config_from_db(tag):
         del config['ds_ro']
         del config['sync_table']
         del config['cols']
+
+        db_ck_ip                = config['sync_db_dest'].split(':')[0]
+        db_ck_port              = config['sync_db_dest'].split(':')[1]
+        db_ck_service           = config['sync_db_dest'].split(':')[2]
+        db_ck_user              = config['sync_db_dest'].split(':')[3]
+        db_ck_pass              = aes_decrypt(config['sync_db_dest'].split(':')[4], db_ck_user)
+        config['db_ck_ip']      = db_ck_ip
+        config['db_ck_port']    = db_ck_port
+        config['db_ck_service'] = db_ck_service
+        config['db_ck_user']    = db_ck_user
+        config['db_ck_pass']    = db_ck_pass
+        config['db_ck_string']  = db_ck_ip + ':' + db_ck_port + '/' + db_ck_service
 
         if config.get('ds_log') is not None and config.get('ds_log') != '':
             config['db_mysql_ip_log']      = config['ds_log']['ip']
@@ -116,6 +147,8 @@ if __name__ == "__main__":
            print('\nstart clear real sync log!')
            clear_real_sync_log(cfg)
            print('clear real sync log ok!')
+           clear_ck_log(cfg)
+           print('clear clickhouse log ok!')
            break
         else:
            time.sleep(1)
