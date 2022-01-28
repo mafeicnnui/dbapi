@@ -19,14 +19,10 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="ck sync bug fix">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="datax[mysql-&gt;doris] sync fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/gather/monitor_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/monitor_agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v4.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v4.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/schedule_clear_sync_log.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/schedule_clear_sync_log.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/common.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -467,14 +463,10 @@
       <workItem from="1643015966141" duration="19000" />
       <workItem from="1643073362444" duration="2418000" />
       <workItem from="1643095514902" duration="6551000" />
-      <workItem from="1643163346993" duration="1110000" />
-    </task>
-    <task id="LOCAL-00015" summary="async update">
-      <created>1614935520351</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1614935520351</updated>
+      <workItem from="1643163346993" duration="1255000" />
+      <workItem from="1643221199029" duration="1330000" />
+      <workItem from="1643227165441" duration="2695000" />
+      <workItem from="1643331340360" duration="18849000" />
     </task>
     <task id="LOCAL-00016" summary="backup api update">
       <created>1615278899659</created>
@@ -812,7 +804,14 @@
       <option name="project" value="LOCAL" />
       <updated>1641871367466</updated>
     </task>
-    <option name="localTasksCounter" value="64" />
+    <task id="LOCAL-00064" summary="datax[mysql-&gt;doris] sync fix">
+      <created>1643165775077</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1643165775078</updated>
+    </task>
+    <option name="localTasksCounter" value="65" />
     <servers />
   </component>
   <component name="TodoView">
@@ -840,7 +839,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="README.md update" />
     <MESSAGE value="backup api update" />
     <MESSAGE value="async update" />
     <MESSAGE value="sync agent update" />
@@ -865,7 +863,8 @@
     <MESSAGE value="ck part support" />
     <MESSAGE value="pg sync fix" />
     <MESSAGE value="ck sync bug fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="ck sync bug fix" />
+    <MESSAGE value="datax[mysql-&gt;doris] sync fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="datax[mysql-&gt;doris] sync fix" />
   </component>
   <component name="WindowStateProjectService">
     <state x="588" y="226" width="1092" height="699" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1643005487067">
@@ -940,11 +939,12 @@
     </state>
     <state x="564" y="244" key="SettingsEditor/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1637716308281" />
     <state x="729" y="232" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1636353606900" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2" timestamp="1641871372811">
-      <screen x="0" y="0" width="1920" height="1040" />
+    <state x="2472" y="255" key="Vcs.Push.Dialog.v2" timestamp="1643165778701">
+      <screen x="1920" y="3" width="1920" height="1040" />
     </state>
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-134.1920.1040@0.0.1920.1040" timestamp="1635237222509" />
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1641871372811" />
+    <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1643165778701" />
     <state x="996" y="290" width="596" height="532" key="find.popup" timestamp="1643074322658">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>

@@ -66,11 +66,12 @@ def log3(msg):
     print("""{} : {}""".format(tm,msg))
 
 def get_obj_op(p_sql):
+    p_sql = p_sql.replace('\n',' ')
     if re.split(r'\s+', p_sql)[0].upper() in('CREATE','DROP') and re.split(r'\s+', p_sql)[1].upper() in('TABLE','INDEX','DATABASE'):
        return re.split(r'\s+', p_sql)[0].upper()+'_'+re.split(r'\s+', p_sql)[1].upper()
     if re.split(r'\s+', p_sql)[0].upper() in('TRUNCATE'):
        return 'TRUNCATE_TABLE'
-    if re.split(r'\s+', p_sql)[0].upper()== 'ALTER' and re.split(r'\s+', p_sql)[1].upper()=='TABLE' and  re.split(r'\s+', p_sql)[3].upper() in('ADD','DROP','MODIFY'):
+    if re.split(r'\s+', p_sql)[0].upper()== 'ALTER' and re.split(r'\s+', p_sql)[1].upper()=='TABLE' and  re.split(r'\s+', p_sql)[3].upper() in('ADD','DROP','CHANGE'):
        return re.split(r'\s+', p_sql)[0].upper()+'_'+re.split(r'\s+', p_sql)[1].upper()+'_'+re.split(r'\s+', p_sql)[3].upper()
     if re.split(r'\s+', p_sql)[0].upper() in('INSERT','UPDATE','DELETE') :
        return re.split(r'\s+', p_sql)[0].upper()
@@ -367,8 +368,9 @@ def create_ck_table(cfg,event):
            print('>>>1',st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
            db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
         else:
-           print('>>>2',st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',event['column']))
-           db.execute(st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',event['column']))
+           col = """PARTITION BY toYYYYMM({})""".format(event['column'])
+           print('>>>2', st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$', col))
+           db.execute(st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$', col))
         log('\033[0;36;40mclickhouse => create  table `{}.{}` success!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
     else:
         log('Table `{}` have no primary key,exit sync!'.format(event['table']))
@@ -382,6 +384,141 @@ def truncate_or_drop_ck_table(cfg,event,ddl):
                print('{} ...'.format(st))
                db.execute(st)
 
+
+def get_mysql_columns(cfg,schema,table,column_name):
+    db = get_ds_mysql_dict(cfg['db_mysql_ip'],
+                           cfg['db_mysql_port'],
+                           cfg['db_mysql_service'],
+                           cfg['db_mysql_user'],
+                           cfg['db_mysql_pass'])
+    cr = db.cursor()
+    st = """select table_name,column_name,data_type,is_nullable,datetime_precision
+            from information_schema.columns  
+             where table_schema='{}' and table_name='{}' and column_name='{}'""".format(schema,table,column_name.lower())
+    print('get_mysql_columns>',st)
+    cr.execute(st)
+    rs =cr.fetchall()
+    print('rs=',rs)
+    return rs
+
+def get_ck_columns(cfg,schema,table):
+    db = get_ds_ck(cfg['db_ck_ip'],
+                   cfg['db_ck_port'],
+                   cfg['db_ck_service'],
+                   cfg['db_ck_user'],
+                   cfg['db_ck_pass'])
+    event = {'schema': schema, 'table': table}
+    st = """select name from system.columns where database='{}' and table='{}'""".format(get_ck_schema(cfg, event), event['table'])
+    print('get_ck_columns=',st)
+    rs = db.execute(st)
+    v = ''
+    for i in rs:
+       v = v + "'{}',".format(i[0])
+    print('v=',v)
+    return v[0:-1]
+
+def mysql_type_convert_ck(p_type,p_is_null,p_datetime_precision):
+    if p_type == 'tinyint':
+        return 'Int16' if p_is_null == 'NO' else 'Nullable(Int16)'
+    elif p_type == 'int':
+       return 'Int32' if p_is_null == 'NO' else 'Nullable(Int32)'
+    elif p_type == 'bigint':
+       return 'Int64' if p_is_null == 'NO' else 'Nullable(Int64)'
+    elif p_type == 'varchar':
+       return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+    elif p_type == 'timestamp':
+        return 'DateTime' if p_is_null == 'NO' else 'Nullable(DateTime)'
+    elif p_type == 'datetime':
+        if p_datetime_precision == 6:
+            return 'DateTime64' if p_is_null == 'NO' else 'Nullable(DateTime64)'
+        else:
+            return 'DateTime' if p_is_null == 'NO' else 'Nullable(DateTime)'
+    elif p_type== 'date':
+        return 'Date' if p_is_null == 'NO' else 'Nullable(Date)'
+    elif p_type == 'text':
+        return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+    elif p_type == 'longtext':
+        return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+    elif p_type == 'float':
+        return 'Float32' if p_is_null == 'NO' else 'Nullable(Float32)'
+    elif p_type == 'double':
+        return 'Float64' if p_is_null == 'NO' else 'Nullable(Float64)'
+    else:
+        return 'String' if p_is_null == 'NO' else 'Nullable(String)'
+
+def sync_ck_alter_add(cfg,event,column):
+    db_ck = get_ds_ck(cfg['db_ck_ip'],
+                      cfg['db_ck_port'],
+                      cfg['db_ck_service'],
+                      cfg['db_ck_user'],
+                      cfg['db_ck_pass'])
+    mysql_cols = get_mysql_columns(cfg,event['schema'],event['table'],column)
+    print('mysql_cols>',mysql_cols)
+    for m in mysql_cols:
+        v ="""alter table {}.{} add column {} {}
+           """.format(get_ck_schema(cfg, event),
+                      event['table'],
+                      m['column_name'],
+                      mysql_type_convert_ck(m['data_type'],m['is_nullable'],m['datetime_precision']))
+        print('sync_ck_alter_add>>',v)
+        db_ck.execute(v)
+
+def sync_ck_alter_change_column_name(cfg,event,old_col,new_col):
+    db_ck = get_ds_ck(cfg['db_ck_ip'],
+                   cfg['db_ck_port'],
+                   cfg['db_ck_service'],
+                   cfg['db_ck_user'],
+                   cfg['db_ck_pass'])
+    v ="alter table {}.{} rename column if exists {} to {}".\
+        format(get_ck_schema(cfg, event),event['table'],old_col.lower(),new_col.lower())
+    print("sync_ck_alter_change_column_name>>>",v)
+    db_ck.execute(v)
+
+def sync_ck_alter_change_column_type(cfg,event,column):
+    db_ck = get_ds_ck(cfg['db_ck_ip'],
+                   cfg['db_ck_port'],
+                   cfg['db_ck_service'],
+                   cfg['db_ck_user'],
+                   cfg['db_ck_pass'])
+    mysql_cols = get_mysql_columns(cfg,event['schema'],event['table'],column)
+    for m in mysql_cols:
+        v ="""alter table {}.{} modify column if exists {} {}
+           """.format(get_ck_schema(cfg, event),
+                      event['table'],
+                      m['column_name'],
+                      mysql_type_convert_ck(m['data_type'],m['is_nullable'],m['datetime_precision']))
+        print("sync_ck_alter_change_column_type>>>",v)
+        db_ck.execute(v)
+
+def sync_ck_alter_drop(cfg,event,column):
+    db_ck = get_ds_ck(cfg['db_ck_ip'],
+                   cfg['db_ck_port'],
+                   cfg['db_ck_service'],
+                   cfg['db_ck_user'],
+                   cfg['db_ck_pass'])
+    v ="alter table {}.{} drop column {}".format(get_ck_schema(cfg, event),event['table'], column.lower())
+    print('sync_ck_alter_drop>>>',v)
+    db_ck.execute(v)
+
+def sync_ck_alter(cfg,event,s):
+    if re.split(r'\s+',s)[0].upper() == 'ADD':
+       sync_ck_alter_add(cfg,event,re.split(r'\s+',s)[2].replace('`',''))
+    elif re.split(r'\s+', s)[0].upper() == 'DROP':
+       sync_ck_alter_drop(cfg, event, re.split(r'\s+', s)[2].replace('`',''))
+    elif re.split(r'\s+',s)[0].upper() == 'CHANGE' and re.split(r'\s+',s)[1].upper() == re.split(r'\s+',s)[2].upper():
+       sync_ck_alter_change_column_type(cfg, event, re.split(r'\s+', s)[2].replace('`',''))
+    elif  re.split(r'\s+',s)[0].upper() == 'CHANGE' and re.split(r'\s+',s)[1].upper() != re.split(r'\s+',s)[2].upper():
+       sync_ck_alter_change_column_name(cfg, event, re.split(r'\s+', s)[1].replace('`',''),re.split(r'\s+', s)[2].replace('`',''))
+    else:
+       pass
+
+def alter_ck_table(cfg,event,ddl):
+    v = ddl[min(
+        10000 if ddl.upper().find('ADD') == -1 else ddl.upper().find('ADD') ,
+        10000 if ddl.upper().find('CHANGE') == -1 else ddl.upper().find('CHANGE'),
+        10000 if ddl.upper().find('DROP') == -1 else ddl.upper().find('DROP')):]
+    for i in re.split(',',v.strip().upper()):
+       sync_ck_alter(cfg,event,i.replace('\n','').strip())
 
 def optimize_table(cfg,event):
     db = cfg['db_ck']
@@ -977,6 +1114,24 @@ def merge_insert(data):
      s = s + t[0:-1]+'),'
    return s[0:-1]
 
+def flush_buffer(cfg):
+    if len(cfg['sync_event'])>0:
+        if get_seconds(cfg['sync_event_timeout']) >= int(cfg['sync_gap']):
+            st = merge_insert(cfg['sync_event'])
+            cfg['cr_mysql_log'].execute(st)
+            log('[{}] writing buffer into log table(timeout:{})!'.
+                format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
+            cfg['sync_event'] = []
+            cfg['sync_event_timeout'] = datetime.datetime.now()
+
+        if len(cfg['sync_event']) == int(cfg['batch_size_incr']):
+            st = merge_insert(cfg['sync_event'])
+            cfg['cr_mysql_log'].execute(st)
+            log('[{}] writing buffer into log server(full:{})!'.
+                format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
+            cfg['sync_event'] = []
+            cfg['sync_event_timeout'] = datetime.datetime.now()
+
 def write_sql(cfg,event):
     cfg['sync_event'].append(
       {
@@ -986,22 +1141,12 @@ def write_sql(cfg,event):
          'type'       : event['action']      
       }
     )
-    log2('[{}] writing event {} into buffer[{}/{}]!'.format(cfg['sync_tag'].split('_')[0],event['action'],int(cfg['batch_size_incr']),len(cfg['sync_event'])))
-
-    if get_seconds(cfg['sync_event_timeout']) >= int(cfg['sync_gap']):
-       st = merge_insert(cfg['sync_event'])
-       cfg['cr_mysql_log'].execute(st)
-       log('[{}] writing buffer into log table(timeout:{})!'.format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
-       cfg['sync_event'] = []
-       cfg['sync_event_timeout'] = datetime.datetime.now()
-
- 
-    if len(cfg['sync_event']) == int(cfg['batch_size_incr']): 
-       st = merge_insert(cfg['sync_event'])
-       cfg['cr_mysql_log'].execute(st)
-       log('[{}] writing buffer into log server(full:{})!'.format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event']))))
-       cfg['sync_event'] = []
-       cfg['sync_event_timeout'] = datetime.datetime.now()
+    log2('[{}] writing event {} into buffer[{}/{}]!'.
+         format(cfg['sync_tag'].split('_')[0],event['action'],int(cfg['batch_size_incr']),len(cfg['sync_event'])))
+    log2('sync_event_timeout=' + str(cfg['sync_event_timeout']))
+    log2('sync_gap=' + str(cfg['sync_gap']))
+    log2('sync_timeout=' + str(get_seconds(cfg['sync_event_timeout'])))
+    flush_buffer(cfg)
 
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1133,9 +1278,9 @@ def start_incr_syncer(cfg):
                delete_amount = 0
                ddl_amount = 0
                gather_time = datetime.datetime.now()
-              # write_ckpt(cfg)
                file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
                log("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlogfile'],cfg['binlogpos']))
+               flush_buffer(cfg)
 
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                sync_event = cfg['sync_event']
@@ -1145,12 +1290,11 @@ def start_incr_syncer(cfg):
                cfg['sync_event_timeout'] = sync_event_timeout
                types,pks,pkn,col = init_cfg(cfg)               
                apply_time = datetime.datetime.now()
-               #write_ckpt(cfg)
                log("\033[1;36;40m[{}] apply config success!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               flush_buffer(cfg)
 
             if isinstance(binlogevent, RotateEvent):
                 cfg['binlogfile'] = binlogevent.next_binlog
-                #write_ckpt(cfg)
                 log("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, QueryEvent):
@@ -1169,8 +1313,12 @@ def start_incr_syncer(cfg):
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                           ddl_amount = ddl_amount +1
 
+                       print('op>>>>>', get_obj_op(ddl.strip()))
                        if re.split(r'\s+', ddl)[0].upper() in ('TRUNCATE', 'DROP'):
                            truncate_or_drop_ck_table(cfg, event, ddl)
+
+                       if get_obj_op(ddl.strip())  in ('ALTER_TABLE_ADD','ALTER_TABLE_CHANGE','ALTER_TABLE_DROP'):
+                           alter_ck_table(cfg, event, ddl)
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
                     isinstance(binlogevent, UpdateRowsEvent) or \
