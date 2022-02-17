@@ -29,6 +29,16 @@ CK_TAB_CONFIG = '''ENGINE = MergeTree() $$PARTITION$$
    ORDER BY ($$PK_NAMES$$)
 '''
 
+def get_ds_mysql_dict(ip,port,service ,user,password):
+    conn = pymysql.connect(host=ip,
+                           port=int(port),
+                           user=user,
+                           passwd=password,
+                           db=service,
+                           charset='utf8mb4',
+                           cursorclass = pymysql.cursors.DictCursor,autocommit=True)
+    return conn
+
 class DateEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
@@ -375,7 +385,7 @@ def create_ck_table(cfg,event):
     else:
         log('Table `{}` have no primary key,exit sync!'.format(event['table']))
 
-def truncate_or_drop_ck_table(cfg,event,ddl):
+def truncate_ck_table(cfg,event,ddl):
     db = cfg['db_ck']
     if check_tab_exists_pk(cfg,event) >0:
         if check_ck_database(cfg,event) > 0:
@@ -383,6 +393,14 @@ def truncate_or_drop_ck_table(cfg,event,ddl):
                st = '{} table {}.{}'.format(re.split(r'\s+', ddl)[0],get_ck_schema(cfg, event),event['table'])
                print('{} ...'.format(st))
                db.execute(st)
+
+def drop_ck_table(cfg,event,ddl):
+    db = cfg['db_ck']
+    if check_ck_database(cfg,event) > 0:
+        if check_ck_tab_exists(cfg,event) > 0 :
+           st = '{} table {}.{}'.format(re.split(r'\s+', ddl)[0],get_ck_schema(cfg, event),event['table'])
+           print('{} ...'.format(st))
+           db.execute(st)
 
 
 def get_mysql_columns(cfg,schema,table,column_name):
@@ -1313,9 +1331,11 @@ def start_incr_syncer(cfg):
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                           ddl_amount = ddl_amount +1
 
-                       print('op>>>>>', get_obj_op(ddl.strip()))
-                       if re.split(r'\s+', ddl)[0].upper() in ('TRUNCATE', 'DROP'):
-                           truncate_or_drop_ck_table(cfg, event, ddl)
+                       if re.split(r'\s+', ddl.strip())[0].upper() == 'TRUNCATE':
+                           truncate_ck_table(cfg, event, ddl)
+
+                       if re.split(r'\s+', ddl.strip())[0].upper() == 'DROP':
+                           drop_ck_table(cfg, event, ddl)
 
                        if get_obj_op(ddl.strip())  in ('ALTER_TABLE_ADD','ALTER_TABLE_CHANGE','ALTER_TABLE_DROP'):
                            alter_ck_table(cfg, event, ddl)

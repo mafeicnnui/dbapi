@@ -159,7 +159,6 @@ def aes_decrypt(p_cfg,p_password,p_key):
         except:
             print('aes_decrypt api not available!')
 
-
 def write_local_config_file_json(config):
     file_name = config['script_path'] + '/config/' + config['sync_tag'] + '.json'
     with open(file_name, 'w') as f:
@@ -354,7 +353,6 @@ def write_sync_log(config):
         except:
             print('Interface Api  not available,skip write_sync_log!')
 
-
 def write_sync_log_detail(config,ftab):
     par = {
         'sync_tag'        : config['sync_tag'],
@@ -412,8 +410,6 @@ def update_sync_status(config,status):
                 print('call interface update_sync_status error :{}'.format(res['msg']))
         except:
             print('Interface API not available,skip update_sync_status!')
-
-
 
 def get_config(fname,tag):
     try:
@@ -630,6 +626,15 @@ def get_sync_table_total_rows(db,tab,v_where):
     cr_source.close()
     return  rs_source[0]
 
+def get_sync_table_min_id(db,tab):
+    cr_source = db.cursor()
+    v_sql="select min(id) from `{0}`".format(tab)
+    cr_source.execute(v_sql)
+    rs_source=cr_source.fetchone()
+    db.commit()
+    cr_source.close()
+    return  rs_source[0]
+
 def get_sync_table_pk_names(db,tab):
     cr_source = db.cursor()
     v_col=''
@@ -702,6 +707,13 @@ def get_sync_where(pk_cols,pk_vals):
     for i in range(len(pk_cols.split(','))):
         v_where=v_where+pk_cols.split(',')[i]+"='"+pk_vals.split('^^^')[i]+"' and "
     return v_where[0:-4]
+
+def get_sync_where_batch(pk_vals):
+    vv=''
+    for i in range(len(pk_vals.split('^^^'))):
+        vv=vv+"'"+pk_vals.split('^^^')[i]+"',"
+    v_where='select {}'.format(vv[0:-1])
+    return v_where
 
 def get_sync_where_incr_mysql(tab,config):
     v_rq_col=tab.split(':')[1]
@@ -821,6 +833,74 @@ def sync_mysql_init(config,debug):
         exception_running(config, traceback.format_exc())
         exit(0)
 
+def sync_mysql_init_n(config,debug):
+    try:
+        config_init={}
+        for i in config['sync_table'].split(","):
+            tab=i.split(':')[0]
+            config_init[tab] = False
+            if (check_mysql_tab_exists(config,tab)==0 \
+                    or (check_mysql_tab_exists(config,tab)>0 and check_mysql_tab_sync(config,tab)==0)):
+                config_init[tab] = True
+                i_counter        = 0
+                ins_sql_header   = get_tab_header(config,tab)
+                n_batch_size     = int(config['batch_size'])
+                db_source        = config['db_mysql_sour']
+                cr_source        = db_source.cursor()
+                db_desc          = config['db_mysql_desc']
+                cr_desc          = db_desc.cursor()
+                print('truncate table:{0} all data!'.format(tab))
+                cr_desc.execute('truncate table `{0}`'.format(tab))
+                print('truncate table:{0} all data ok!'.format(tab))
+                n_row = get_sync_table_min_id(db_source, tab)
+                n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
+                while True:
+                    st = "select {} from `{}` where id between {} and {}".format(get_sync_table_cols(config, tab),tab,n_row,n_row+n_batch_size)
+                    cr_source.execute(st)
+                    rs_source = cr_source.fetchall()
+                    v_sql = ''
+                    if len(rs_source) > 0:
+                        for i in range(len(rs_source)):
+                            rs_source_desc = cr_source.description
+                            ins_val = ''
+                            for j in range(len(rs_source[i])):
+                                col_type = str(rs_source_desc[j][1])
+                                if  rs_source[i][j] is None:
+                                    ins_val = ins_val + "null,"
+                                elif col_type == '253':  # varchar,date
+                                    ins_val = ins_val + "'"+ format_sql(str(rs_source[i][j])) + "',"
+                                elif col_type in ('1', '3', '8', '246'):  # int,decimal
+                                    ins_val = ins_val + "'"+ str(rs_source[i][j]) + "',"
+                                elif col_type == '12':  # datetime
+                                    ins_val = ins_val + "'"+ str(rs_source[i][j]).split('.')[0] + "',"
+                                else:
+                                    ins_val = ins_val + "'"+ format_sql(str(rs_source[i][j])) + "',"
+                            v_sql = v_sql +'('+ins_val[0:-1]+'),'
+                        batch_sql = ins_sql_header + v_sql[0:-1]
+                        #noinspection PyBroadException
+                        config['run_sql'] = batch_sql
+                        #print('batch:',batch_sql)
+                        cr_desc.execute(batch_sql)
+                        i_counter = i_counter + len(rs_source)
+                        if n_tab_total_rows == 0:
+                            print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                                  format(tab, n_tab_total_rows,i_counter,round(i_counter / 1 * 100,2)), end='')
+                        else:
+                            print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                                  format(tab, n_tab_total_rows,i_counter, round(i_counter / n_tab_total_rows * 100, 2)), end='')
+                        db_desc.commit()
+                        print('')
+
+                    n_row = n_row + n_batch_size + 1
+                    if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
+                        break
+
+        return config_init
+    except Exception as e:
+        print('sync_mysql_init_n exceptiion:' + traceback.format_exc())
+        exception_running(config, traceback.format_exc())
+        exit(0)
+
 def sync_mysql_data(config,config_init):
     start_time = datetime.datetime.now()
     db=config['db_mysql_sour']
@@ -902,6 +982,7 @@ def sync_mysql_data_no_pkid_7(config, ftab):
                 batch_sql_del=""
                 v_sql = ''
                 v_sql_del = ''
+                v_sql_del2= ''
                 for r in list(rs_source):
                     rs_source_desc = cr_source.description
                     ins_val = ""
@@ -919,6 +1000,7 @@ def sync_mysql_data_no_pkid_7(config, ftab):
                             ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
                     v_sql = v_sql + '(' + ins_val[0:-1] + '),'
                     v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
+                    #v_sql_del2 = v_sql_del2 + get_sync_where_batch(r[0]) + " union all "
                 batch_sql = ins_sql_header + v_sql[0:-1]
 
                 if ftab.split(':')[1] == '':
@@ -928,6 +1010,8 @@ def sync_mysql_data_no_pkid_7(config, ftab):
                     for d in v_sql_del[0:-1].split(','):
                         config['run_sql'] = 'delete from {0} where {1}'.format(tab, d)
                         cr_desc.execute('delete from {0} where {1}'.format(tab, d))
+                    # print('delete from {0} where {1} in ({2})'.format(tab, v_pk_names,v_sql_del2[0:-11]))
+                    # cr_desc.execute('delete from {0} where {1} in ({2})'.format(tab, v_pk_names,v_sql_del2[0:-11]))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
@@ -989,6 +1073,7 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
             while rs_source:
                 v_sql = ''
                 v_sql_del = ''
+                v_sql_del2 = ''
                 for r in list(rs_source):
                     rs_source_desc = cr_source.description
                     ins_val = ""
@@ -1006,16 +1091,18 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
                             ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
                     v_sql = v_sql + '(' + ins_val[0:-1] + '),'
                     v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
+                    #v_sql_del2 = v_sql_del2 + get_sync_where_batch(r[0]) + " union all "
                 batch_sql = ins_sql_header + v_sql[0:-1]
 
                 if ftab.split(':')[1] == '':
                     config['run_sql'] =batch_sql
-
                     cr_desc.execute(batch_sql)
                 else:
                     for d in v_sql_del[0:-1].split(','):
                         config['run_sql'] = 'delete from `{0}` where {1}'.format(tab, d)
                         cr_desc.execute('delete from `{0}` where {1}'.format(tab, d))
+                    # print('delete from {0} where {1} in ({2})'.format(tab, v_pk_names, v_sql_del2[0:-11]))
+                    # cr_desc.execute('delete from {0} where {1} in ({2})'.format(tab, v_pk_names, v_sql_del2[0:-11]))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
@@ -1415,7 +1502,7 @@ def sync(config,debug):
     sync_mysql_ddl(config, debug)
 
     # init sync table
-    config_init=sync_mysql_init(config, debug)
+    config_init=sync_mysql_init_n(config, debug)
 
     # sync data
     while True:

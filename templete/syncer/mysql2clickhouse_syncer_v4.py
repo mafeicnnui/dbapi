@@ -396,7 +396,7 @@ def create_ck_table(cfg,event):
     else:
         log('Table `{}` have no primary key,exit sync!'.format(event['table']))
 
-def truncate_or_drop_ck_table(cfg,event,ddl):
+def truncate_ck_table(cfg,event,ddl):
     db = cfg['db_ck']
     if check_tab_exists_pk(cfg,event) >0:
         if check_ck_database(cfg,event) > 0:
@@ -404,6 +404,15 @@ def truncate_or_drop_ck_table(cfg,event,ddl):
                st = '{} table {}.{}'.format(re.split(r'\s+', ddl)[0],get_ck_schema(cfg, event),event['table'])
                print('{} ...'.format(st))
                db.execute(st)
+
+def drop_ck_table(cfg,event,ddl):
+    db = cfg['db_ck']
+    if check_ck_database(cfg,event) > 0:
+        if check_ck_tab_exists(cfg,event) > 0 :
+           st = '{} table {}.{}'.format(re.split(r'\s+', ddl)[0],get_ck_schema(cfg, event),event['table'])
+           print('{} ...'.format(st))
+           db.execute(st)
+
 
 def get_mysql_columns(cfg,schema,table,column_name):
     db = get_ds_mysql_dict(cfg['db_mysql_ip'],
@@ -1113,13 +1122,11 @@ def get_sync_tables(cfg):
     v4 = ''
     for o in cfg['sync_table'].split(','):
         if o !='':
-           evt = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1]}
-           if check_tab_exists(cfg,evt)>0:
-               t1,t2,t3,t4 = get_tables(cfg,o)
-               v1 = v1 + t1+','
-               v2 = v2 + t2+','
-               v3 = v3 + t3 + ','
-               v4 = v4 + t4 + ','
+           t1,t2,t3,t4 = get_tables(cfg,o)
+           v1 = v1 + t1+','
+           v2 = v2 + t2+','
+           v3 = v3 + t3 + ','
+           v4 = v4 + t4 + ','
     cfg['sync_table']   = v1[0:-1].split(',')
     cfg['sync_check']   = v2[0:-1].split(',')
     cfg['sync_schemas'] = list(set(v3[0:-1].split(',')))
@@ -1382,9 +1389,11 @@ def start_incr_syncer(cfg):
                            types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                            ddl_amount = ddl_amount +1
 
-                        print('op>>>>>',get_obj_op(ddl.strip()))
-                        if get_obj_op(ddl.strip()) in('TRUNCATE_TABLE','DROP_TABLE'):
-                              truncate_or_drop_ck_table(cfg,event,ddl)
+                        if re.split(r'\s+', ddl.strip())[0].upper() == 'TRUNCATE':
+                            truncate_ck_table(cfg, event, ddl)
+
+                        if re.split(r'\s+', ddl.strip())[0].upper() == 'DROP':
+                            drop_ck_table(cfg, event, ddl)
 
                         if get_obj_op(ddl.strip())  in ('ALTER_TABLE_ADD','ALTER_TABLE_CHANGE','ALTER_TABLE_DROP'):
                               alter_ck_table(cfg, event, ddl)

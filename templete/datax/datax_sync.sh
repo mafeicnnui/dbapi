@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
+source /etc/profile
 export PYTHON3_HOME=$$PYTHON3_HOME$$
 export LD_LIBRARY_PATH=$$PYTHON3_HOME$$/lib
 export SCRIPT_PATH=$$SCRIPT_PATH$$
