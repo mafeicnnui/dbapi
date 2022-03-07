@@ -21,7 +21,7 @@ import json
 '''
 config = {
     "chat_interface":"https://api.hopsontong.com/wxcp/message/template/send",
-    "mysql":"10.2.39.18:3306:puppet:puppet:Puppet@123",
+    "mysql":"10.2.39.17:23306:puppet:puppet:Puppet@123",
     "warn_level":"紧急"
 }
 
@@ -215,7 +215,6 @@ def write_warn_log(config,server_id,index_code,index_name,index_value,flag):
                                   index_value={},
                                   succ_times=succ_times+1,
                                   fail_times=0,
-                                  is_send_alt_mail='N',
                                   is_send_rcv_mail='N',
                                   update_time=now() ,
                                   first_failure_time=null,
@@ -349,7 +348,6 @@ def server_warning(config):
                          CASE WHEN TIMESTAMPDIFF(MINUTE, a.create_date, NOW())>3 THEN '0' ELSE '100' END  AS index_value
                       FROM t_monitor_task_server_log a ,t_server b
                        WHERE  a.server_id=b.id 
-                           AND a.server_id=18
                            AND b.server_ip NOT LIKE '10.2.39.%' 
                            AND (a.server_id,a.create_date) IN( 
                                 SELECT a.server_id, MAX(a.create_date) FROM t_monitor_task_server_log a GROUP BY server_id) 
@@ -377,7 +375,7 @@ def server_warning(config):
 
             print('warn_info>>>:',warn_info)
             if (warn_info['is_send_alt_mail'] == 'N' and  warn_info['fail_times'] > 3  or \
-                  warn_info['is_send_alt_mail'] == 'Y' and  warn_info['fail_times'] % 10 == 0) \
+                  warn_info['is_send_alt_mail'] == 'Y' and  warn_info['fail_times'] % 60 == 0) \
                     and warn_info['is_send_alt_mail_times'] <=5:
                write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'warning')
                send_message(cfg,
@@ -399,7 +397,6 @@ def server_warning(config):
     '''发送异常恢复邮件或微信'''
     cr.execute("""SELECT * FROM t_monitor_server_warn_log a,t_server b
                          where a.server_id=b.id 
-                           AND a.server_id=18
                            AND b.server_ip NOT LIKE '10.2.39.%' 
                              AND a.succ_times=1 
                                AND a.index_code='server_available' 
@@ -503,7 +500,7 @@ def cpu_warning(config):
                                   warn_info['fail_times']
                                   )
             if (warn_info['is_send_alt_mail'] == 'N' and warn_info['fail_times'] > 3 or \
-                warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times'] % 10 == 0) \
+                warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times'] % 60 == 0) \
                     and warn_info['is_send_alt_mail_times'] <= 5:
                 write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'warning')
                 send_message(cfg,
@@ -630,7 +627,7 @@ def mem_warning(config):
                                         )
 
             if (warn_info['is_send_alt_mail'] == 'N' and warn_info['fail_times'] > 3 or \
-                warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times'] % 10 == 0) \
+                warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times'] % 60 == 0) \
                     and warn_info['is_send_alt_mail_times'] <= 5:
                 write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'warning')
                 send_message(cfg,
@@ -728,7 +725,6 @@ def disk_warning(config):
                      a.create_date
                   FROM t_monitor_task_server_log a ,t_server b
                    WHERE  a.server_id=b.id 
-                       AND a.`server_id`=96
                        AND b.server_ip NOT LIKE '10.2.39.%' 
                        AND (a.server_id,a.create_date) IN( 
                             SELECT a.server_id, MAX(a.create_date) FROM t_monitor_task_server_log a GROUP BY server_id) 
@@ -758,7 +754,7 @@ def disk_warning(config):
                                   warn_info['fail_times']
                                   )
             if (warn_info['is_send_alt_mail'] == 'N' and warn_info['fail_times'] > 3 or \
-                warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times'] % 10 == 0) \
+                warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times'] % 60 == 0) \
                     and warn_info['is_send_alt_mail_times'] <= 5:
                 write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'warning')
                 send_message(cfg,
@@ -775,7 +771,7 @@ def disk_warning(config):
                              v_content)
         else:
             # 写恢复告警日志
-            write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], max_disk_usage+'%', 'success')
+            write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], max_disk_usage, 'success')
 
     '''发送异恢复邮件或微信'''
     cr.execute("""SELECT * FROM t_monitor_server_warn_log a,t_server b
