@@ -472,6 +472,7 @@ def check_mysql_tab_exists(config,tab):
    db.commit()
    return rs[0]
 
+
 def get_mysql_tab_rows(config,tab):
    db=config['db_mysql_desc3']
    cr=db.cursor()
@@ -628,7 +629,8 @@ def get_sync_table_total_rows(db,tab,v_where):
 
 def get_sync_table_min_id(db,tab):
     cr_source = db.cursor()
-    v_sql="select min(id) from `{0}`".format(tab)
+    v_col= get_sync_table_pk_names(db,tab)
+    v_sql="select min(`{}`) from `{}`".format(v_col,tab)
     cr_source.execute(v_sql)
     rs_source=cr_source.fetchone()
     db.commit()
@@ -650,6 +652,19 @@ def get_sync_table_pk_names(db,tab):
     db.commit()
     cr_source.close()
     return v_col[0:-1]
+
+def get_sync_table_int_pk_num(config,tab):
+    db = config['db_mysql_sour']
+    cr = db.cursor()
+    v_sql="""select count(0)
+              from information_schema.columns
+              where table_schema=database() 
+                and table_name='{0}' and column_key='PRI'  AND data_type IN('INT','BIGINT') order by ordinal_position
+          """.format(tab)
+    cr.execute(v_sql)
+    rs = cr.fetchone()
+    cr.close()
+    return rs[0]
 
 def get_sync_cols(config,tab):
     for dic in config['cols']:
@@ -764,14 +779,12 @@ def get_pk_vals_mysql(db,ftab,v_where):
 
 def sync_mysql_init(config,debug):
     try:
-        config_init={}
         for i in config['sync_table'].split(","):
             tab=i.split(':')[0]
-            config_init[tab] = False
             if (check_mysql_tab_exists(config,tab)==0 \
-                    or (check_mysql_tab_exists(config,tab)>0 and check_mysql_tab_sync(config,tab)==0)):
-
-                config_init[tab] = True
+                  or (check_mysql_tab_exists(config,tab)>0 and check_mysql_tab_sync(config,tab)==0)) \
+                    and ( check_mysql_tab_exists_pk(config,tab) >1 \
+                           or check_mysql_tab_exists_pk(config,tab) == 1 and get_sync_table_int_pk_num(config,tab) == 0):
                 i_counter        = 0
                 ins_sql_header   = get_tab_header(config,tab)
                 print('ins_sql_header=',ins_sql_header)
@@ -827,7 +840,6 @@ def sync_mysql_init(config,debug):
                     rs_source = cr_source.fetchmany(n_batch_size)
                 db_desc.commit()
                 print('')
-        return config_init
     except Exception as e:
         print('sync_sqlserver_init exceptiion:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
@@ -835,13 +847,11 @@ def sync_mysql_init(config,debug):
 
 def sync_mysql_init_n(config,debug):
     try:
-        config_init={}
         for i in config['sync_table'].split(","):
             tab=i.split(':')[0]
-            config_init[tab] = False
             if (check_mysql_tab_exists(config,tab)==0 \
-                    or (check_mysql_tab_exists(config,tab)>0 and check_mysql_tab_sync(config,tab)==0)):
-                config_init[tab] = True
+                 or (check_mysql_tab_exists(config,tab)>0 and check_mysql_tab_sync(config,tab)==0)) \
+                   and check_mysql_tab_exists_pk(config,tab) == 1  and get_sync_table_int_pk_num(config,tab) == 1:
                 i_counter        = 0
                 ins_sql_header   = get_tab_header(config,tab)
                 n_batch_size     = int(config['batch_size'])
@@ -853,9 +863,23 @@ def sync_mysql_init_n(config,debug):
                 cr_desc.execute('truncate table `{0}`'.format(tab))
                 print('truncate table:{0} all data ok!'.format(tab))
                 n_row = get_sync_table_min_id(db_source, tab)
+                if n_row is None :
+                   print('Table:{0} data is empty ,skip full sync!'.format(tab))
+                   continue
                 n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
-                while True:
-                    st = "select {} from `{}` where id between {} and {}".format(get_sync_table_cols(config, tab),tab,n_row,n_row+n_batch_size)
+                v_pk_col_name = get_sync_table_pk_names(db_source,tab)
+
+                print('a=',n_tab_total_rows)
+                print('b=',v_pk_col_name)
+                print('c=',str(n_row))
+                print('d=',get_sync_table_cols(config, tab))
+                print('e=',tab)
+                print('f=',str(n_row+n_batch_size))
+
+                while n_tab_total_rows>0:
+                    st = "select {} from `{}` where {} between {} and {}"\
+                         .format(get_sync_table_cols(config, tab),tab,v_pk_col_name,str(n_row),str(n_row+n_batch_size))
+                    print('st=',st)
                     cr_source.execute(st)
                     rs_source = cr_source.fetchall()
                     v_sql = ''
@@ -894,23 +918,21 @@ def sync_mysql_init_n(config,debug):
                     n_row = n_row + n_batch_size + 1
                     if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                         break
-
-        return config_init
     except Exception as e:
         print('sync_mysql_init_n exceptiion:' + traceback.format_exc())
         exception_running(config, traceback.format_exc())
         exit(0)
 
-def sync_mysql_data(config,config_init):
+def sync_mysql_data(config):
     start_time = datetime.datetime.now()
     db=config['db_mysql_sour']
     amount=0
     for v in config['sync_table'].split(","):
         tab=v.split(':')[0]
         if get_sync_table_pk_names(db,tab)=='pkid':
-           sync_mysql_data_pkid(config, v,config_init)
+           sync_mysql_data_pkid(config, v)
         else:
-           sync_mysql_data_no_pkid(config,v,config_init)
+           sync_mysql_data_no_pkid(config,v)
 
         if config['run_mode'] == 'remote':
            amount = amount + int(config['sync_amount'])
@@ -1034,7 +1056,7 @@ def sync_mysql_data_no_pkid_7(config, ftab):
         exception_running(config, traceback.format_exc())
         exit(0)
 
-def sync_mysql_data_no_pkid(config, ftab,config_init):
+def sync_mysql_data_no_pkid(config, ftab):
     try:
         config['sync_amount'] = 0
         if not check_full_sync(config, ftab.split(':')[0]):
@@ -1126,7 +1148,7 @@ def sync_mysql_data_no_pkid(config, ftab,config_init):
         exception_running(config, traceback.format_exc())
         exit(0)
 
-def sync_mysql_data_pkid(config, ftab,config_init):
+def sync_mysql_data_pkid(config, ftab):
     try:
         config['sync_amount'] = 0
         if not check_full_sync(config, ftab.split(':')[0]):
@@ -1501,13 +1523,16 @@ def sync(config,debug):
     # sync table ddl
     sync_mysql_ddl(config, debug)
 
-    # init sync table
-    config_init=sync_mysql_init_n(config, debug)
+    # full sync table for multi primary key cols
+    sync_mysql_init(config, debug)
+
+    # full sync table for  one primary col
+    sync_mysql_init_n(config, debug)
 
     # sync data
     while True:
       # sync increment data
-      sync_mysql_data(config,config_init)
+      sync_mysql_data(config)
 
       # check  recently n day data
       check_mysql_data(config)

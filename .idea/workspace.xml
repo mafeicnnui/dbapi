@@ -19,10 +19,11 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="db task commit">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="server alert update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/monitor/server_alert.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/monitor/server_alert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -490,14 +491,12 @@
       <workItem from="1646269301028" duration="23263000" />
       <workItem from="1646356182498" duration="7736000" />
       <workItem from="1646377502008" duration="782000" />
-      <workItem from="1646615739834" duration="4480000" />
-    </task>
-    <task id="LOCAL-00020" summary="sync agent update">
-      <created>1620456861010</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1620456861010</updated>
+      <workItem from="1646615739834" duration="4506000" />
+      <workItem from="1646638053647" duration="648000" />
+      <workItem from="1646708113684" duration="361000" />
+      <workItem from="1646711506582" duration="1231000" />
+      <workItem from="1647236048016" duration="946000" />
+      <workItem from="1647324583027" duration="5023000" />
     </task>
     <task id="LOCAL-00021" summary="update mongo backup">
       <created>1623295479541</created>
@@ -835,7 +834,14 @@
       <option name="project" value="LOCAL" />
       <updated>1646361622507</updated>
     </task>
-    <option name="localTasksCounter" value="69" />
+    <task id="LOCAL-00069" summary="server alert update">
+      <created>1646634334093</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1646634334094</updated>
+    </task>
+    <option name="localTasksCounter" value="70" />
     <servers />
   </component>
   <component name="TodoView">
@@ -863,7 +869,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="update mongo backup" />
     <MESSAGE value="add mail param" />
     <MESSAGE value="upate sync api" />
     <MESSAGE value="update backup api" />
@@ -888,7 +893,8 @@
     <MESSAGE value="ck sync agent update" />
     <MESSAGE value="db alert commit" />
     <MESSAGE value="db task commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="db task commit" />
+    <MESSAGE value="server alert update" />
+    <option name="LAST_COMMIT_MESSAGE" value="server alert update" />
   </component>
   <component name="WindowStateProjectService">
     <state x="2255" y="155" width="1124" height="683" key="#Deployment" timestamp="1646617610134">
@@ -952,21 +958,21 @@
     </state>
     <state x="244" y="138" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1646269344572" />
     <state x="2164" y="141" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1646617617353" />
-    <state x="2472" y="255" key="Vcs.Push.Dialog.v2" timestamp="1646361627643">
+    <state x="2472" y="255" key="Vcs.Push.Dialog.v2" timestamp="1646634339584">
       <screen x="1920" y="3" width="1920" height="1040" />
     </state>
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.-173.1920.1040@0.0.1920.1040" timestamp="1641871372811" />
     <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1645088763772" />
-    <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1646361627643" />
+    <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1646634339584" />
     <state x="515" y="444" width="596" height="532" key="find.popup" timestamp="1644302772430">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="515" y="444" width="596" height="532" key="find.popup/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1644302772430" />
-    <state x="2686" y="428" key="publish.login" timestamp="1646622758069">
+    <state x="2686" y="428" key="publish.login" timestamp="1647329321395">
       <screen x="1920" y="3" width="1920" height="1040" />
     </state>
     <state x="766" y="425" key="publish.login/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1646269725145" />
-    <state x="2686" y="428" key="publish.login/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1646622758069" />
+    <state x="2686" y="428" key="publish.login/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1647329321395" />
     <state x="2543" y="228" width="672" height="678" key="search.everywhere.popup" timestamp="1644823359999">
       <screen x="1920" y="3" width="1920" height="1040" />
     </state>
