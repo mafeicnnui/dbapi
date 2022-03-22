@@ -266,10 +266,10 @@ def write_warn_log(config,server_id,index_code,index_name,index_value,flag):
 '''
  功能：统计某个服务失败次数
 '''
-def get_warn_info(config,server_id):
+def get_warn_info(config,server_id,index_code):
     db = config['db_mysql_dict']
     cr = db.cursor()
-    st = '''select * from t_monitor_server_warn_log where server_id={} '''.format(server_id)
+    st = '''select * from t_monitor_server_warn_log where server_id={} and index_code='{}' '''.format(server_id,index_code)
     cr.execute(st)
     rs = cr.fetchone()
     return rs
@@ -357,7 +357,7 @@ def server_warning(config):
         server_info = get_server_info(cfg, r['server_id'])
         if r['index_value'] == '0':
             write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'failure')
-            warn_info = get_warn_info(cfg, r['server_id'])
+            warn_info = get_warn_info(cfg, r['server_id'],r['index_code'])
 
             v_title = '{}告警'.format(server_info['server_desc'])
             v_content = ft.format(server_info['server_ip'], server_info['server_port'],
@@ -485,7 +485,7 @@ def cpu_warning(config):
         index_threshold = get_index_threshold(config, r['index_code'])
         if float(r['index_value']) > index_threshold :
             write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'failure')
-            warn_info = get_warn_info(cfg, r['server_id'])
+            warn_info = get_warn_info(cfg, r['server_id'],r['index_code'])
             v_title = '{}告警({})'.format(server_info['server_desc'], warn_info['fail_times'])
             v_content = ft.format(server_info['server_ip'], server_info['server_port'],
                                   get_time(),
@@ -611,7 +611,7 @@ def mem_warning(config):
         index_threshold = get_index_threshold(config, r['index_code'])
         if float(r['index_value']) > index_threshold :
             write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], r['index_value'], 'failure')
-            warn_info = get_warn_info(cfg, r['server_id'])
+            warn_info = get_warn_info(cfg, r['server_id'],r['index_code'])
             v_title = '{}告警'.format(server_info['server_desc'])
             v_content = ft.format(server_info['server_ip'], server_info['server_port'],
                                   get_time(),
@@ -738,7 +738,7 @@ def disk_warning(config):
 
         if float(max_disk_usage) > index_threshold:
             write_warn_log(cfg, r['server_id'], r['index_code'], r['index_name'], max_disk_usage, 'failure')
-            warn_info = get_warn_info(cfg, r['server_id'])
+            warn_info = get_warn_info(cfg, r['server_id'],r['index_code'])
             v_title   = '{}告警'.format(server_info['server_desc'])
             v_content = ft.format(server_info['server_ip'], server_info['server_port'],
                                   get_time(),

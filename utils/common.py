@@ -35,7 +35,6 @@ class read_db_decrypt(tornado.web.RequestHandler):
             res = {'code': -1, 'msg': str(e)}
             self.write(json.dumps(res))
 
-
 def format_sql(v_sql):
     if v_sql is not None:
        return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -277,3 +276,31 @@ class DateEncoder(json.JSONEncoder):
 
         else:
             return json.JSONEncoder.default(self, obj)
+
+
+async def get_ds_by_dsid(p_dsid):
+    sql="""select cast(id as char) as dsid,
+                  db_type,
+                  db_desc,
+                  ip,
+                  port,
+                  service,
+                  user,
+                  password,
+                  status,
+                  date_format(creation_date,'%Y-%m-%d %H:%i:%s') as creation_date,
+                  creator,
+                  date_format(last_update_date,'%Y-%m-%d %H:%i:%s') as last_update_date,
+                  updator ,
+                  db_env,
+                  inst_type,
+                  market_id,
+                  proxy_status,
+                  proxy_server,
+                  id_ro,
+                  stream_load
+           from t_db_source where id={0}""".format(p_dsid)
+    ds = await async_processer.query_dict_one(sql)
+    ds['password'] = '' if ds['password']=='' else await aes_decrypt(ds['password'],ds['user'])
+    ds['url'] = 'MySQL://{0}:{1}/{2}'.format(ds['ip'], ds['port'], ds['service'])
+    return ds

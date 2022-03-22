@@ -1091,6 +1091,7 @@ def sync_mysql_data_no_pkid(config, ftab):
                print('DB:{0},delete {1} table data ok!'.format(config['db_mysql_desc_string'], tab))
             else:
                 print('delete from `{0}` {1} '.format(tab, v_where))
+                cr_desc.execute('delete from `{0}` {1} '.format(tab, v_where))
 
             while rs_source:
                 v_sql = ''

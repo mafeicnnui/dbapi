@@ -6,7 +6,7 @@
 # @Software: PyCharm
 
 import traceback
-from utils.common import check_tab_exists, aes_decrypt,gen_transfer_file
+from utils.common import check_tab_exists, aes_decrypt,gen_transfer_file,get_ds_by_dsid
 from utils.mysql_async import async_processer
 from utils.common import ssh_helper,ftp_helper
 
@@ -37,6 +37,7 @@ async def get_db_config(p_tag):
        return {'code': -1, 'msg': '备份任务已禁用!'}
 
     st = """SELECT  a.db_tag,
+                    c.id       as ds_id,
                     c.ip       as db_ip,
                     c.port     as db_port,
                     c.service  as db_service,
@@ -56,6 +57,8 @@ async def get_db_config(p_tag):
 
     rs = await async_processer.query_dict_one(st)
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
+    ds = await get_ds_by_dsid(rs['ds_id'])
+    rs['ds'] = await async_processer.query_dict_one_by_ds(ds,'show master status')
     return {'code': 200, 'msg': rs}
 
 async def save_backup_total(config):

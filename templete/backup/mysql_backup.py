@@ -20,6 +20,16 @@ def get_now():
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+def get_stop_time():
+    return  (datetime.datetime.now()+datetime.timedelta(days=1)).strftime("%Y-%m-%d %H:%M")
+
+def get_binlog_name():
+    return  'mysql-bin-{}-{}'\
+        .format((datetime.datetime.now()+datetime.timedelta(days=1)).strftime("%Y%m%d%H%M%S"),
+                (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%Y%m%d%H%M%S"))
+
+
+
 def get_time2(t):
     return t.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -85,6 +95,7 @@ def read_config(tag):
     if res['code'] == 200:
         print('read_config is success!')
         config = res['msg']
+        print('config=',config)
         config['year'] = get_year()
         config['day']  = get_date()
         config['bk_path']=config['bk_base']+'/'+get_date()
@@ -181,6 +192,16 @@ def write_log(msg):
     file_handle.write(msg + '\n')
     file_handle.close()
 
+def check_binlog_server(config):
+    c = 'ps -ef | grep {} | grep mysqlbinlog | grep -v grep | wc -l'.format(config['db_tag'])
+    r = os.popen(c)
+    f = r.readlines()
+    if int(f[0].replace('\n','')) == 1 :
+       return True
+    else:
+       return False
+
+
 def db_backup(config):
     print_dict(config)
     db=config['db_mysql']
@@ -206,14 +227,43 @@ def db_backup(config):
     update_backup_status(config['db_tag'],'1')
     cr.execute(v_sql)
     rs=cr.fetchall()
+
+    # init variables
     bk_begin_time=get_now()
     n_elaspsed_backup_total=0
     n_elaspsed_gzip_total=0
     g_status='0'
+
+    # binlog backup
+    if check_binlog_server(config) == 0:
+       print('starting mysqlbinlog backup task for {}...'.format(config['db_tag']))
+       os.system('mkdir -p {0}/mysqlbinlog'.format(config['bk_base']))
+       binlog_name = config['bk_base'] + '/mysqlbinlog/{}_'.format(config['db_tag'])
+       err_name = '/tmp/' + config['db_tag'] + '_binlog_' + get_date() + '.err'
+       bk_cmd ="""/usr/local/mysql5.6/bin/mysqlbinlog --no-defaults --read-from-remote-server --host={} --port={} --user={} --password='{}' --raw --stop-never -r {} {} &>{} &
+               """.format(config['db_ip'] ,
+                          config['db_port'],
+                          config['db_user'],
+                          config['newpass'],
+                          binlog_name,
+                          config['ds']['file'],
+                          err_name)
+       print(bk_cmd)
+       try:
+           r = os.system(bk_cmd)
+           if r != 0:
+              error = format_sql(get_file_contents(err_name).
+                                 replace('Warning: Using a password on the command line interface can be insecure.', ''))
+              print('mysqlbinlog error=',error)
+       except Exception as e:
+          traceback.print_exc()
+    else:
+       print('mysqlbinlog backup task already running for {}...'.format(config['db_tag']))
+
+    os.system('mkdir -p {0}'.format(config['bk_path']))
     for db in list(rs):
         error  = ''
         status = '0'
-        os.system('mkdir -p {0}'.format(config['bk_path']))
         print('Performing backup database {0}...'.format(db[0]))
         start_time     = get_now()
         file_name      = config['bk_path']+'/'+db[0]+'_'+get_date()+'.sql'
@@ -389,5 +439,3 @@ def main():
 
 if __name__ == "__main__":
      main()
-
-

@@ -20,7 +20,7 @@ class read_config_backup(tornado.web.RequestHandler):
     async def post(self):
         try:
             self.set_header("Content-Type", "application/json; charset=UTF-8")
-            tag   = self.get_argument("tag")
+            tag  = self.get_argument("tag")
             res  = await get_db_config(tag)
             self.write(json.dumps(res))
         except Exception as e:
