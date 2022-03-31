@@ -44,6 +44,25 @@ async def set_real_sync_status(p_status):
         return {'code':-1,'msg':str(e)}
 
 
+async def get_mysql_real_sync_status():
+    try:
+        st = "select `value` from t_sys_settings where `key`='MYSQL_REAL_SYNC_STATUS'"
+        rs = await async_processer.query_dict_one(st)
+        return {'code':200,'msg':rs}
+    except Exception as e:
+        traceback.print_exc()
+        return {'code':-1,'msg':str(e)}
+
+async def set_mysql_real_sync_status(p_status):
+    try:
+        st = "update t_sys_settings set `value`='{}' where `key`='MYSQL_REAL_SYNC_STATUS'".format(p_status)
+        rs = await async_processer.exec_sql(st)
+        return {'code':200,'msg':'success'}
+    except Exception as e:
+        traceback.print_exc()
+        return {'code':-1,'msg':str(e)}
+
+
 async def get_db_sync_config(p_tag):
     if await check_server_sync_status(p_tag)>0:
        return {'code': -1, 'msg': '同步服务器已禁用!'}
@@ -55,37 +74,37 @@ async def get_db_sync_config(p_tag):
        return {'code': -3, 'msg': '同步任务已禁用!'}
 
     st = '''
-select a.sync_tag,a.sync_ywlx,
-        (select dmmc from t_dmmx where dm='08' and dmm=a.sync_ywlx) as sync_ywlx_name,
+SELECT a.sync_tag,a.sync_ywlx,
+        (SELECT dmmc FROM t_dmmx WHERE dm='08' AND dmm=a.sync_ywlx) AS sync_ywlx_name,
         a.sync_type,
-        (select dmmc from t_dmmx where dm='09' and dmm=a.sync_type) as sync_type_name,
+        (SELECT dmmc FROM t_dmmx WHERE dm='09' AND dmm=a.sync_type) AS sync_type_name,
         CASE WHEN c.service='' THEN 
           CONCAT(c.ip,':',c.port,':',IFNULL(a.sync_schema,'information_schema'),':',c.user,':',c.password)
         ELSE
           CONCAT(c.ip,':',c.port,':',c.service,':',c.user,':',c.password)
         END AS sync_db_sour,      
-        c.id_ro as id_ro,
-        a.log_db_id as log_db_id,
-        a.log_db_name as log_db_name,
+        c.id_ro AS id_ro,
+        a.log_db_id AS log_db_id,
+        a.log_db_name AS log_db_name,
         CASE WHEN d.service='' THEN 
-        CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,a.sync_schema),':',d.user,':',d.password)
+        CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,IFNULL(a.sync_schema,'information_schema')),':',d.user,':',d.password)
         ELSE
-        CONCAT(d.ip,':',d.port,':',d.service,':',d.user,':',d.password)
+        CONCAT(d.ip,':',d.port,':',IFNULL(d.service,'information_schema') ,':',d.user,':',d.password)
         END AS sync_db_dest,                          
         a.server_id,b.server_desc,a.run_time,a.api_server,
         LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
         a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
         a.status,a.process_num,a.apply_timeout,a.desc_db_prefix,
         b.server_ip,b.server_port,b.server_user,b.server_pass,c.proxy_server,
-        (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
-        (select `value` from t_sys_settings where `key`='send_server') as send_server,
-        (select `value` from t_sys_settings where `key`='send_port') as send_port,
-        (select `value` from t_sys_settings where `key`='sender') as sender,
-        (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
-        (select `value` from t_sys_settings where `key`='receiver') as receiver,
-        (select `value` from t_sys_settings where `key`='REAL_SYNC_STATUS') as real_sync_status
-from t_db_sync_config a,t_server b,t_db_source c,t_db_source d
-  where a.server_id=b.id AND a.sour_db_id=c.id  AND a.desc_db_id=d.id 
+        (SELECT dmmc FROM t_dmmx WHERE dm='36' AND dmm='01') AS proxy_local_port,
+        (SELECT `value` FROM t_sys_settings WHERE `key`='send_server') AS send_server,
+        (SELECT `value` FROM t_sys_settings WHERE `key`='send_port') AS send_port,
+        (SELECT `value` FROM t_sys_settings WHERE `key`='sender') AS sender,
+        (SELECT `value` FROM t_sys_settings WHERE `key`='sendpass') AS sendpass,
+        (SELECT `value` FROM t_sys_settings WHERE `key`='receiver') AS receiver,
+        (SELECT `value` FROM t_sys_settings WHERE `key`='REAL_SYNC_STATUS') AS real_sync_status
+FROM t_db_sync_config a,t_server b,t_db_source c,t_db_source d
+  WHERE a.server_id=b.id AND a.sour_db_id=c.id  AND a.desc_db_id=d.id 
     and a.sync_tag ='{0}' ORDER BY a.id,a.sync_ywlx
 '''.format(p_tag)
 

@@ -45,6 +45,14 @@ def create_doris_table(cfg):
     db.commit()
     cr.close()
 
+def truncate_doris_table(cfg):
+    db = cfg['db_mysql_doris']
+    cr = db.cursor()
+    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>truncate_doris_table :{}'.format(cfg['doris_tab_name']))
+    cr.execute('truncate table {}'.format(cfg['doris_tab_name']))
+    db.commit()
+    cr.close()
+
 def get_doris_table_defi(cfg):
     db = cfg['db_mysql_sour']
     cr = db.cursor()
@@ -408,11 +416,12 @@ def main():
             print(v_full_scp)
             os.system(v_full_scp)
         else:
-            if datax_incr is not None or datax_incr != '':
+            if datax_incr is not None and datax_incr != '':
                 print(v_incr_scp)
                 os.system(v_incr_scp)
             else:
-                print(v_full_scp)
+                print('>>>',v_full_scp)
+                truncate_doris_table(config)
                 os.system(v_full_scp)
 
         config['table_name']    = config['sync_table']

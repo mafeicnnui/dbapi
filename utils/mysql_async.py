@@ -136,4 +136,4 @@ class async_processer:
                 async with conn.cursor(DictCursor) as cur:
                     await cur.execute(p_sql)
                     rs = await cur.fetchone()
-        return capital_to_lower(rs)
+        return None if rs is None else capital_to_lower(rs)

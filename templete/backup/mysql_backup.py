@@ -6,13 +6,16 @@
 # @Func : MySQL数据库备份工具
 # @Software: PyCharm
 
-import sys,os
-import traceback
-import warnings
-import pymysql
 import datetime
 import json
+import os
+import sys
+import traceback
+import warnings
+
+import pymysql
 import requests
+
 
 def get_now():
     return datetime.datetime.now()
@@ -193,10 +196,14 @@ def write_log(msg):
     file_handle.close()
 
 def check_binlog_server(config):
+    if config.get('binlog_status') == '0':
+       return True
     c = 'ps -ef | grep {} | grep mysqlbinlog | grep -v grep | wc -l'.format(config['db_tag'])
     r = os.popen(c)
     f = r.readlines()
     if int(f[0].replace('\n','')) == 1 :
+       return True
+    elif config.get('ds') is None:
        return True
     else:
        return False
@@ -235,13 +242,14 @@ def db_backup(config):
     g_status='0'
 
     # binlog backup
-    if check_binlog_server(config) == 0:
+    if not check_binlog_server(config):
        print('starting mysqlbinlog backup task for {}...'.format(config['db_tag']))
        os.system('mkdir -p {0}/mysqlbinlog'.format(config['bk_base']))
        binlog_name = config['bk_base'] + '/mysqlbinlog/{}_'.format(config['db_tag'])
        err_name = '/tmp/' + config['db_tag'] + '_binlog_' + get_date() + '.err'
-       bk_cmd ="""/usr/local/mysql5.6/bin/mysqlbinlog --no-defaults --read-from-remote-server --host={} --port={} --user={} --password='{}' --raw --stop-never -r {} {} &>{} &
-               """.format(config['db_ip'] ,
+       bk_cmd ="""{}/mysqlbinlog --no-defaults --read-from-remote-server --host={} --port={} --user={} --password='{}' --raw --stop-never -r {} {} &>{} &
+               """.format(os.path.dirname(config['bk_cmd']),
+                          config['db_ip'] ,
                           config['db_port'],
                           config['db_user'],
                           config['newpass'],
@@ -257,6 +265,10 @@ def db_backup(config):
               print('mysqlbinlog error=',error)
        except Exception as e:
           traceback.print_exc()
+    elif config.get('binlog_status') == '0':
+       print('mysqlbinlog backup is diabled for {}...'.format(config['db_tag']))
+    elif config.get('ds') is None:
+       print('mysql binlog is closed for {}...'.format(config['db_tag']))
     else:
        print('mysqlbinlog backup task already running for {}...'.format(config['db_tag']))
 
@@ -270,10 +282,18 @@ def db_backup(config):
         err_name       = '/tmp/'+db[0]+'_'+get_date()+'.err'
         full_gzip_name = file_name+'.gz'
         gzip_name      = db[0]+'_'+get_date()+'.sql.gz'
-        bk_cmd         = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
-                        '--routines --force --master-data=2 --databases {5} -r {6} &>{7}'.\
-                        format(config['bk_cmd'],config['db_user'],config['newpass'],
-                               config['db_ip'] ,config['db_port'],db[0],file_name,err_name)
+        bk_cmd         = ''
+        if config.get('ds') is not None and not config.get('ro') :
+            bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
+                      '--routines --force --master-data=2 --databases {5} -r {6} &>{7}'.\
+                      format(config['bk_cmd'],config['db_user'],config['newpass'],
+                             config['db_ip'] ,config['db_port'],db[0],file_name,err_name)
+
+        if  config.get('sv') is not None and config.get('ro'):
+            bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
+                      '--routines --force --dump-slave=2 --databases {5} -r {6} &>{7}'. \
+                      format(config['bk_cmd'], config['db_user'], config['newpass'],
+                             config['db_ip'], config['db_port'], db[0], file_name, err_name)
         print(bk_cmd)
         try:
           r=os.system(bk_cmd)
@@ -351,16 +371,49 @@ def db_backup_mydumper(config):
     update_backup_status(config['db_tag'], '1')
     cr.execute(v_sql)
     rs=cr.fetchall()
-    print('rs=',rs)
 
+    # init variables
     bk_begin_time=get_now()
     n_elaspsed_backup_total=0
     n_elaspsed_gzip_total=0
     g_status='0'
+
+    # binlog backup
+    if not check_binlog_server(config):
+        print('starting mysqlbinlog backup task for {}...'.format(config['db_tag']))
+        os.system('mkdir -p {0}/mysqlbinlog'.format(config['bk_base']))
+        binlog_name = config['bk_base'] + '/mysqlbinlog/{}_'.format(config['db_tag'])
+        err_name = '/tmp/' + config['db_tag'] + '_binlog_' + get_date() + '.err'
+        bk_cmd = """$MYSQL_HOME/bin/mysqlbinlog --no-defaults --read-from-remote-server --host={} --port={} --user={} --password='{}' --raw --stop-never -r {} {} &>{} &
+                   """.format(config['db_ip'],
+                              config['db_port'],
+                              config['db_user'],
+                              config['newpass'],
+                              binlog_name,
+                              config['ds']['file'],
+                              err_name)
+        print(bk_cmd)
+        try:
+            r = os.system(bk_cmd)
+            if r != 0:
+                error = format_sql(get_file_contents(err_name).
+                                   replace('Warning: Using a password on the command line interface can be insecure.',
+                                           ''))
+                print('mysqlbinlog error=', error)
+        except Exception as e:
+            traceback.print_exc()
+    elif config.get('binlog_status') == '0':
+        print('mysqlbinlog backup is diabled for {},skip binlog backup...'.format(config['db_tag']))
+    elif config.get('ds') is None:
+        print('mysql binlog is closed for {},skip binlog backup...'.format(config['db_tag']))
+    else:
+        print('mysqlbinlog backup task already running for {}...'.format(config['db_tag']))
+
+    # backup database
+    os.system('mkdir -p {0}'.format(config['bk_path']))
     for db in list(rs):
         error  = ''
         status = '0'
-        os.system('mkdir -p {0}'.format(config['bk_path']))
         print('Performing backup database {0}...'.format(db[0]))
         start_time     = get_now()
         dir_name       = config['bk_path']+'/'+db[0]

@@ -15,7 +15,9 @@ from  service.syncer import read_config_sync,\
                             run_script_remote_sync,\
                             stop_script_remote_sync,\
                             read_real_sync_status,\
-                            write_real_sync_status
+                            write_real_sync_status, \
+                            read_mysql_real_sync_status,\
+                            write_mysql_real_sync_status
 syncer = [
     (r"/read_config_sync",        read_config_sync),
     (r"/write_sync_log",          write_sync_log),
@@ -27,4 +29,6 @@ syncer = [
     (r"/stop_script_remote_sync", stop_script_remote_sync),
     (r"/get_real_sync_status",    read_real_sync_status),
     (r"/set_real_sync_status",    write_real_sync_status),
+    (r"/get_mysql_real_sync_status", read_mysql_real_sync_status),
+    (r"/set_mysql_real_sync_status", write_mysql_real_sync_status),
 ]

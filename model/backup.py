@@ -37,15 +37,17 @@ async def get_db_config(p_tag):
        return {'code': -1, 'msg': '备份任务已禁用!'}
 
     st = """SELECT  a.db_tag,
-                    c.id       as ds_id,
-                    c.ip       as db_ip,
-                    c.port     as db_port,
-                    c.service  as db_service,
-                    c.user     as db_user,
-                    c.password as db_pass,
+                    c.id         as ds_id,
+                    c.related_id as related_id,
+                    c.ip         as db_ip,
+                    c.port       as db_port,
+                    c.service    as db_service,
+                    c.user       as db_user,
+                    c.password   as db_pass,
+                    c.db_type    as db_type,
                     a.expire,a.bk_base,a.script_path,a.script_file,a.bk_cmd,a.run_time,
                     b.server_ip,b.server_port,b.server_user,b.server_pass,b.server_os,
-                    a.comments,a.python3_home,a.backup_databases,a.api_server,a.status,
+                    a.comments,a.python3_home,a.backup_databases,a.api_server,a.status,a.binlog_status,
                     (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
                     (select `value` from t_sys_settings where `key`='send_server') as send_server,
                     (select `value` from t_sys_settings where `key`='send_port') as send_port,
@@ -57,8 +59,44 @@ async def get_db_config(p_tag):
 
     rs = await async_processer.query_dict_one(st)
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
-    ds = await get_ds_by_dsid(rs['ds_id'])
-    rs['ds'] = await async_processer.query_dict_one_by_ds(ds,'show master status')
+    if rs['db_type'] == '0':
+        if rs['binlog_status'] == '1':
+           try:
+                print('from ds read master an slave status!')
+                ds = await get_ds_by_dsid(rs['ds_id'])
+                ms = await async_processer.query_dict_one_by_ds(ds,'show master status')
+                sv = await async_processer.query_dict_one_by_ds(ds,'show slave status')
+                ro = await async_processer.query_dict_one_by_ds(ds,"SHOW VARIABLES LIKE 'read_only'")
+                print('ro=',ro)
+                if ms is not None:
+                   rs['ds'] = ms
+                if sv is not None:
+                   rs['sv'] = sv
+                if ro is not None:
+                   rs['ro'] = False if ro['value'] == 'OFF' else True
+                print('from ds read master an slave status ok!')
+           except:
+                traceback.print_exc()
+                try:
+                    print('from ds read master and slave status failure,try from related_id read ...')
+                    print('related_id=',rs['related_id'])
+                    ds = await get_ds_by_dsid(rs['related_id'])
+                    print('ds=',ds)
+                    ms = await async_processer.query_dict_one_by_ds(ds, 'show master status')
+                    sv = await async_processer.query_dict_one_by_ds(ds, 'show slave status')
+                    ro = await async_processer.query_dict_one_by_ds(ds, "SHOW VARIABLES LIKE 'read_only'")
+                    print('ro=', ro)
+                    if ms is not None:
+                        rs['ds'] = ms
+                    if sv is not None:
+                        rs['sv'] = sv
+                    if ro is not None:
+                        rs['ro'] = False if ro['value'] == 'OFF' else True
+                    print('from related_id read master and slave status ok...')
+                except:
+                    traceback.print_exc()
+                    print('Read master and slave status failure!')
+                    pass
     return {'code': 200, 'msg': rs}
 
 async def save_backup_total(config):

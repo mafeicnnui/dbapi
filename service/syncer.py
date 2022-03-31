@@ -16,7 +16,7 @@ from model.syncer import \
     save_sync_log_detail, \
     update_sync_status, \
     push, save_sync_real_log, \
-    get_real_sync_status, set_real_sync_status
+    get_real_sync_status, set_real_sync_status, get_mysql_real_sync_status, set_mysql_real_sync_status
 
 from utils.common import DateEncoder
 
@@ -48,6 +48,30 @@ class write_real_sync_status(tornado.web.RequestHandler):
             status = self.get_argument("status")
             print('status=',status)
             res = await set_real_sync_status(status)
+            self.write(json.dumps(res, cls=DateEncoder))
+        except Exception as e:
+            traceback.print_exc()
+            self.write({'code': -1, 'msg': str(e)})
+
+
+
+class read_mysql_real_sync_status(tornado.web.RequestHandler):
+    async def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            res  = await get_mysql_real_sync_status()
+            self.write(json.dumps(res, cls=DateEncoder))
+        except Exception as e:
+            traceback.print_exc()
+            self.write({'code':-1,'msg':str(e)})
+
+class write_mysql_real_sync_status(tornado.web.RequestHandler):
+    async def post(self):
+        try:
+            self.set_header("Content-Type", "application/json; charset=UTF-8")
+            status = self.get_argument("status")
+            print('status=',status)
+            res = await set_mysql_real_sync_status(status)
             self.write(json.dumps(res, cls=DateEncoder))
         except Exception as e:
             traceback.print_exc()
