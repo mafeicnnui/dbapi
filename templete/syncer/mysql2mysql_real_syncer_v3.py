@@ -141,8 +141,7 @@ def is_col_null(is_nullable):
        return True
 
 def check_mysql_tab_exists(cfg,event):
-   db=cfg['db_mysql_dest']
-   cr= db.cursor()
+   cr= cfg['cr_mysql_dest']
    st="""select count(0) from information_schema.tables
             where table_schema='{}' and table_name='{}'""".format(get_mysql_schema(cfg,event),event['table'])
    cr.execute(st)
@@ -150,8 +149,7 @@ def check_mysql_tab_exists(cfg,event):
    return rs[0]
 
 def check_mysql_database(cfg,event):
-    db = cfg['db_mysql_dest']
-    cr = db.cursor()
+    cr= cfg['cr_mysql_dest']
     st = """select count(0) from information_schema.`SCHEMATA` d 
                   where schema_name ='{}'""".format(get_mysql_schema(cfg, event))
     cr.execute(st)
@@ -159,36 +157,30 @@ def check_mysql_database(cfg,event):
     return rs[0]
 
 def check_mysql_tab_exists_data(cfg,event):
-   db = cfg['db_mysql_dest']
-   cr = db.cursor()
+   cr = cfg['cr_mysql_dest']
    st = "select count(0) from {}.{}".format(get_mysql_schema(cfg,event),event['table'])
    cr.execute(st)
    rs = cr.fetchone()
    return rs[0]
 
 def check_tab_exists_pk(cfg,event):
-   db = cfg['db_mysql']
-   cr = db.cursor()
+   cr = cfg['cr_mysql']
    st = """select count(0) from information_schema.columns
               where table_schema='{}' and table_name='{}' and column_key='PRI'""".format(event['schema'],event['table'])
    cr.execute(st)
    rs=cr.fetchone()
-   cr.close()
    return rs[0]
 
 def check_tab_exists(cfg,event):
-   db = cfg['db_mysql']
-   cr = db.cursor()
+   cr = cfg['cr_mysql']
    st = """select count(0) from information_schema.tables
               where table_schema='{}' and table_name='{}' """.format(event['schema'],event['table'])
    cr.execute(st)
    rs=cr.fetchone()
-   cr.close()
    return rs[0]
 
 def f_get_table_ddl(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     st = """show create table `{0}`.`{1}`""".format(get_mysql_schema(cfg, event),event['table'])
     cr.execute(st)
     rs = cr.fetchone()
@@ -197,8 +189,7 @@ def f_get_table_ddl(cfg,event):
 
 
 def create_mysql_table(cfg,event):
-    db = cfg['db_mysql_dest']
-    cr = db.cursor()
+    cr= cfg['cr_mysql_dest']
     if check_tab_exists_pk(cfg,event) >0:
         if check_mysql_database(cfg,event) == 0:
            cr.execute('create database `{}` /*!40100 DEFAULT CHARACTER SET utf8mb4 */'.format(get_mysql_schema(cfg, event)))
@@ -219,8 +210,7 @@ def check_mysql_tab_sync(cfg,event):
    return rs[0]
 
 def get_sync_table_int_pk_num(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     st = """select count(0)
               from information_schema.columns
               where table_schema='{}'
@@ -230,12 +220,10 @@ def get_sync_table_int_pk_num(cfg,event):
           """.format(event['schema'],event['table'])
     cr.execute(st)
     rs = cr.fetchone()
-    cr.close()
     return rs[0]
 
 def get_sync_table_cols(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     st="""select concat('`',column_name,'`') from information_schema.columns
               where table_schema='{0}' and table_name='{1}'  order by ordinal_position
           """.format(get_mysql_schema(cfg,event),event['table'])
@@ -253,8 +241,7 @@ def get_tab_header(cfg,event):
     return s1+s2
 
 def get_sync_table_pk_names(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     st="""select column_name  from information_schema.columns
            where table_schema='{0}' and table_name='{1}' and column_key='PRI' order by ordinal_position
        """.format(event['schema'],event['table'])
@@ -266,8 +253,7 @@ def get_sync_table_pk_names(cfg,event):
     return v_col[0:-1]
 
 def get_sync_table_min_id(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     cl = get_sync_table_pk_names(cfg,event)
     st = "select min(`{}`) from `{}`.`{}`".format(cl,event['schema'],event['table'])
     cr.execute(st)
@@ -275,15 +261,14 @@ def get_sync_table_min_id(cfg,event):
     return  rs[0]
 
 def get_sync_table_total_rows(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     st = "select count(0) from `{0}`.`{1}`".format(event['schema'],event['table'])
     cr.execute(st)
     rs = cr.fetchone()
     return  rs[0]
 
 def full_sync(cfg,event):
-    print('full sync table:{}...'.format(event['table']))
+    print('full sync table:{}...'.format(event['tab']))
     tab = event['table']
     if (check_mysql_tab_exists(cfg, event) == 0 \
         or (check_mysql_tab_exists(cfg, event) > 0 and check_mysql_tab_sync(cfg, event) == 0)) \
@@ -291,10 +276,8 @@ def full_sync(cfg,event):
         i_counter = 0
         ins_sql_header = get_tab_header(cfg, event)
         n_batch_size = int(cfg['batch_size'])
-        db_source = cfg['db_mysql']
-        cr_source = db_source.cursor()
-        db_desc   = cfg['db_mysql_dest']
-        cr_desc   = db_desc.cursor()
+        cr_source = cfg['cr_mysql']
+        cr_desc   = cfg['cr_mysql_dest']
         n_row     = get_sync_table_min_id(cfg, event)
         if n_row is None:
             print('Table:{0} data is empty ,skip full sync!'.format(tab))
@@ -332,17 +315,59 @@ def full_sync(cfg,event):
                 print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
                       format(tab, n_tab_total_rows, i_counter,
                              round(i_counter / n_tab_total_rows * 100, 2)), end='')
-                db_desc.commit()
-
             n_row = n_row + n_batch_size + 1
             if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                 break
         print('')
 
+def create_table_many(cfg):
+    # create table
+    for o in cfg['sync_table']:
+        if o != '':
+            event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],
+                     'column': o.split('$')[0].split('.')[2]}
+            if check_tab_exists_pk(cfg, event) > 0 and check_mysql_tab_exists(cfg, event) == 0:
+                event['tab'] = event['schema'] + '.' + event['table']
+                print('create table {} ...'.format(event['tab']))
+                create_mysql_table(cfg, event)
+
+def full_sync_one(cfg,event):
+    # set session iso level is repeattable
+    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
+    # full sync
+    if check_tab_exists_pk(cfg,event) >0 and check_mysql_tab_exists(cfg, event) == 0:
+        event['tab'] = event['schema']+'.'+event['table']
+        full_sync(cfg,event)
+    cfg['db_mysql'].commit()
+
+def full_sync_many(cfg):
+    # set session iso level is repeattable
+    cfg['cr_mysql'].execute('FLUSH /*!40101 LOCAL */ TABLES')
+    cfg['cr_mysql'].execute('FLUSH TABLES WITH READ LOCK')
+    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
+    if check_ckpt(cfg):
+        file, pos = read_ckpt(cfg)
+        cfg['binlogfile'] = file
+        cfg['binlogpos'] = pos
+    else:
+        write_ckpt(cfg)
+    cfg['cr_mysql'].execute('UNLOCK TABLES')
+
+    # full sync
+    for o in cfg['sync_table']:
+        if o != '':
+            event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
+            if check_tab_exists_pk(cfg,event) >0 and check_mysql_tab_exists(cfg, event) == 0:
+                event['tab'] = event['schema']+'.'+event['table']
+                print('create table {} ...'.format(event['tab']))
+                create_mysql_table(cfg, event)
+                full_sync(cfg,event)
+    cfg['db_mysql'].commit()
 
 def get_cols_from_mysql(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     v_col = ''
     v_sql = """select column_name 
                  from information_schema.columns
@@ -353,7 +378,6 @@ def get_cols_from_mysql(cfg,event):
     rs = cr.fetchall()
     for i in list(rs):
         v_col = v_col + '`{}`,'.format(i[0])
-    cr.close()
     return v_col[0:-1]
 
 def set_column(event):
@@ -391,8 +415,7 @@ def get_ins_header(cfg,event):
     return v_ddl
 
 def get_col_type(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     st = """SELECT  `column_name`,`data_type`
                 FROM information_schema.columns
                 WHERE table_schema='{}'
@@ -520,14 +543,14 @@ def gen_ddl_sql(p_ddl):
     else:
        return None
 
-def get_file_and_pos(p_db):
-    cr = p_db.cursor()
+def get_file_and_pos(cfg):
+    cr = cfg['cr_mysql']
     cr.execute('show master status')
     ds = cr.fetchone()
     return ds
 
-def get_binlog_files(p_db):
-    cr = p_db.cursor()
+def get_binlog_files(cfg):
+    cr = cfg['cr_mysql']
     cr.execute('show binary logs')
     files = []
     rs = cr.fetchall()
@@ -567,18 +590,14 @@ def check_batch_full_data(batch,cfg):
     return False
 
 def write_ckpt(cfg):
-    if check_ckpt(cfg):
-       ckpt = {
-            'binlogfile':cfg['binlogfile'],
-            'binlogpos' :cfg['binlogpos']
-       }
-    else:
-       file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
-       ckpt = {
-           'binlogfile': file,
-           'binlogpos': pos
-       }
-
+    file, pos = get_file_and_pos(cfg)[0:2]
+    cfg['binlogfile'] = file
+    cfg['binlogpos']  = pos
+    ckpt = {
+       'binlogfile': file,
+       'binlogpos': pos,
+       'last_update_time': get_time()
+    }
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
 
@@ -597,7 +616,13 @@ def read_ckpt(cfg):
         pos = binlog['binlogpos']
         return file,pos
 
-def get_ds_mysql(ip,port,service ,user,password):
+
+def get_ds_mysql_sour(ip,port,service ,user,password):
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=False)
+    return conn
+
+
+def get_ds_mysql_dest(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=True)
     return conn
 
@@ -641,8 +666,10 @@ def get_config_from_db(tag):
         config['db_mysql_pass_dest']     = db_mysql_pass_dest
         config['db_mysql_string']        = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
         config['db_mysql_dest_string']   = db_mysql_ip_dest + ':' + db_mysql_port_dest + '/' + db_mysql_service_dest
-        config['db_mysql']               = get_ds_mysql(db_mysql_ip, db_mysql_port, db_mysql_service, db_mysql_user, db_mysql_pass)
-        config['db_mysql_dest']          = get_ds_mysql(db_mysql_ip_dest, db_mysql_port_dest, db_mysql_service_dest, db_mysql_user_dest, db_mysql_pass_dest)
+        config['db_mysql']               = get_ds_mysql_sour(db_mysql_ip, db_mysql_port, db_mysql_service, db_mysql_user, db_mysql_pass)
+        config['cr_mysql']               = config['db_mysql'].cursor()
+        config['db_mysql_dest']          = get_ds_mysql_dest(db_mysql_ip_dest, db_mysql_port_dest, db_mysql_service_dest, db_mysql_user_dest, db_mysql_pass_dest)
+        config['cr_mysql_dest']          = config['db_mysql_dest'].cursor()
 
         if config.get('ds_ro') is not None and config.get('ds_ro') != '':
             config['db_mysql_ip_ro']      = config['ds_ro']['ip']
@@ -650,7 +677,7 @@ def get_config_from_db(tag):
             config['db_mysql_service_ro'] = config['ds_ro']['service']
             config['db_mysql_user_ro']    = config['ds_ro']['user']
             config['db_mysql_pass_ro']    = aes_decrypt(config['ds_ro']['password'],config['ds_ro']['user'])
-            config['db_mysql_ro']         = get_ds_mysql(config['db_mysql_ip_ro'] ,
+            config['db_mysql_ro']         = get_ds_mysql_sour(config['db_mysql_ip_ro'] ,
                                                          config['db_mysql_port_ro'],
                                                          config['db_mysql_service_ro'],
                                                          config['db_mysql_user_ro'],
@@ -662,22 +689,13 @@ def get_config_from_db(tag):
             config['db_mysql_service_log'] = config['log_db_name']
             config['db_mysql_user_log']    = config['ds_log']['user']
             config['db_mysql_pass_log']    = aes_decrypt(config['ds_log']['password'],config['ds_log']['user'])
-            config['db_mysql_log']         = get_ds_mysql(config['db_mysql_ip_log'],
+            config['db_mysql_log']         = get_ds_mysql_dest(config['db_mysql_ip_log'],
                                                           config['db_mysql_port_log'],
                                                           config['db_mysql_service_log'],
                                                           config['db_mysql_user_log'],
                                                           config['db_mysql_pass_log'])
             config['cr_mysql_log']        = config['db_mysql_log'].cursor()
 
-        if check_ckpt(config):
-            file, pos = read_ckpt(config)
-            if file not in get_binlog_files(config['db_mysql']):
-               file, pos = get_file_and_pos(config['db_mysql'])[0:2]
-        else:
-            file, pos = get_file_and_pos(config['db_mysql'])[0:2]
-
-        config['binlogfile']            = file
-        config['binlogpos']             = pos
         config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = float(config['sync_gap'])
         
@@ -692,8 +710,7 @@ def get_config_from_db(tag):
         sys.exit(0)
 
 def get_tables(cfg,o):
-    db  = cfg['db_mysql']
-    cr  = db.cursor()
+    cr  = cfg['cr_mysql']
     sdb = o.split('$')[0].split('.')[0]
     tab = o.split('$')[0].split('.')[1]
     col = o.split('$')[0].split('.')[2]
@@ -714,7 +731,6 @@ def get_tables(cfg,o):
         if check_tab_exists_pk(cfg,evt)>0:
            vv1 = vv1 + '{}.{}.{}${},'.format(sdb, i[0], col, ddb)
            vv2 = vv2 + '{}.{},'.format(sdb,i[0])
-    cr.close()
     return vv1[0:-1],vv2[0:-1]
 
 
@@ -787,7 +803,7 @@ def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def write_sync_log(config):
-    cfile, cpos = get_file_and_pos(config['db_mysql'])[0:2]
+    cfile, cpos = get_file_and_pos(config)[0:2]
     par = {
             'sync_tag'       : config['sync_tag'],
             'event_amount'   : config['event_amount'],
@@ -820,8 +836,7 @@ def read_real_sync_status():
          sys.exit(0)
 
 def get_table_pk_names(cfg,event):
-    db = cfg['db_mysql']
-    cr = db.cursor()
+    cr = cfg['cr_mysql']
     v_col=''
     v_sql="""select column_name 
               from information_schema.columns
@@ -832,7 +847,6 @@ def get_table_pk_names(cfg,event):
     rs = cr.fetchall()
     for i in list(rs):
         v_col = v_col + '`{}`,'.format(i[0])
-    cr.close()
     return v_col[0:-1]
 
 def init_cfg(cfg):
@@ -929,7 +943,7 @@ def start_incr_syncer(cfg):
                delete_amount = 0
                ddl_amount = 0
                gather_time = datetime.datetime.now()
-               file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
+               file, pos = get_file_and_pos(cfg)[0:2]
                log("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlogfile'],cfg['binlogpos']))
                flush_buffer(cfg)
 
@@ -955,12 +969,11 @@ def start_incr_syncer(cfg):
                     ddl = gen_ddl_sql(event['query'])
                     event['table'] = get_obj_name(event['query']).lower()
                     event['tab'] = event['schema']+'.'+event['table']
-                    #event['column'] = col[event['tab']]
 
                     if check_sync(cfg,event,pks) and ddl is not None:
                        if check_mysql_tab_exists(cfg,event) == 0:
                           create_mysql_table(cfg,event)
-                          full_sync(cfg, event)
+                          full_sync_one(cfg, event)
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                           ddl_amount = ddl_amount +1
                        else:
@@ -1000,7 +1013,7 @@ def start_incr_syncer(cfg):
                             event['tab'] = event['schema'] + '.' + event['table']
                             event['column'] = col[event['tab']]
                             create_mysql_table(cfg, event)
-                            full_sync(cfg, event)
+                            start_full_sync(cfg, event)
                             types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
 
                         if isinstance(binlogevent, DeleteRowsEvent):
@@ -1045,13 +1058,7 @@ def start_incr_syncer(cfg):
 
 def start_full_sync(cfg):
     log("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
-    for o in cfg['sync_table']:
-        if o != '':
-            event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
-            if check_tab_exists_pk(cfg,event) >0 and check_mysql_tab_exists(cfg, event) == 0:
-                event['tab'] = event['schema']+'.'+event['table']
-                create_mysql_table(cfg, event)
-                full_sync(cfg,event)
+    full_sync_many(cfg)
 
 
 def get_task_status(cfg):

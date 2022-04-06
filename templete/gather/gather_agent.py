@@ -313,21 +313,35 @@ def get_tbs_usage(config):
 
 def write_disk_init_info(config):
     d_disk_io  ={}
-    d_disk_io['read_count']  = psutil.disk_io_counters().read_count
-    d_disk_io['write_count'] = psutil.disk_io_counters().write_count
-    d_disk_io['read_bytes']  = psutil.disk_io_counters().read_bytes
-    d_disk_io['write_bytes'] = psutil.disk_io_counters().write_bytes
-    d_disk_io['read_time']   = int(time.time())
-    d_disk_io['write_time']  = int(time.time())
+    try:
+        d_disk_io['read_count']  = psutil.disk_io_counters().read_count
+        d_disk_io['write_count'] = psutil.disk_io_counters().write_count
+        d_disk_io['read_bytes']  = psutil.disk_io_counters().read_bytes
+        d_disk_io['write_bytes'] = psutil.disk_io_counters().write_bytes
+        d_disk_io['read_time']   = int(time.time())
+        d_disk_io['write_time']  = int(time.time())
+    except:
+        d_disk_io['read_count'] = 0
+        d_disk_io['write_count'] = 0
+        d_disk_io['read_bytes'] = 0
+        d_disk_io['write_bytes'] = 0
+        d_disk_io['read_time'] = int(time.time())
+        d_disk_io['write_time'] = int(time.time())
     with open(os.getcwd()+'/disk_io.ini', 'w') as f:
         f.write(json.dumps(d_disk_io, ensure_ascii=False, indent=4, separators=(',', ':')))
 
 def write_net_init_info(config):
     d_net_io = {}
-    d_net_io['sent_bytes'] = psutil.net_io_counters().bytes_sent
-    d_net_io['recv_bytes'] = psutil.net_io_counters().bytes_recv
-    d_net_io['sent_time']  = int(time.time())
-    d_net_io['recv_time']  = int(time.time())
+    try:
+        d_net_io['sent_bytes'] = psutil.net_io_counters().bytes_sent
+        d_net_io['recv_bytes'] = psutil.net_io_counters().bytes_recv
+        d_net_io['sent_time']  = int(time.time())
+        d_net_io['recv_time']  = int(time.time())
+    except:
+        d_net_io['sent_bytes'] = 0
+        d_net_io['recv_bytes'] = 0
+        d_net_io['sent_time'] = int(time.time())
+        d_net_io['recv_time'] = int(time.time())
     with open('net_io.ini', 'w') as f:
         f.write(json.dumps(d_net_io, ensure_ascii=False, indent=4, separators=(',', ':')))
 
@@ -338,13 +352,21 @@ def get_disk_io_info(config):
     # with open(os.getcwd()+'/disk_io.ini', 'r') as f:
     #     prev_disk_io = f.read()
     # d_prev_disk_io=json.loads(prev_disk_io)
-    d_prev_disk_io['read_bytes']  = psutil.disk_io_counters().read_bytes
-    d_prev_disk_io['write_bytes'] = psutil.disk_io_counters().write_bytes
+    try:
+        d_prev_disk_io['read_bytes']  = psutil.disk_io_counters().read_bytes
+        d_prev_disk_io['write_bytes'] = psutil.disk_io_counters().write_bytes
+    except:
+        d_prev_disk_io['read_bytes'] = 0
+        d_prev_disk_io['write_bytes'] = 0
     d_prev_disk_io['read_time']   = int(time.time())
     d_prev_disk_io['write_time']  = int(time.time())
     time.sleep(1)
-    d_disk_io['read_bytes']       = psutil.disk_io_counters().read_bytes
-    d_disk_io['write_bytes']      = psutil.disk_io_counters().write_bytes
+    try:
+        d_disk_io['read_bytes']       = psutil.disk_io_counters().read_bytes
+        d_disk_io['write_bytes']      = psutil.disk_io_counters().write_bytes
+    except:
+        d_disk_io['read_bytes']       = 0
+        d_disk_io['write_bytes']      = 0
     d_disk_io['read_time']        = int(time.time())
     d_disk_io['write_time']       = int(time.time())
     disk_stats['read_bytes']      = int((d_disk_io['read_bytes']  * 1.0 - d_prev_disk_io['read_bytes']) / (d_disk_io['read_time'] - d_prev_disk_io['read_time']))
@@ -820,11 +842,13 @@ def main():
     config=init(config)
 
     #数据同步
-    if ping(config):
-       print('ping is ok!')
-       gather(config)
-    else:
-       print('ping is not ok,exit!')
+    # if ping(config):
+    #    print('ping is ok!')
+    #    gather(config)
+    # else:
+    #    print('ping is not ok,exit!')
+    gather(config)
+
 
 
 if __name__ == "__main__":
