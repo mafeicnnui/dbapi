@@ -345,23 +345,23 @@ def write_mysql(cfg,tab):
     write_sync_log(cfg)
     log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
-    #rs_log_process = process_sql(rs_log)
     ids=''
-    #for r in rs_log_process:
     for r in rs_log:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
         if check_mysql_tab_exists(cr_dest,cfg,event) == 0:
            log('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
            continue
         try:
-           cr_dest.execute(r['statement'])
-           ids = ids + '{},'.format(r['id'])
+            cr_dest.execute(r['statement'])
         except:
-           traceback.print_exc()
-           print('\033[1;36;40mrs_log\033[0m', rs_log)
-           # print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
-           print('\033[0;36;40m' + r['statement'] + '\033[0m')
-           sys.exit(0)
+           if traceback.format_exc().count('Duplicate entry') == 0:
+              traceback.print_exc()
+              print('\033[1;36;40mrs_log\033[0m', rs_log)
+              print('\033[0;36;40m' + r['statement'] + '\033[0m')
+              sys.exit(0)
+           else:
+              print('Duplicate entry,skip sync!')
+        ids = ids + '{},'.format(r['id'])
 
     if ids != '':
         upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
@@ -371,7 +371,6 @@ def write_mysql(cfg,tab):
         except:
           traceback.print_exc()
           sys.exit(0)
-
 
 def get_tasks(cfg):
     db = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
@@ -389,8 +388,7 @@ def get_tasks(cfg):
 def start_syncer(cfg):
     apply_time = datetime.datetime.now()
     sleep_time = datetime.datetime.now()
-    #with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
-    with ProcessPoolExecutor(max_workers=1) as executor:
+    with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
         while True:
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()

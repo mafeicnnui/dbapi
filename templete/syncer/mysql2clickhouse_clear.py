@@ -11,6 +11,7 @@ import traceback
 import requests
 import pymysql
 from clickhouse_driver import Client
+import warnings
 
 def get_ds_ck(ip,port,service ,user,password):
     return  Client(host=ip,
@@ -125,8 +126,12 @@ def print_dict(config):
 
 
 if __name__ == "__main__":
-
-    tag = 'hst_prod_real_sync_mysql_clickhouse_logger'
+    #tag = 'hst_prod_real_sync_mysql_clickhouse_logger'
+    tag = ""
+    warnings.filterwarnings("ignore")
+    for p in range(len(sys.argv)):
+        if sys.argv[p] == "-tag":
+            tag = sys.argv[p + 1]
 
     # call api get config
     cfg = get_config_from_db(tag)
@@ -148,7 +153,7 @@ if __name__ == "__main__":
            clear_real_sync_log(cfg)
            print('clear real sync log ok!')
            clear_ck_log(cfg)
-           print('clear clickhouse log ok!')
+           print('clear {} log ok!'.format(tag))
            break
         else:
            time.sleep(1)

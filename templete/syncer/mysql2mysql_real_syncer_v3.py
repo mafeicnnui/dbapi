@@ -22,16 +22,6 @@ from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
 
-def get_ds_mysql_dict(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip,
-                           port=int(port),
-                           user=user,
-                           passwd=password,
-                           db=service,
-                           charset='utf8mb4',
-                           cursorclass = pymysql.cursors.DictCursor,autocommit=True)
-    return conn
-
 class DateEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
@@ -124,22 +114,6 @@ def get_seconds(b):
     a=datetime.datetime.now()
     return int((a-b).total_seconds())
 
-def get_db(MYSQL_SETTINGS):
-    conn = pymysql.connect(host=MYSQL_SETTINGS['host'],
-                           port=int(MYSQL_SETTINGS['port']),
-                           user=MYSQL_SETTINGS['user'],
-                           passwd=MYSQL_SETTINGS['passwd'],
-                           db=MYSQL_SETTINGS['db'],
-                           charset='utf8',
-                           autocommit=True)
-    return conn
-
-def is_col_null(is_nullable):
-    if is_nullable == 'NO':
-       return False
-    else:
-       return True
-
 def check_mysql_tab_exists(cfg,event):
    cr= cfg['cr_mysql_dest']
    st="""select count(0) from information_schema.tables
@@ -186,7 +160,6 @@ def f_get_table_ddl(cfg,event):
     rs = cr.fetchone()
     re = rs[1].replace('CREATE TABLE `','CREATE TABLE `{0}`.`'.format(get_mysql_schema(cfg, event)))
     return re
-
 
 def create_mysql_table(cfg,event):
     cr= cfg['cr_mysql_dest']
@@ -332,14 +305,10 @@ def create_table_many(cfg):
                 create_mysql_table(cfg, event)
 
 def full_sync_one(cfg,event):
-    # set session iso level is repeattable
-    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
-    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
     # full sync
-    if check_tab_exists_pk(cfg,event) >0 and check_mysql_tab_exists(cfg, event) == 0:
+    if check_tab_exists_pk(cfg,event) >0 and check_mysql_tab_exists_data(cfg, event) == 0:
         event['tab'] = event['schema']+'.'+event['table']
         full_sync(cfg,event)
-    cfg['db_mysql'].commit()
 
 def full_sync_many(cfg):
     # set session iso level is repeattable
@@ -502,7 +471,6 @@ def get_ck_col_type(v_type,v_value):
         v = "'{}'".format(v_value)
     return v
 
-
 def get_where_upd(event):
     v_where = ' where '
     v_pk_name = '('
@@ -546,17 +514,8 @@ def gen_ddl_sql(p_ddl):
 def get_file_and_pos(cfg):
     cr = cfg['cr_mysql']
     cr.execute('show master status')
-    ds = cr.fetchone()
-    return ds
-
-def get_binlog_files(cfg):
-    cr = cfg['cr_mysql']
-    cr.execute('show binary logs')
-    files = []
-    rs = cr.fetchall()
-    for r in rs:
-        files.append(r[0])
-    return files
+    rs = cr.fetchone()
+    return rs
 
 def merge_insert(data):
     header = data[0]['sql'].split(' values ')[0]
@@ -565,7 +524,6 @@ def merge_insert(data):
         body = body +d['sql'].split(' values ')[1][0:-1]+','
     sql = header+' values '+body[0:-1]
     return {'event':'insert','sql': sql ,'amount':len(data)}
-
 
 def check_sync(cfg,event,pks):
     res = False
@@ -576,18 +534,6 @@ def check_sync(cfg,event,pks):
        if  event['schema']+'.'+event['table'] in cfg['sync_check']:
            return True
     return res
-
-def check_batch_exist_data(batch):
-    for k in batch:
-        if len(batch[k])>0:
-           return True
-    return False
-
-def check_batch_full_data(batch,cfg):
-    for k in batch:
-        if len(batch[k])>0 and len(batch[k]) % cfg['batch_size'] == 0:
-           return True
-    return False
 
 def write_ckpt(cfg):
     file, pos = get_file_and_pos(cfg)[0:2]
@@ -600,7 +546,6 @@ def write_ckpt(cfg):
     }
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
-
 
 def check_ckpt(cfg):
     return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
@@ -616,11 +561,9 @@ def read_ckpt(cfg):
         pos = binlog['binlogpos']
         return file,pos
 
-
 def get_ds_mysql_sour(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=False)
     return conn
-
 
 def get_ds_mysql_dest(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=True)
@@ -696,9 +639,7 @@ def get_config_from_db(tag):
                                                           config['db_mysql_pass_log'])
             config['cr_mysql_log']        = config['db_mysql_log'].cursor()
 
-        config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = float(config['sync_gap'])
-        
         config['sync_event']            = []
         config['sync_event_timeout']    = datetime.datetime.now()
 
@@ -733,7 +674,6 @@ def get_tables(cfg,o):
            vv2 = vv2 + '{}.{},'.format(sdb,i[0])
     return vv1[0:-1],vv2[0:-1]
 
-
 def get_sync_tables(cfg):
     v1 = ''
     v2 = ''
@@ -751,7 +691,6 @@ def write_event(cfg,event):
     st = """insert into t_db_sync_log(`sync_table`,`statement`) 
               values('{}','{}') """.format(event['tab'],json.dumps(event,cls=DateEncoder))
     cfg['cr_mysql_log'].execute(st)
-
 
 def merge_insert(data):
    s = "insert into t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) values "
@@ -794,9 +733,9 @@ def write_sql(cfg,event):
     )
     log2('[{}] writing event {} into buffer[{}/{}]!'.
          format(cfg['sync_tag'].split('_')[0],event['action'],int(cfg['batch_size_incr']),len(cfg['sync_event'])))
-    log2('sync_event_timeout=' + str(cfg['sync_event_timeout']))
-    log2('sync_gap=' + str(cfg['sync_gap']))
-    log2('sync_timeout=' + str(get_seconds(cfg['sync_event_timeout'])))
+    # log2('sync_event_timeout=' + str(cfg['sync_event_timeout']))
+    # log2('sync_gap=' + str(cfg['sync_gap']))
+    # log2('sync_timeout=' + str(get_seconds(cfg['sync_event_timeout'])))
     flush_buffer(cfg)
 
 def get_time():
@@ -1013,7 +952,7 @@ def start_incr_syncer(cfg):
                             event['tab'] = event['schema'] + '.' + event['table']
                             event['column'] = col[event['tab']]
                             create_mysql_table(cfg, event)
-                            start_full_sync(cfg, event)
+                            full_sync_one(cfg, event)
                             types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
 
                         if isinstance(binlogevent, DeleteRowsEvent):
