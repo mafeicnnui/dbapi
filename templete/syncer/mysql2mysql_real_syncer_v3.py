@@ -839,7 +839,7 @@ def init_diff_cfg(cfg):
     pks   = {}
     pkn   = {}
     col   = {}
-    for o in list(set(cfg['sync_table_diff'])-set(cfg['sync_table_diff'])):
+    for o in list(set(cfg['sync_table'])-set(cfg['sync_table_diff'])):
         if o != '':
             evt = {'schema':o.split('$')[0].split('.')[0],'table':o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
             tab = evt['schema']+'.'+evt['table']
@@ -1278,7 +1278,7 @@ if __name__ == "__main__":
           log('load config faulure,exit sync!')
           sys.exit(0)
 
-       # init go full sync
+       # init full sync
        start_full_sync(cfg)
 
        # apply diff logs from config ckpt to full sync ckpt
