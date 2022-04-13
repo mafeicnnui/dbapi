@@ -276,7 +276,7 @@ def db_backup_windows(config):
     os.system(v_del)
 
     print('remote backup...')
-    v_remote ="""D:\\cwRsync\\rsync.bat '{}'""".format(datetime.datetime.now().strftime("%Y%m%d"))
+    v_remote ="""D:\\cwRsync\\rsync.bat '{}'""".format(datetime.datetime.now().strftime("%Y%m"))
     print(v_remote)
     os.system(v_remote)
 

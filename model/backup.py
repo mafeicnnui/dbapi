@@ -76,14 +76,14 @@ async def get_db_config(p_tag):
                    rs['ro'] = False if ro['value'] == 'OFF' else True
                 print('from ds read master an slave status ok!')
            except:
-                traceback.print_exc()
                 try:
-                    print('from ds read master and slave status failure,try from related_id read ...')
-                    print('related_id=',rs['related_id'])
+                    print('from ds read master and slave status failure,try from related_id={} read ...'.format(rs['related_id']))
                     ds = await get_ds_by_dsid(rs['related_id'])
                     print('ds=',ds)
                     ms = await async_processer.query_dict_one_by_ds(ds, 'show master status')
+                    print('ms=',ms)
                     sv = await async_processer.query_dict_one_by_ds(ds, 'show slave status')
+                    print('sv=',sv)
                     ro = await async_processer.query_dict_one_by_ds(ds, "SHOW VARIABLES LIKE 'read_only'")
                     print('ro=', ro)
                     if ms is not None:
