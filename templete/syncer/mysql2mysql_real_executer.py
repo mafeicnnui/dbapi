@@ -354,13 +354,17 @@ def write_mysql(cfg,tab):
         try:
             cr_dest.execute(r['statement'])
         except:
-           if traceback.format_exc().count('Duplicate entry') == 0:
-              traceback.print_exc()
-              print('\033[1;36;40mrs_log\033[0m', rs_log)
-              print('\033[0;36;40m' + r['statement'] + '\033[0m')
-              sys.exit(0)
-           else:
-              print('Duplicate entry,skip sync!')
+            traceback.print_exc()
+            print('\033[1;36;40mrs_log\033[0m', rs_log)
+            print('\033[0;36;40m' + r['statement'] + '\033[0m')
+            sys.exit(0)
+           # if traceback.format_exc().count('Duplicate entry') == 0:
+           #    traceback.print_exc()
+           #    print('\033[1;36;40mrs_log\033[0m', rs_log)
+           #    print('\033[0;36;40m' + r['statement'] + '\033[0m')
+           #    sys.exit(0)
+           # else:
+           #    print('Duplicate entry,skip sync!')
         ids = ids + '{},'.format(r['id'])
 
     if ids != '':
