@@ -381,17 +381,19 @@ def merge_buffer(buffer):
 def process_sql(logs):
     nbatch = []
     buffer = []
+    latest_table = logs[0]['sync_table']
     latest_event = logs[0]['type']
     buffer.append({'sync_table':logs[0]['sync_table'],'type':latest_event,'statement':logs[0]['statement'],'id':logs[0]['id']})
 
     for log in logs[1:]:
-        if log['type'] == latest_event:
+        if log['sync_table'] == latest_table and log['type'] == latest_event:
            buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
         else:
            if len(buffer)>0:
                nbatch.extend(merge_buffer(buffer))
                buffer = []
            buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
+           latest_table = log['sync_table']
            latest_event = log['type']
 
     if  len(buffer)>0:
@@ -524,6 +526,7 @@ def write_ck(cfg,tab):
     log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
     rs_log_process=process_sql(rs_log)
+    print('rs_log_process>>>:',rs_log_process)
     db_ck  = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
     ids=''
     for r in rs_log_process:
@@ -539,6 +542,7 @@ def write_ck(cfg,tab):
                if get_ck_async_task_table(cfg,db_ck,evt) == 0:
                   break
                time.sleep(0.1)
+           print('Execute>>>:',r['statement'])
            db_ck.execute(r['statement'])
            ids = ids + '{},'.format(r['id'])
         except:
@@ -556,6 +560,7 @@ def write_ck(cfg,tab):
     if ids != '':
         upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
         try:
+          print('Execute>>>:', upd)
           cr_log.execute(upd)
           print('Task {} execute complete!'.format(tab))
         except:
@@ -564,6 +569,7 @@ def write_ck(cfg,tab):
           print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
           print('\033[1;36;40mids\033[0m', ids)
           print('\033[1;36;40mupd===========>\033[0m', upd)
+          sys.exit(0)
 
 
 def get_tasks(cfg):

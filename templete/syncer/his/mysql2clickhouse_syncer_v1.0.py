@@ -559,14 +559,14 @@ def write_ckpt(cfg):
         'curr_binlogfile':cfg['curr_binlogfile'],
         'curr_binlogpos':cfg['curr_binlogpos']
     }
-    with open('mysqlbinlog.json', 'w') as f:
+    with open('../mysqlbinlog.json', 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
 
 def check_ckpt():
-    return os.path.isfile('mysqlbinlog.json')
+    return os.path.isfile('../mysqlbinlog.json')
 
 def read_ckpt():
-    with open('mysqlbinlog.json', 'r') as f:
+    with open('../mysqlbinlog.json', 'r') as f:
         contents = f.read()
     if  contents == '':
         return ''
