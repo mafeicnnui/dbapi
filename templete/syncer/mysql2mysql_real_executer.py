@@ -11,6 +11,7 @@ import time
 import json
 import requests
 import pymysql
+import logging
 import datetime
 import warnings
 import traceback
@@ -36,9 +37,15 @@ def print_dict(config):
     print('-'.ljust(85, '-'))
     print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
     print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
+    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logging.info('-'.ljust(85, '-'))
     for key in config:
         print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
+        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
     print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
+
 
 def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -178,6 +185,7 @@ def get_config_from_db(tag):
             config['db_mysql_pass_log']    = aes_decrypt(config['ds_log']['password'],config['ds_log']['user'])
         else:
             print('mysql日志库不能为空!')
+            logging.info('mysql日志库不能为空!')
             sys.exit(0)
 
         config = get_sync_tables(config)
@@ -321,10 +329,10 @@ def write_sync_log(config):
 
 def write_mysql(cfg,tab):
     db_dest = get_ds_mysql(cfg['db_mysql_ip_dest'],
-                                 cfg['db_mysql_port_dest'],
-                                 cfg['db_mysql_service_dest'],
-                                 cfg['db_mysql_user_dest'],
-                                 cfg['db_mysql_pass_dest'])
+                           cfg['db_mysql_port_dest'],
+                           cfg['db_mysql_service_dest'],
+                           cfg['db_mysql_user_dest'],
+                           cfg['db_mysql_pass_dest'])
     cr_dest = db_dest.cursor()
     db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
                                cfg['db_mysql_port_log'],
@@ -344,34 +352,33 @@ def write_mysql(cfg,tab):
     cfg['ddl_amount'] = 0
     write_sync_log(cfg)
     log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
-
+    logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
     ids=''
     for r in rs_log:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
         if check_mysql_tab_exists(cr_dest,cfg,event) == 0:
            log('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
+           logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
+           time.sleep(1)
            continue
         try:
             cr_dest.execute(r['statement'])
+            ids = ids + '{},'.format(r['id'])
         except:
             traceback.print_exc()
             print('\033[1;36;40mrs_log\033[0m', rs_log)
             print('\033[0;36;40m' + r['statement'] + '\033[0m')
+            logging.info('\033[1;36;40mrs_log\033[0m', rs_log)
+            logging.info('\033[0;36;40m' + r['statement'] + '\033[0m')
             sys.exit(0)
-           # if traceback.format_exc().count('Duplicate entry') == 0:
-           #    traceback.print_exc()
-           #    print('\033[1;36;40mrs_log\033[0m', rs_log)
-           #    print('\033[0;36;40m' + r['statement'] + '\033[0m')
-           #    sys.exit(0)
-           # else:
-           #    print('Duplicate entry,skip sync!')
-        ids = ids + '{},'.format(r['id'])
+
 
     if ids != '':
         upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
         try:
           cr_log.execute(upd)
           print('Task {} execute complete!'.format(tab))
+          logging.info('Task {} execute complete!'.format(tab))
         except:
           traceback.print_exc()
           sys.exit(0)
@@ -386,18 +393,29 @@ def get_tasks(cfg):
     st = """SELECT sync_table,count(0) as amount FROM t_db_sync_log 
                WHERE  status='0' and sync_tag='{}' GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['process_num'])
     cr.execute(st)
-    rs =cr.fetchall()
+    rs = cr.fetchall()
     return  rs
+
+def read_real_sync_status():
+    try:
+        url = 'http://$$API_SERVER$$/get_mysql_real_sync_status'
+        res = requests.post(url,timeout=3).json()
+        return res
+    except:
+         traceback.print_exc()
+         sys.exit(0)
 
 def start_syncer(cfg):
     apply_time = datetime.datetime.now()
     sleep_time = datetime.datetime.now()
+    sync_time  = datetime.datetime.now()
     with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
         while True:
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()
                cfg = get_config_from_db(cfg['sync_tag'])
                log("\033[1;36;40\nmapply config success\033[0m")
+               logging.info("\033[1;36;40\nmapply config success\033[0m")
 
             tasks = get_tasks(cfg)
             if tasks!=():
@@ -407,6 +425,13 @@ def start_syncer(cfg):
                     print(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = ', task['amount'])
                 print('-'.ljust(85, '-'))
                 print('\n')
+
+                logging.info('\n检测到新事件：')
+                logging.info('-'.ljust(85, '-'))
+                for task in tasks:
+                    logging.info(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = '+ str(task['amount']))
+                logging.info('-'.ljust(85, '-'))
+                logging.info('\n')
 
                 sleep_time = datetime.datetime.now()
                 all_task = [executor.submit(write_mysql,cfg,t['sync_table']) for t in tasks]
@@ -418,6 +443,26 @@ def start_syncer(cfg):
             else:
                time.sleep(0.1)
                print('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))),end='')
+               logging.info('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
+               if get_seconds(sync_time) >= 3:
+                   sync_time = datetime.datetime.now()
+                   if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                       while True:
+                           time.sleep(1)
+                           if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                               log2("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                               logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                               continue
+                           elif read_real_sync_status()['msg']['value'] == 'STOP':
+                               log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                               logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                               sys.exit(0)
+                           else:
+                               break
+                   elif read_real_sync_status()['msg']['value'] == 'STOP':
+                       log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                       logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                       sys.exit(0)
 
 
 def get_task_status(cfg):
@@ -425,10 +470,19 @@ def get_task_status(cfg):
     r = os.popen(c).read()
     if int(r) > 2 :
        log('Executer Task already running!')
+       logging.info('Executer Task already running!')
        return True
     else:
        return False
 
+class DateEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(obj, datetime.date):
+            return obj.strftime("%Y-%m-%d")
+        else:
+            return json.JSONEncoder.default(self, obj)
 
 if __name__=="__main__":
     tag = ""
@@ -437,11 +491,16 @@ if __name__=="__main__":
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
 
+    # init logger
+    logging.basicConfig(filename='/tmp/{}.log'.format(tag), format='[%(asctime)s-%(levelname)s:%(message)s]',
+                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+
     # call api get config
     cfg = get_config_from_db(tag)
 
     # print cfg
     print_dict(cfg)
+    #logging.info(json.dumps(cfg,cls=DateEncoder, ensure_ascii=False, indent=4, separators=(',', ':')))
 
     # check task
     if not get_task_status(cfg):
