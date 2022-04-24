@@ -15,8 +15,138 @@ import logging
 import datetime
 import warnings
 import traceback
+import smtplib
+import socket
+from email.mime.text import MIMEText
 from clickhouse_driver import Client
 from concurrent.futures import ProcessPoolExecutor,wait,as_completed
+
+def socket_port(ip, port):
+    try:
+        socket.setdefaulttimeout(1)
+        s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result=s.connect_ex((ip, port))
+        if result==0:
+          return True
+        else:
+          return False
+    except:
+        return False
+
+def get_available_port():
+    for p in [465,25]:
+        if socket_port("smtp.exmail.qq.com",p):
+            return p
+
+def send_mail(p_from_user,p_from_pass,p_to_user,p_title,p_content):
+    to_user = p_to_user.split(",")
+    try:
+        msg = MIMEText(p_content, 'html', 'utf-8')
+        msg["Subject"] = p_title
+        msg["From"] = p_from_user
+        msg["To"] = ",".join(to_user)
+        server = smtplib.SMTP("smtp.exmail.qq.com", 25)
+        server.set_debuglevel(0)
+        server.login(p_from_user, p_from_pass)
+        server.sendmail(p_from_user, to_user, msg.as_string())
+        server.quit()
+    except smtplib.SMTPException as e:
+        print(e)
+
+def send_mail25(p_sendserver,p_from_user,p_from_pass,p_to_user,p_title,p_content):
+    to_user=p_to_user.split(",")
+    try:
+        msg = MIMEText(p_content,'html','utf-8')
+        msg["Subject"] = p_title
+        msg["From"]    = p_from_user
+        msg["To"]      = ",".join(to_user)
+        server = smtplib.SMTP(p_sendserver, 25)
+        server.set_debuglevel(0)
+        server.login(p_from_user, p_from_pass)
+        server.sendmail(p_from_user, to_user, msg.as_string())
+        server.quit()
+    except smtplib.SMTPException as e:
+        print(e)
+
+def send_mail465(p_sendserver,p_from_user,p_from_pass,p_to_user,p_title,p_content):
+    to_user=p_to_user.split(",")
+    try:
+        msg = MIMEText(p_content,'html','utf-8')
+        msg["Subject"] = p_title
+        msg["From"]    = p_from_user
+        msg["To"]      = ",".join(to_user)
+        server = smtplib.SMTP_SSL(p_sendserver, 465)
+        server.set_debuglevel(0)
+        server.login(p_from_user, p_from_pass)
+        server.sendmail(p_from_user, to_user, msg.as_string())
+        server.quit()
+    except smtplib.SMTPException as e:
+        print(e)
+
+def send_mail_param(p_sendserver,p_from_user, p_from_pass, p_to_user, p_title, p_content):
+    try:
+        port = get_available_port()
+        if port == 465:
+           print('send_mail465')
+           send_mail465(p_sendserver,p_from_user, p_from_pass, p_to_user, p_title, p_content)
+        else:
+           print('send_mail25')
+           send_mail25(p_sendserver,p_from_user, p_from_pass, p_to_user, p_title, p_content)
+        print('send_mail_param send success!')
+    except :
+        print("send_mail_param exception:")
+        traceback.print_exc()
+
+def exception_executer(config,p_error):
+    v_templete = '''
+        <html>
+           <head>
+              <style type="text/css">
+                  .xwtable {width: 100%;border-collapse: collapse;border: 1px solid #ccc;}
+                  .xwtable thead td {font-size: 12px;color: #333333;
+                                     text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                     border: 1px solid #ccc; font-weight:bold;}
+                  .xwtable thead th {font-size: 12px;color: #333333;
+                                     text-align: center;background: url(table_top.jpg) repeat-x top center;
+                                     border: 1px solid #ccc; font-weight:bold;}
+                  .xwtable tbody tr {background: #fff;font-size: 12px;color: #666666;}
+                  .xwtable tbody tr.alt-row {background: #f2f7fc;}
+                  .xwtable td{line-height:20px;text-align: left;padding:4px 10px 3px 10px;height: 18px;border: 1px solid #ccc;}
+              </style>
+           </head>
+           <body>             
+              <table class='xwtable'>
+                  <tr><td  width="30%">任务描述</td><td  width="70%">$$task_desc$$</td></tr>
+                  <tr><td>任务标识</td><td>$$sync_tag$$</td></tr>                 
+                  <tr><td>业务类型</td><td>$$sync_ywlx$$</td></tr>
+                  <tr><td>同步方向</td><td>$$sync_type$$</td></tr>
+                  <tr><td>同步服务器</td><td>$$server_id$$</td></tr>
+                  <tr><td>源数据源</td><td>$$sync_db_sour$$</td></tr>
+                  <tr><td>目标数据源</td><td>$$sync_db_dest$$</td></tr>
+                  <tr><td>同步表名</td><td>$$sync_table$$</td></tr>
+                  <tr><td>时间类型</td><td>$$sync_time_type$$</td></tr>
+                  <tr><td>同步脚本</td><td>$$script_file$$</td></tr>
+                  <tr><td>运行时间</td><td>$$run_time$$</td></tr>                
+                  <tr><td>异常信息</td><td>$$run_error$$</td></tr>
+              </table>                
+           </body>
+        </html>
+       '''
+    v_title   = config.get('comments')+'数据同步数据库异常[★★★]'
+    v_content = v_templete.replace('$$task_desc$$', config.get('comments'))
+    v_content = v_content.replace('$$sync_tag$$',   config.get('sync_tag'))
+    v_content = v_content.replace('$$sync_ywlx$$' , config.get('sync_ywlx_name'))
+    v_content = v_content.replace('$$sync_type$$' , config.get('sync_type_name'))
+    v_content = v_content.replace('$$server_id$$', str(config.get('server_desc')))
+    v_content = v_content.replace('$$sync_db_sour$$', config.get('sync_db_sour'))
+    v_content = v_content.replace('$$sync_db_dest$$', config.get('sync_db_dest'))
+    v_content = v_content.replace('$$sync_table$$', config.get('sync_table'))
+    v_content = v_content.replace('$$sync_time_type$$', config.get('sync_time_type_name'))
+    v_content = v_content.replace('$$script_file$$', config.get('script_file'))
+    v_content = v_content.replace('$$run_time$$', config.get('run_time'))
+    v_content = v_content.replace('$$run_error$$', str(p_error))
+    #send_mail25('190343@lifeat.cn','Hhc5HBtAuYTPGHQ8','190343@lifeat.cn', v_title,v_content
+    send_mail_param(config.get('send_server'),config.get('sender'),config.get('sendpass'),config.get('receiver'),v_title, v_content)
 
 def log(msg,pos='l'):
     tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
@@ -34,16 +164,11 @@ def get_seconds(b):
     return int((a-b).total_seconds())
 
 def print_dict(config):
-    print('-'.ljust(85, '-'))
-    print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
-    print('-'.ljust(85, '-'))
     logging.info('-'.ljust(85, '-'))
     logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
     logging.info('-'.ljust(85, '-'))
     for key in config:
-        print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
         logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
-    print('-'.ljust(85, '-'))
     logging.info('-'.ljust(85, '-'))
 
 
@@ -59,9 +184,9 @@ def aes_decrypt(p_password,p_key):
             config = res['msg']
             return config
         else:
-            log('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
+            logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
     except:
-        log('aes_decrypt api not available!')
+        logging.info('aes_decrypt api not available!')
 
 def get_ds_mysql(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip,
@@ -219,88 +344,6 @@ def check_mysql_tab_exists(cr,cfg,event):
    rs = cr.fetchone()
    return rs[0]
 
-def merge_buffer(buffer):
-    print('merge_buffer=',buffer)
-    type = buffer[0]['type']
-    table = buffer[0]['sync_table']
-    if type == 'insert':
-       h = buffer[0]['statement'].split(' values ')[0]
-       b = ''
-       i = ''
-       for o in buffer:
-         b = b + o['statement'].split(' values ')[1]+','
-         i = i + str(o['id'])+','
-       return  [
-           {'sync_table':table,'type': type, 'statement': h + ' values ' + b[0:-1],'id':i[0:-1]}
-       ]
-
-    if type == 'delete':
-        hd = buffer[0]['statement'].split(' = ')[0]
-        bd = ''
-        id= ''
-        for o in buffer:
-            if len(hd.split('where')[1].split(',')) > 1:
-                bd = bd + o['statement'].split('^^^')[0].split(' = ')[1] + ' union all '
-            else:
-                bd = bd + o['statement'].split('^^^')[0].split(' = ')[1] + ','
-
-            id = id + str(o['id']) + ','
-
-        if len(hd.split('where')[1].split(',')) > 1:
-            return [
-                {'sync_table': table, 'type': 'delete', 'statement': hd + ' in (' + bd[0:-10] + ')', 'id': id[0:-1]},
-            ]
-        else:
-            return [
-                {'sync_table': table, 'type': 'delete', 'statement': hd + ' in (' + bd[0:-1] + ')', 'id': id[0:-1]},
-            ]
-
-    if type == 'update':
-       bd = ''
-       bi = ''
-       id = ''
-       hd = buffer[0]['statement'].split('^^^')[0].split(' = ')[0]
-       hi = buffer[0]['statement'].split('^^^')[1].split(' values ')[0]
-       for o in buffer:
-           if len(hd.split('where')[1].split(','))>1:
-              bd = bd + o['statement'].split('^^^')[0].split(' = ')[1]+ ' union all '
-           else:
-              bd = bd + o['statement'].split('^^^')[0].split(' = ')[1] + ','
-
-           bi = bi + o['statement'].split('^^^')[1].split(' values ')[1]+','
-           id = id + str(o['id']) + ','
-
-       if  len(hd.split('where')[1].split(','))>1:
-           return [
-                  { 'sync_table':table,'type': 'delete', 'statement': hd + ' in (' + bd[0:-10] + ')','id': id[0:-1] },
-                  { 'sync_table':table,'type': 'insert', 'statement': hi + ' values ' + bi[0:-1],'id': id[0:-1] }
-           ]
-       else:
-           return [
-               {'sync_table': table, 'type': 'delete', 'statement': hd + ' in (' + bd[0:-1] + ')', 'id': id[0:-1]},
-               {'sync_table': table, 'type': 'insert', 'statement': hi + ' values ' + bi[0:-1], 'id': id[0:-1]}
-           ]
-
-def process_sql(logs):
-    nbatch = []
-    buffer = []
-    latest_event = logs[0]['type']
-    buffer.append({'sync_table':logs[0]['sync_table'],'type':latest_event,'statement':logs[0]['statement'],'id':logs[0]['id']})
-
-    for log in logs[1:]:
-        if log['type'] == latest_event:
-           buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
-        else:
-           if len(buffer)>0:
-               nbatch.extend(merge_buffer(buffer))
-               buffer = []
-           buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
-           latest_event = log['type']
-
-    if  len(buffer)>0:
-        nbatch.extend(merge_buffer(buffer))
-    return nbatch
-
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -351,13 +394,11 @@ def write_mysql(cfg,tab):
     cfg['delete_amount'] = 0
     cfg['ddl_amount'] = 0
     write_sync_log(cfg)
-    log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
     logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
     ids=''
     for r in rs_log:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
         if check_mysql_tab_exists(cr_dest,cfg,event) == 0:
-           log('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
            logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
            time.sleep(1)
            continue
@@ -365,11 +406,19 @@ def write_mysql(cfg,tab):
             cr_dest.execute(r['statement'])
             ids = ids + '{},'.format(r['id'])
         except:
-            traceback.print_exc()
-            print('\033[1;36;40mrs_log\033[0m', rs_log)
-            print('\033[0;36;40m' + r['statement'] + '\033[0m')
+            logging.info('execute statement error!')
+            logging.info(traceback.print_exc())
             logging.info('\033[1;36;40mrs_log\033[0m', rs_log)
             logging.info('\033[0;36;40m' + r['statement'] + '\033[0m')
+            # send mail
+            v_title = 'mysql->mysql实时同步任务执行失败告警[e]'
+            v_error = 'execute statement error!\n' + traceback.print_exc()+'\n'+'rs_log='+rs_log+'\n'+'statement='+r['statement']
+            v_templete = exception_executer(cfg,v_error)
+            send_mail_param(cfg.get('send_server'),
+                            cfg.get('sender'),
+                            cfg.get('sendpass'),
+                            cfg.get('receiver'),
+                            v_title, v_templete)
             sys.exit(0)
 
 
@@ -377,10 +426,19 @@ def write_mysql(cfg,tab):
         upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
         try:
           cr_log.execute(upd)
-          print('Task {} execute complete!'.format(tab))
           logging.info('Task {} execute complete!'.format(tab))
         except:
-          traceback.print_exc()
+          logging.info('update t_db_sync_log error!')
+          logging.info(traceback.print_exc())
+          # send mail
+          v_title = 'mysql->mysql实时同步任务执行失败告警[u]'
+          v_error = 'update t_db_sync_log error!\n' + traceback.print_exc() + '\n' + 'upd=' + upd
+          v_templete = exception_executer(cfg, v_error)
+          send_mail_param(cfg.get('send_server'),
+                          cfg.get('sender'),
+                          cfg.get('sendpass'),
+                          cfg.get('receiver'),
+                          v_title, v_templete)
           sys.exit(0)
 
 def get_tasks(cfg):
@@ -414,18 +472,10 @@ def start_syncer(cfg):
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()
                cfg = get_config_from_db(cfg['sync_tag'])
-               log("\033[1;36;40\nmapply config success\033[0m")
                logging.info("\033[1;36;40\nmapply config success\033[0m")
 
             tasks = get_tasks(cfg)
             if tasks!=():
-                log('\n检测到新事件：','r')
-                print('-'.ljust(85, '-'))
-                for task in tasks:
-                    print(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = ', task['amount'])
-                print('-'.ljust(85, '-'))
-                print('\n')
-
                 logging.info('\n检测到新事件：')
                 logging.info('-'.ljust(85, '-'))
                 for task in tasks:
@@ -441,26 +491,24 @@ def start_syncer(cfg):
                     if res is not None:
                        log(res)
             else:
-               time.sleep(0.1)
-               print('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))),end='')
-               logging.info('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
+               if get_seconds(sleep_time) % 60 == 0:
+                  logging.info('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
+                  time.sleep(1)
+
                if get_seconds(sync_time) >= 3:
                    sync_time = datetime.datetime.now()
                    if read_real_sync_status()['msg']['value'] == 'PAUSE':
                        while True:
                            time.sleep(1)
                            if read_real_sync_status()['msg']['value'] == 'PAUSE':
-                               log2("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                continue
                            elif read_real_sync_status()['msg']['value'] == 'STOP':
-                               log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                sys.exit(0)
                            else:
                                break
                    elif read_real_sync_status()['msg']['value'] == 'STOP':
-                       log("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                        logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                        sys.exit(0)
 
@@ -469,7 +517,6 @@ def get_task_status(cfg):
     c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
     r = os.popen(c).read()
     if int(r) > 2 :
-       log('Executer Task already running!')
        logging.info('Executer Task already running!')
        return True
     else:
@@ -492,16 +539,13 @@ if __name__=="__main__":
             tag = sys.argv[p + 1]
 
     # init logger
-    logging.basicConfig(filename='/tmp/{}.log'.format(tag), format='[%(asctime)s-%(levelname)s:%(message)s]',
+    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")), format='[%(asctime)s-%(levelname)s:%(message)s]',
                         level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
 
     # call api get config
     cfg = get_config_from_db(tag)
 
-    # print cfg
-    print_dict(cfg)
-    #logging.info(json.dumps(cfg,cls=DateEncoder, ensure_ascii=False, indent=4, separators=(',', ':')))
-
     # check task
     if not get_task_status(cfg):
+       print_dict(cfg)
        start_syncer(cfg)
