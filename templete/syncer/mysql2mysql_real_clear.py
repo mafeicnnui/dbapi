@@ -128,4 +128,6 @@ if __name__ == "__main__":
 
     # set sync logger status is running
     print('set sync logger process is running status!')
+    set_real_sync_status(cfg, 'STOP')
+    time.sleep(30)
     set_real_sync_status(cfg,'RUNNING')

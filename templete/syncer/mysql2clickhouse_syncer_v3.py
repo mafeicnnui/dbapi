@@ -17,7 +17,7 @@ import traceback
 import logging
 import requests
 import warnings
-import threading
+import logging
 import decimal
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
@@ -53,12 +53,17 @@ class DateEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
 
 def print_dict(config):
-    print('-'.ljust(85,'-'))
-    print(' '.ljust(3,' ')+"name".ljust(20,' ')+'value')
-    print('-'.ljust(85,'-'))
+    print('-'.ljust(85, '-'))
+    print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
+    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logging.info('-'.ljust(85, '-'))
     for key in config:
-      print(' '.ljust(3,' ')+key.ljust(20,' ')+'=',config[key])
-    print('-'.ljust(85,'-'))
+        print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
+        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
+    print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
 
 def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -1679,6 +1684,11 @@ if __name__ == "__main__":
        if cfg is None:
           log('load config faulure,exit sync!')
           sys.exit(0)
+
+       # init logger
+       logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
+                          format='[%(asctime)s-%(levelname)s:%(message)s]',
+                          level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
 
        # init go full sync
        start_full_sync(cfg)

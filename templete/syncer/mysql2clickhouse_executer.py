@@ -14,6 +14,7 @@ import pymysql
 import datetime
 import warnings
 import traceback
+import logging
 from clickhouse_driver import Client
 from concurrent.futures import ProcessPoolExecutor,wait,as_completed
 
@@ -36,9 +37,14 @@ def print_dict(config):
     print('-'.ljust(85, '-'))
     print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
     print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
+    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logging.info('-'.ljust(85, '-'))
     for key in config:
         print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
+        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
     print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
 
 def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -637,6 +643,11 @@ if __name__=="__main__":
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
+
+    # init logger
+    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
+                        format='[%(asctime)s-%(levelname)s:%(message)s]',
+                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
 
     # call api get config
     cfg = get_config_from_db(tag)
