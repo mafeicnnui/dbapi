@@ -17,6 +17,7 @@ import warnings
 import traceback
 import smtplib
 import socket
+import psutil
 from email.mime.text import MIMEText
 from clickhouse_driver import Client
 from concurrent.futures import ProcessPoolExecutor,wait,as_completed
@@ -178,7 +179,7 @@ def format_sql(v_sql):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://$$API_SERVER$$/read_db_decrypt'
+        url = 'http://124.127.103.190:21080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -266,7 +267,7 @@ def get_sync_tables(cfg):
     return cfg
 
 def get_config_from_db(tag):
-    url = 'http://$$API_SERVER$$/read_config_sync'
+    url = 'http://124.127.103.190:21080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -362,7 +363,7 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://$$API_SERVER$$/write_sync_real_log'
+        url = 'http://124.127.103.190:21080/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
            print('Interface write_sync_log call failed!')
@@ -408,7 +409,7 @@ def write_mysql(cfg,tab):
         except:
             logging.info('execute statement error!')
             logging.info(traceback.print_exc())
-            logging.info('\033[1;36;40mrs_log\033[0m', rs_log)
+            logging.info('\033[1;36;40mrs_log\033[0m',+rs_log)
             logging.info('\033[0;36;40m' + r['statement'] + '\033[0m')
             # send mail
             v_title = 'mysql->mysql实时同步任务执行失败告警[e]'
@@ -456,7 +457,7 @@ def get_tasks(cfg):
 
 def read_real_sync_status():
     try:
-        url = 'http://$$API_SERVER$$/get_mysql_real_sync_status'
+        url = 'http://124.127.103.190:21080/get_mysql_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -513,14 +514,52 @@ def start_syncer(cfg):
                        sys.exit(0)
 
 
-def get_task_status(cfg):
-    c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
-    r = os.popen(c).read()
-    if int(r) > 2 :
-       logging.info('Executer Task already running!')
-       return True
+
+def write_pid(cfg):
+    ckpt = {
+       'pid':os.getpid()
+    }
+    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
+        f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
+    logging.info('write pid:{}'.format(ckpt['pid']))
+
+
+def check_pid(cfg):
+    return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
+
+def read_pid(cfg):
+    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'r') as f:
+        contents = f.read()
+    if  contents == '':
+        return ''
     else:
-       return False
+        ckpt = json.loads(contents)
+        return ckpt
+
+# def get_task_status(cfg):
+#     c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
+#     r = os.popen(c).read()
+#     if len(r.split('\n')) >= 3 :
+#        logging.info('Executer Task already running!')
+#        return True
+#     else:
+#        return False
+
+def get_task_status(cfg):
+    if check_pid(cfg):
+        pid = read_pid(cfg).get('pid')
+        if pid :
+            if pid == os.getpid():
+                return False
+
+            if int(pid) in psutil.pids():
+              return True
+            else:
+              return False
+        else:
+            return False
+    else:
+        return False
 
 class DateEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -539,13 +578,22 @@ if __name__=="__main__":
             tag = sys.argv[p + 1]
 
     # init logger
-    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")), format='[%(asctime)s-%(levelname)s:%(message)s]',
+    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")),
+                        format='[%(asctime)s-%(levelname)s:%(message)s]',
                         level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
 
     # call api get config
     cfg = get_config_from_db(tag)
 
+    # query system parameters to determine whether to run the  program
+    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+        logging.info("\033[1;37;40mclear log task {} terminate!\033[0m".format(cfg['sync_tag']))
+        sys.exit(0)
+
     # check task
     if not get_task_status(cfg):
+       write_pid(cfg)
        print_dict(cfg)
        start_syncer(cfg)
+    else:
+       logging.info('sync program:{} is running!'.format(tag))

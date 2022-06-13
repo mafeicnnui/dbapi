@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time : 2021/12/13 14:03
+# @Time : 2022/04/01 14:03
 # @Author : ma.fei
-# @File : schedule_clear_sync_log.py
+# @File : mysql2clickhouse_clear.py
 # @Software: PyCharm
 
 import sys
@@ -10,61 +10,10 @@ import time
 import traceback
 import requests
 import pymysql
-from clickhouse_driver import Client
+import logging
+import datetime
 import warnings
-
-def get_ds_ck(ip,port,service ,user,password):
-    return  Client(host=ip,
-                   port=port,
-                   user=user,
-                   password=password,
-                   database=service,
-                   send_receive_timeout=600000)
-
-def clear_real_sync_log(cfg):
-   db = cfg['db_log']
-   cr = db.cursor()
-   cr.execute("truncate table`t_db_sync_log`")
-
-def clear_ck_log(cfg):
-    db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
-    db.execute('truncate table system.query_thread_log')
-    db.execute('truncate table system.query_log')
-    db.execute('truncate table system.part_log')
-    db.execute('truncate table system.trace_log')
-    db.execute('truncate table system.asynchronous_metric_log')
-    db.execute('truncate table system.metric_log')
-    db.execute('truncate table system.session_log')
-
-def get_real_sync_log_num(cfg):
-   db = cfg['db_log']
-   cr = db.cursor()
-   cr.execute("SELECT COUNT(0) as num FROM `t_db_sync_log` WHERE STATUS='0'")
-   rs = cr.fetchone()
-   return rs['num']
-
-def set_real_sync_status(cfg,p_status):
-    try:
-        par = {'status': p_status}
-        url = 'http://{}/set_real_sync_status'.format(cfg['api_server'])
-        res = requests.post(url, data=par,timeout=3).json()
-        return res
-    except:
-         traceback.print_exc()
-         sys.exit(0)
-
-def aes_decrypt(p_password,p_key):
-    par = { 'password': p_password,  'key':p_key }
-    try:
-        url = 'http://124.127.103.190:21080/read_db_decrypt'
-        res = requests.post(url, data=par,timeout=1).json()
-        if res['code'] == 200:
-            config = res['msg']
-            return config
-        else:
-            print('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
-    except:
-        print('aes_decrypt api not available!')
+from clickhouse_driver import Client
 
 def get_ds_mysql_dict(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip,
@@ -75,6 +24,87 @@ def get_ds_mysql_dict(ip,port,service ,user,password):
                            charset='utf8mb4',
                            cursorclass = pymysql.cursors.DictCursor,autocommit=True)
     return conn
+
+def get_ds_ck(ip,port,service ,user,password):
+    return  Client(host=ip,
+                   port=port,
+                   user=user,
+                   password=password,
+                   database=service,
+                   send_receive_timeout=600000)
+
+def aes_decrypt(p_password,p_key):
+    par = { 'password': p_password,  'key':p_key }
+    try:
+        url = 'http://124.127.103.190:21080/read_db_decrypt'
+        res = requests.post(url, data=par,timeout=1).json()
+        if res['code'] == 200:
+            config = res['msg']
+            return config
+        else:
+            logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
+            sys.exit(0)
+    except:
+        logging.info('aes_decrypt api not available!')
+        sys.exit(0)
+
+def clear_real_sync_log(cfg):
+   db = cfg['db_log']
+   cr = db.cursor()
+   logging.info("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
+   cr.execute("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
+   logging.info("delete from `t_db_sync_log` where sync_tag='{}' and status='1' ok!".format(cfg['exec_tag']))
+   logging.info("alter table `t_db_sync_log` engine=innodb")
+   cr.execute("alter table `t_db_sync_log` engine=innodb")
+   logging.info("alter table `t_db_sync_log` engine=innodb success!")
+
+def clear_ck_log(cfg):
+    db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
+    logging.info('truncate table system.query_thread_log')
+    db.execute('truncate table system.query_thread_log')
+    logging.info('truncate table system.query_log')
+    db.execute('truncate table system.query_log')
+    logging.info('truncate table system.part_log')
+    db.execute('truncate table system.part_log')
+    logging.info('truncate table system.trace_log')
+    db.execute('truncate table system.trace_log')
+    logging.info('truncate table system.asynchronous_metric_log')
+    db.execute('truncate table system.asynchronous_metric_log')
+    logging.info('truncate table system.metric_log')
+    db.execute('truncate table system.metric_log')
+    logging.info('truncate table system.session_log')
+    db.execute('truncate table system.session_log')
+
+def get_real_sync_log_num(cfg):
+   db = cfg['db_log']
+   cr = db.cursor()
+   logging.info("SELECT COUNT(0) as num FROM `t_db_sync_log` WHERE STATUS='0'")
+   cr.execute("SELECT COUNT(0) as num FROM `t_db_sync_log` WHERE STATUS='0'")
+   rs = cr.fetchone()
+   logging.info("get_real_sync_log_num={}".format(rs['num']))
+   return rs['num']
+
+def read_real_sync_status():
+    try:
+        url = 'http://124.127.103.190:20080/get_real_sync_status'
+        res = requests.post(url,timeout=3).json()
+        return res
+    except:
+        logging.info('write event failure!')
+        logging.info(traceback.format_exc())
+        return None
+
+def set_real_sync_status(cfg,p_status):
+    try:
+        par = {'status': p_status}
+        url = 'http://124.127.103.190:20080/set_real_sync_status'.format(cfg['api_server'])
+        res = requests.post(url, data=par,timeout=3).json()
+        logging.info("set_real_sync_status is ok")
+        return res
+    except:
+        logging.info("set_real_sync_status error")
+        logging.info(traceback.format_exc())
+        sys.exit(0)
 
 def get_config_from_db(tag):
     url = 'http://124.127.103.190:21080/read_config_sync'
@@ -108,57 +138,76 @@ def get_config_from_db(tag):
                                                                config['log_db_name'],
                                                                config['db_mysql_user_log'],
                                                                config['db_mysql_pass_log'])
+            config['exec_tag'] = config['sync_tag'].replace('_executer', '_logger')
         else:
-            print('clickhouse日志库不能为空!')
-            sys.exit(0)
+            logging.info('clickhouse日志库不能为空!')
+            return None
         return config
     else:
-        print('load config failure:{0}'.format(res['msg']))
-        sys.exit(0)
+        logging.info('load config failure:{0}'.format(res['msg']))
+        return None
 
 def print_dict(config):
-    print('-'.ljust(85, '-'))
-    print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
-    print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
+    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logging.info('-'.ljust(85, '-'))
     for key in config:
-        print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
-    print('-'.ljust(85, '-'))
-
+        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
+    logging.info('-'.ljust(85, '-'))
 
 if __name__ == "__main__":
-    #tag = 'hst_prod_real_sync_mysql_clickhouse_logger'
     tag = ""
     warnings.filterwarnings("ignore")
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
 
+    # check sys parameter
+    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+          logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
+          sys.exit(0)
+
+    # init logger
+    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
+                        format='[%(asctime)s-%(levelname)s:%(message)s]',
+                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+
     # call api get config
     cfg = get_config_from_db(tag)
+    if cfg is None:
+          logging.info('load config failure,exit sync!')
+          sys.exit(0)
 
-    # print cfg
-    print_dict(cfg)
+    # # print cfg
+    # print_dict(cfg)
 
-    # set sync logger status is pause
-    print('set sync logger process is pause status!')
-    set_real_sync_status(cfg,'PAUSE')
+    # set sync logger status is stop
+    logging.info('set sync logger process is stop status!')
+    set_real_sync_status(cfg,'STOP')
 
     # loop check sync log num
-    while True:
-        # get sync log num
-        num = get_real_sync_log_num(cfg)
-        print('\rsync log num is {} {}'.format(num,' '*10),end='')
-        if num == 0 :
-           print('\nstart clear real sync log!')
-           clear_real_sync_log(cfg)
-           print('clear real sync log ok!')
-           clear_ck_log(cfg)
-           print('clear {} log ok!'.format(tag))
-           break
-        else:
-           time.sleep(1)
-           continue
+    # while True:
+    #     # get sync log num
+    #     num = get_real_sync_log_num(cfg)
+    #     logging.info('sync log num is {} for:{}'.format(str(num), cfg['exec_tag']))
+    #     if num == 0 :
+    #        logging.info('start clear real sync log!')
+    #        clear_real_sync_log(cfg)
+    #        logging.info('clear real sync log ok!')
+    #        clear_ck_log(cfg)
+    #        logging.info('clear ck log ok!')
+    #        break
+    #     else:
+    #        time.sleep(1)
+    #        continue
 
+    logging.info('start clear real sync log!')
+    clear_real_sync_log(cfg)
+    logging.info('clear real sync log ok!')
+    clear_ck_log(cfg)
+    logging.info('clear ck log ok!')
+    time.sleep(3)
+    logging.info("waiting log apply process...")
     # set sync logger status is running
-    print('set sync logger process is running status!')
+    logging.info('set sync logger process is running status!')
     set_real_sync_status(cfg,'RUNNING')

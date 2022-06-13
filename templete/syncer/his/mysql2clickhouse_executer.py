@@ -15,20 +15,35 @@ import datetime
 import warnings
 import traceback
 import logging
-import psutil
 from clickhouse_driver import Client
 from concurrent.futures import ProcessPoolExecutor,wait,as_completed
+
+def log(msg,pos='l'):
+    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+    if pos == 'l':
+       print("""{} : {}""".format(tm,msg))
+    else:
+       print("""{} : {}""".format(msg,tm))
+
+def log2(msg):
+    tm = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+    print("""\r{} : {}""".format(tm,msg),end='')
 
 def get_seconds(b):
     a=datetime.datetime.now()
     return int((a-b).total_seconds())
 
 def print_dict(config):
+    print('-'.ljust(85, '-'))
+    print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    print('-'.ljust(85, '-'))
     logging.info('-'.ljust(85, '-'))
     logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
     logging.info('-'.ljust(85, '-'))
     for key in config:
+        print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
         logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
+    print('-'.ljust(85, '-'))
     logging.info('-'.ljust(85, '-'))
 
 def format_sql(v_sql):
@@ -37,17 +52,15 @@ def format_sql(v_sql):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://124.127.103.190:65480/read_db_decrypt'
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
             return config
         else:
-            logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
-            sys.exit(0)
+            log('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
     except:
-        logging.info('aes_decrypt api not available!')
-        sys.exit(0)
+        log('aes_decrypt api not available!')
 
 def get_ds_mysql(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip,
@@ -127,7 +140,7 @@ def get_sync_tables(cfg):
     return cfg
 
 def get_config_from_db(tag):
-    url = 'http://124.127.103.190:65480/read_config_sync'
+    url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -170,14 +183,14 @@ def get_config_from_db(tag):
             config['db_mysql_user_log']    = config['ds_log']['user']
             config['db_mysql_pass_log']    = aes_decrypt(config['ds_log']['password'],config['ds_log']['user'])
         else:
-            logging.info('clickhouse日志库不能为空!')
-            return None
+            print('clickhouse日志库不能为空!')
+            sys.exit(0)
 
         config = get_sync_tables(config)
         return config
     else:
-        logging.info('load config failure:{0}'.format(res['msg']))
-        return None
+        log('load config failure:{0}'.format(res['msg']))
+        sys.exit(0)
 
 def get_ck_schema(cfg,event):
     for o in cfg['sync_table'].split(','):
@@ -296,51 +309,21 @@ def get_cols_from_mysql(cfg,event):
 
 def full_sync(cfg,event):
     db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
-    logging.info('create clickhouse temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event),event['table']+'_tmp'))
+    log('create clickhouse temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event),event['table']+'_tmp'))
     st = get_ck_table_defi_mysql(cfg,event)
     db.execute(st)
 
-    logging.info('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event),event['table']))
+    log('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event),event['table']))
     col = get_cols_from_mysql(cfg, event)
     st = """insert into {}.{} ({}) select {} from {}.{}
          """.format(get_ck_schema(cfg, event),event['table'], col,col,get_ck_schema(cfg, event),event['table']+'_tmp')
     db.execute(st)
 
-    logging.info('drop temp table:{}.{}'.format(get_ck_schema(cfg, event), event['table'] + '_tmp'))
+    log('drop temp table:{}.{}'.format(get_ck_schema(cfg, event), event['table'] + '_tmp'))
     st = 'drop table {}.{}'.format(get_ck_schema(cfg, event),event['table']+'_tmp')
     db.execute(st)
 
 def merge_buffer(buffer):
-    type = buffer[0]['type']
-    table = buffer[0]['sync_table']
-    if type == 'insert':
-       h = buffer[0]['statement'].split(' values ')[0]
-       b = ''
-       i = ''
-       for o in buffer:
-         b = b + o['statement'].split(' values ')[1]+','
-         i = i + str(o['id'])+','
-       return {'sync_table':table,'type': type, 'statement': h + ' values ' + b[0:-1],'id':i[0:-1]}
-
-    else:
-       return buffer
-
-def process_sql(logs):
-    n_batch = []
-    ins_buffer = []
-    for log in logs:
-        if log['type']=='insert':
-           ins_buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
-        else:
-           if len(ins_buffer)>0:
-               n_batch.append(merge_buffer(ins_buffer))
-               ins_buffer = []
-           n_batch.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
-    if  len(ins_buffer)>0:
-        n_batch.append(merge_buffer(ins_buffer))
-    return n_batch
-
-def merge_buffer_n(buffer):
     type = buffer[0]['type']
     table = buffer[0]['sync_table']
     if type == 'insert':
@@ -401,27 +384,27 @@ def merge_buffer_n(buffer):
                {'sync_table': table, 'type': 'insert', 'statement': hi + ' values ' + bi[0:-1], 'id': id[0:-1]}
            ]
 
-def process_sql_n(logs):
-    batch  = []
+def process_sql(logs):
+    nbatch = []
     buffer = []
     latest_table = logs[0]['sync_table']
     latest_event = logs[0]['type']
     buffer.append({'sync_table':logs[0]['sync_table'],'type':latest_event,'statement':logs[0]['statement'],'id':logs[0]['id']})
+
     for log in logs[1:]:
         if log['sync_table'] == latest_table and log['type'] == latest_event:
            buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
         else:
            if len(buffer)>0:
-               batch.extend(merge_buffer_n(buffer))
+               nbatch.extend(merge_buffer(buffer))
                buffer = []
            buffer.append({'sync_table':log['sync_table'],'type':log['type'],'statement':log['statement'],'id':log['id']})
            latest_table = log['sync_table']
            latest_event = log['type']
-    if  len(buffer)>0:
-        batch.extend(merge_buffer_n(buffer))
-    #logging.info("batch="+str(batch))
-    return batch
 
+    if  len(buffer)>0:
+        nbatch.extend(merge_buffer(buffer))
+    return nbatch
 
 def get_mysql_columns(cfg,schema,table,ck_cols):
     db = get_ds_mysql_dict(cfg['db_mysql_ip'],
@@ -445,12 +428,12 @@ def get_ck_columns(cfg,schema,table):
                    cfg['db_ck_pass'])
     event = {'schema': schema, 'table': table}
     st = """select name from system.columns where database='{}' and table='{}'""".format(get_ck_schema(cfg, event), event['table'])
-    logging.info('get_ck_columns='+st)
+    print('get_ck_columns=',st)
     rs = db.execute(st)
     v = ''
     for i in rs:
        v = v + "'{}',".format(i[0])
-    logging.info('v='+v)
+    print('v=',v)
     return v[0:-1]
 
 def mysql_type_convert_ck(p_type,p_is_null,p_datetime_precision):
@@ -497,7 +480,7 @@ def sync_alter(cfg,schema,table):
                       event['table'],
                       m['column_name'],
                       mysql_type_convert_ck(m['data_type'],m['is_nullable'],m['datetime_precision']))
-        logging.info(v)
+        print(v)
         db_ck.execute(v)
 
 def get_time():
@@ -518,14 +501,14 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://124.127.103.190:65480/write_sync_real_log'
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
-           logging.info('Interface write_sync_log call failed!')
+           print('Interface write_sync_log call failed!')
     except:
-        logging.info('Interface write_sync_log call failed!')
-        logging.info(traceback.format_exc())
-        sys.exit(0)
+         traceback.print_exc()
+         sys.exit(0)
+
 
 def write_ck(cfg,tab):
     db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
@@ -546,189 +529,53 @@ def write_ck(cfg,tab):
     cfg['delete_amount'] = 0
     cfg['ddl_amount'] = 0
     write_sync_log(cfg)
-    logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+    log("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+
+    rs_log_process=process_sql(rs_log)
+    print('rs_log_process>>>:',rs_log_process)
     db_ck  = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
     ids=''
-    for r in  rs_log: #rs_log_process:
+    for r in rs_log_process:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
         if check_ck_tab_exists(cfg,db_ck,event) == 0:
-           logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_ck_schema(cfg,event),event['table']))
+           log('Table:{}.{} not exists,skip incr sync!'.format(get_ck_schema(cfg,event),event['table']))
            continue
+
         try:
-           #logging.info('Execute>>>:'+r['statement'])
-           db_ck.execute(r['statement'])
-           ids = ids + '{},'.format(r['id'])
-        except:
-           if traceback.format_exc().count('No such column')>0:
-              sync_alter(cfg,event['schema'],event['table'])
-              db_ck.execute(r['statement'])
-           else :
-              logging.info(traceback.format_exc())
-              logging.info('\033[0;36;40m'+r['statement']+'\033[0m')
-              logging.info("sleep 3s...")
-              time.sleep(3)
-
-    logging.info('wait ck async task for table :{}/res:{} complete...'.format(event['table'],len(rs_log)))
-    while True:
-        evt = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-        if get_ck_async_task_table(cfg,db_ck,evt) == 0:
-           break
-        time.sleep(0.1)
-
-    if ids != '':
-        upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
-        try:
-          #logging.info('Execute>>>:'+upd)
-          cr_log.execute(upd)
-          logging.info('Task {} execute complete!'.format(tab))
-        except:
-          logging.info(traceback.format_exc())
-          logging.info('\033[1;36;40m rs_log\033[0m'+rs_log)
-          logging.info('\033[1;36;40m ids\033[0m'+ids)
-          logging.info('\033[1;36;40m upd===========>\033[0m'+ upd)
-          sys.exit(0)
-
-def write_ck_batch(cfg,tab):
-    db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
-                               cfg['db_mysql_port_log'],
-                               cfg['log_db_name'],
-                               cfg['db_mysql_user_log'],
-                               cfg['db_mysql_pass_log'])
-    cr_log = db_log.cursor()
-    st_log = """select id,sync_table,statement,type
-                   from t_db_sync_log where  status='0' and sync_tag='{}' and sync_table='{}' 
-                       order by id limit {}""".format(cfg['exec_tag'],tab,cfg['batch_size_incr'])
-    cr_log.execute(st_log)
-    rs_log = cr_log.fetchall()
-
-    cfg['event_amount'] = len(rs_log)
-    cfg['insert_amount'] = 0
-    cfg['update_amount'] = 0
-    cfg['delete_amount'] = 0
-    cfg['ddl_amount'] = 0
-    write_sync_log(cfg)
-    logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
-    db_ck = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
-    ids=''
-    for r in  process_sql(rs_log):
-        event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-        if check_ck_tab_exists(cfg,db_ck,event) == 0:
-           logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_ck_schema(cfg,event),event['table']))
-           continue
-        try:
-           db_ck.execute(r['statement'])
-           ids = ids + '{},'.format(r['id'])
-        except:
-           if traceback.format_exc().count('No such column')>0:
-              sync_alter(cfg,event['schema'],event['table'])
-              db_ck.execute(r['statement'])
-           else :
-              logging.info(traceback.format_exc())
-              logging.info('\033[0;36;40m'+r['statement']+'\033[0m')
-              time.sleep(1)
-
-    logging.info('wait ck async task for table :{}/res:{} complete...'.format(event['table'],len(rs_log)))
-    while True:
-        evt = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-        if get_ck_async_task_table(cfg,db_ck,evt) == 0:
-           break
-        time.sleep(0.1)
-
-    if ids != '':
-        upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
-        try:
-          #logging.info('Execute>>>:'+upd)
-          cr_log.execute(upd)
-          logging.info('Task {} execute complete!'.format(tab))
-        except:
-          logging.info(traceback.format_exc())
-          logging.info('\033[0;36;40m' + upd + '\033[0m')
-          sys.exit(0)
-
-def write_ck_multi(cfg,tab):
-    db_log = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
-                               cfg['db_mysql_port_log'],
-                               cfg['log_db_name'],
-                               cfg['db_mysql_user_log'],
-                               cfg['db_mysql_pass_log'])
-    cr_log = db_log.cursor()
-    st_map = """ select MAX(id) as id,
-                        GROUP_CONCAT(id) as map_id
-                  from (select * from `t_db_sync_log`
-                         where sync_tag='{}' AND sync_table='{}' 
-                           and status='0' order by id limit {} ) as t group by type,pk_val """.format(cfg['exec_tag'],tab,cfg['batch_size_incr'])
-    cr_log.execute(st_map)
-    rs_map = cr_log.fetchall()
-    id_map = {}
-    for m in rs_map:
-       id_map[str(m['id'])] = str(m['map_id'])
-
-    #logging.info("rs_map:"+str(rs_map))
-    #logging.info("id_map:" + json.dumps(id_map))
-    id = ','.join([str(x['id']) for x in rs_map])
-    #logging.info('id='+id)
-    st_log = """select id,sync_table,statement,type from t_db_sync_log where id in({}) order by id""".format(id)
-    #logging.info("st_log="+st_log)
-    cr_log.execute(st_log)
-    rs_log = cr_log.fetchall()
-    cfg['event_amount'] = len(rs_log)
-    cfg['insert_amount'] = 0
-    cfg['update_amount'] = 0
-    cfg['delete_amount'] = 0
-    cfg['ddl_amount'] = 0
-    write_sync_log(cfg)
-    logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
-    db_ck = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
-    ids=''
-    for r in  process_sql_n(rs_log):
-        event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-        if check_ck_tab_exists(cfg,db_ck,event) == 0:
-           logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_ck_schema(cfg,event),event['table']))
-           continue
-        try:
-           logging.info(r['statement'])
-           db_ck.execute(r['statement'])
-           logging.info('wait ck async task for table :{}/res:{}/type:{}/len:{}...'.
-                         format(event['table'],
-                                len(rs_log),
-                                r['type'],
-                                len(r['id'].split(','))))
+           log2('wait ck async task complete...')
            while True:
                evt = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
-               if get_ck_async_task_table(cfg, db_ck, evt) == 0:
-                   break
+               if get_ck_async_task_table(cfg,db_ck,evt) == 0:
+                  break
                time.sleep(0.1)
-           logging.info('ck async task for table :{}/res:{}/type:{}/len:{} complete!'.
-                        format(event['table'],
-                               len(rs_log),
-                               r['type'],
-                               len(r['id'].split(','))))
-
-           if r['id'] != '':
-               uid = ''
-               for id in r['id'].split(','):
-                   uid = uid + id_map[id] +','
-
-               upd = "update t_db_sync_log set status='1' where id in({})".format(uid[0:-1])
-               try:
-                   logging.info(upd)
-                   cr_log.execute(upd)
-                   logging.info('Task {} execute complete!'.format(tab))
-               except:
-                   logging.info(traceback.format_exc())
-                   logging.info('\033[0;36;40m' + upd + '\033[0m')
-                   sys.exit(0)
-
+           print('Execute>>>:',r['statement'])
+           db_ck.execute(r['statement'])
+           ids = ids + '{},'.format(r['id'])
         except:
            if traceback.format_exc().count('No such column')>0:
               sync_alter(cfg,event['schema'],event['table'])
               db_ck.execute(r['statement'])
            else :
-              logging.info(traceback.format_exc())
-              logging.info('\033[0;36;40m'+r['statement']+'\033[0m')
-              time.sleep(1)
+              traceback.print_exc()
+              print('\033[1;36;40mrs_log\033[0m', rs_log)
+              print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
+              print('\033[0;36;40m'+r['statement']+'\033[0m')
+              sys.exit(0)
 
 
+    if ids != '':
+        upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
+        try:
+          print('Execute>>>:', upd)
+          cr_log.execute(upd)
+          print('Task {} execute complete!'.format(tab))
+        except:
+          traceback.print_exc()
+          print('\033[1;36;40mrs_log\033[0m', rs_log)
+          print('\033[1;36;40mrs_log_process\033[0m', rs_log_process)
+          print('\033[1;36;40mids\033[0m', ids)
+          print('\033[1;36;40mupd===========>\033[0m', upd)
+          sys.exit(0)
 
 
 def get_tasks(cfg):
@@ -739,100 +586,56 @@ def get_tasks(cfg):
                            cfg['db_mysql_pass_log'])
     cr = db.cursor()
     st = """SELECT sync_table,count(0) as amount FROM t_db_sync_log 
-               WHERE  status='0' and sync_tag='{}' and instr('{}',sync_table)>0 
-                 GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['sync_table'],cfg['process_num'])
+               WHERE  status='0' and sync_tag='{}' GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['process_num'])
     cr.execute(st)
     rs =cr.fetchall()
     return  rs
 
-def start_sync(cfg):
+def start_syncer(cfg):
     apply_time = datetime.datetime.now()
     sleep_time = datetime.datetime.now()
     with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
         while True:
-            if not read_real_sync_status() is None:
-                if  read_real_sync_status()['msg']['value'] == 'STOP':
-                    logging.info("\033[1;37;40m execute log task {} terminate!\033[0m".format(cfg['sync_tag']))
-                    sys.exit(0)
-
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()
                cfg = get_config_from_db(cfg['sync_tag'])
-               logging.info("\033[1;36;40m apply config success\033[0m")
-               if cfg is None:
-                   logging.info('load config failure,exit sync!')
-                   sys.exit(0)
+               log("\033[1;36;40\nmapply config success\033[0m")
 
             tasks = get_tasks(cfg)
             if tasks!=():
-                logging.info('检测到新事件：')
-                logging.info('-'.ljust(85, '-'))
+                log('\n检测到新事件：','r')
+                print('-'.ljust(85, '-'))
                 for task in tasks:
-                    logging.info(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = '+ str(task['amount']))
-                logging.info('-'.ljust(85, '-'))
+                    print(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = ', task['amount'])
+                print('-'.ljust(85, '-'))
+                print('\n')
 
                 async_task_amount = get_ck_async_task(cfg)
-                logging.info("ck async task amount:"+str(async_task_amount))
-                if round(async_task_amount / 300)>=1:
-                   logging.info("\033[1;36;40m sleep {}s wait ck async task!\033[0m".format(round(async_task_amount / 500)*3))
-                   time.sleep(round(async_task_amount / 300)*6)
+                if round(async_task_amount / 500)>=1:
+                   log("\033[1;36;40msleep {}s wait ck async task!\033[0m".format(round(async_task_amount / 500)*3))
+                   time.sleep(round(async_task_amount / 500)*3)
 
-                all_task = [executor.submit(write_ck_multi,cfg,t['sync_table']) for t in tasks]
+                sleep_time = datetime.datetime.now()
+                all_task = [executor.submit(write_ck,cfg,t['sync_table']) for t in tasks]
+
                 for future in as_completed(all_task):
                     res = future.result()
                     if res is not None:
-                       logging.info(res)
+                       log(res)
             else:
-               if get_seconds(sleep_time) % cfg['apply_timeout'] == 0:
-                  logging.info('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
-                  sleep_time = datetime.datetime.now()
-                  time.sleep(1)
+               time.sleep(0.1)
+               print('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))),end='')
+
 
 def get_task_status(cfg):
-    if check_pid(cfg):
-        pid = read_pid(cfg).get('pid')
-        if pid :
-            if pid == os.getpid():
-                return False
-
-            if int(pid) in psutil.pids():
-              return True
-            else:
-              return False
-        else:
-            return False
+    c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
+    r = os.popen(c).read()
+    if int(r) > 2 :
+       log('Executer Task already running!')
+       return True
     else:
-        return False
+       return False
 
-def write_pid(cfg):
-    ck = {
-       'pid':os.getpid()
-    }
-    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
-        f.write(json.dumps(ck, ensure_ascii=False, indent=4, separators=(',', ':')))
-    logging.info('write pid:{}'.format(ck['pid']))
-
-def check_pid(cfg):
-    return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
-
-def read_pid(cfg):
-    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'r') as f:
-        contents = f.read()
-    if  contents == '':
-        return ''
-    else:
-        ckpt = json.loads(contents)
-        return ckpt
-
-def read_real_sync_status():
-    try:
-        url = 'http://124.127.103.190:21080/get_real_sync_status'
-        res = requests.post(url,timeout=3).json()
-        return res
-    except:
-        logging.info('read_real_sync_status failure!')
-        # logging.info(traceback.format_exc())
-        return None
 
 if __name__=="__main__":
     tag = ""
@@ -840,13 +643,6 @@ if __name__=="__main__":
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
-
-
-    # query system parameters to determine whether to run the  program
-    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
-        print("\033[1;37;40m execute log task {} terminate!\033[0m".format(tag))
-        sys.exit(0)
-
 
     # init logger
     logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
@@ -856,10 +652,9 @@ if __name__=="__main__":
     # call api get config
     cfg = get_config_from_db(tag)
 
+    # print cfg
+    print_dict(cfg)
+
     # check task
     if not get_task_status(cfg):
-       write_pid(cfg)
-       print_dict(cfg)
-       start_sync(cfg)
-    else:
-       logging.info('sync program:{} is running!'.format(tag))
+       start_syncer(cfg)

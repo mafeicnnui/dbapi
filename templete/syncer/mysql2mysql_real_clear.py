@@ -10,18 +10,20 @@ import time
 import traceback
 import requests
 import pymysql
-from clickhouse_driver import Client
 import warnings
+import logging
+import datetime
 
 def clear_real_sync_log(cfg):
    db = cfg['db_log']
    cr = db.cursor()
-   cr.execute("truncate table`t_db_sync_log`")
+   cr.execute("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
+   cr.execute("alter table `t_db_sync_log` engine=innodb")
 
 def get_real_sync_log_num(cfg):
    db = cfg['db_log']
    cr = db.cursor()
-   cr.execute("SELECT COUNT(0) as num FROM `t_db_sync_log` WHERE STATUS='0'")
+   cr.execute("SELECT COUNT(0) as num FROM `t_db_sync_log` WHERE  status='0' and sync_tag='{}'".format(cfg['exec_tag']))
    rs = cr.fetchone()
    return rs['num']
 
@@ -78,56 +80,78 @@ def get_config_from_db(tag):
                                                                config['log_db_name'],
                                                                config['db_mysql_user_log'],
                                                                config['db_mysql_pass_log'])
+            config['exec_tag'] = config['sync_tag'].replace('_executer', '_logger')
         else:
-            print('mysql日志库不能为空!')
+            logging.info('mysql日志库不能为空!')
             sys.exit(0)
         return config
     else:
-        print('load config failure:{0}'.format(res['msg']))
+        logging.info('load config failure:{0}'.format(res['msg']))
         sys.exit(0)
 
 def print_dict(config):
-    print('-'.ljust(85, '-'))
-    print(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
-    print('-'.ljust(85, '-'))
+    logging.info('-'.ljust(85, '-'))
+    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logging.info('-'.ljust(85, '-'))
     for key in config:
-        print(' '.ljust(3, ' ') + key.ljust(20, ' ') + '='+str(config[key]))
-    print('-'.ljust(85, '-'))
+        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
+    logging.info('-'.ljust(85, '-'))
 
+def get_seconds(b):
+    a=datetime.datetime.now()
+    return int((a-b).total_seconds())
+
+def read_real_sync_status():
+    try:
+        url = 'http://124.127.103.190:65480/get_mysql_real_sync_status'
+        res = requests.post(url,timeout=3).json()
+        return res
+    except:
+         logging.info(traceback.format_exc())
+         return None
 
 if __name__ == "__main__":
     tag = ""
+    sync_time = datetime.datetime.now()
     warnings.filterwarnings("ignore")
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
 
+    # init logger
+    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")),
+                        format='[%(asctime)s-%(levelname)s:%(message)s]',
+                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+
     # call api get config
     cfg = get_config_from_db(tag)
+
+    # query system parameters to determine whether to run the  program
+    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+        logging.info("\033[1;37;40mclear log task {} terminate!\033[0m".format(cfg['sync_tag']))
+        sys.exit(0)
 
     # print cfg
     print_dict(cfg)
 
     # set sync logger status is pause
-    print('set sync logger process is pause status!')
+    logging.info('set sync logger process is pause status[sync_tag:{}]!'.format(cfg['exec_tag']))
     set_real_sync_status(cfg,'PAUSE')
 
     # loop check sync log num
     while True:
         # get sync log num
         num = get_real_sync_log_num(cfg)
-        print('\rsync log num is {} {}'.format(num,' '*10),end='')
+        logging.info('sync log num is {} for:{}'.format(str(num),cfg['exec_tag']))
         if num == 0 :
-           print('\nstart clear real sync log!')
+           logging.info('\nstart clear real sync log![{}]'.format(cfg['exec_tag']))
            clear_real_sync_log(cfg)
-           print('clear real sync log ok!')
+           logging.info('clear real sync log ok![{}]'.format(cfg['exec_tag']))
            break
         else:
            time.sleep(1)
            continue
 
     # set sync logger status is running
-    print('set sync logger process is running status!')
-    set_real_sync_status(cfg, 'STOP')
-    time.sleep(30)
+    logging.info('set sync logger process is running status[{}]!'.format(cfg['exec_tag']))
     set_real_sync_status(cfg,'RUNNING')

@@ -19,7 +19,6 @@ import requests
 import warnings
 import threading
 import decimal
-import psutil
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
@@ -54,12 +53,12 @@ class DateEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
 
 def print_dict(config):
-    logging.info('-'.ljust(85, '-'))
-    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
-    logging.info('-'.ljust(85, '-'))
+    print('-'.ljust(85,'-'))
+    print(' '.ljust(3,' ')+"name".ljust(20,' ')+'value')
+    print('-'.ljust(85,'-'))
     for key in config:
-        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
-    logging.info('-'.ljust(85, '-'))
+      print(' '.ljust(3,' ')+key.ljust(20,' ')+'=',config[key])
+    print('-'.ljust(85,'-'))
 
 def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -253,17 +252,6 @@ def check_ck_tab_exists(cfg,event):
    rs = db.execute(sql)
    return rs[0][0]
 
-def upd_ckpt(cfg):
-    ckpt = {
-       'binlogfile': cfg['binlogfile'],
-       'binlogpos' : cfg['binlogpos'],
-       'last_update_time': get_time(),
-       'pid':cfg['pid']
-    }
-    with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
-        f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
-    logging.info('update ckpt:{}/{}'.format(cfg['binlogfile'],cfg['binlogpos'] ))
-
 def check_ck_database(cfg,event):
     db = cfg['db_ck']
     sql = """select count(0) from system.databases d 
@@ -398,23 +386,15 @@ def create_ck_table(cfg,event):
            log('\033[0;36;40mclickhouse => create  database `{}` success!\033[0m'.format(get_ck_schema(cfg, event)))
         st = get_ck_table_defi(cfg,event)
         if event['column'] =='auto' or event.get('column') is None:
-           try:
-              db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
-           except:
-              logging.info('>>>1'+st)
-              logging.info('>>>2'+st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
-              traceback.print_exc()
+           print('>>>1',st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
+           db.execute(st.replace('$$PK_NAMES$$',get_table_pk_names(cfg,event)).replace('$$PARTITION$$',get_table_part_col(cfg,event)))
         else:
            col = """PARTITION BY toYYYYMM({})""".format(event['column'])
-           try:
-              db.execute(st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$', col))
-           except:
-              traceback.print_exc()
-              logging.info('>>>2'+st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$', col))
-        logging.info('\033[0;36;40mclickhouse => create  table `{}.{}` success!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
+           print('>>>2',st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',col))
+           db.execute(st.replace('$$PK_NAMES$$', get_table_pk_names(cfg, event)).replace('$$PARTITION$$',col))
+        log('\033[0;36;40mclickhouse => create  table `{}.{}` success!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
     else:
-        logging.info('Table `{}` have no primary key,exit sync!'.format(event['table']))
-
+        log('Table `{}` have no primary key,exit sync!'.format(event['table']))
 
 def truncate_ck_table(cfg,event,ddl):
     db = cfg['db_ck']
@@ -422,7 +402,7 @@ def truncate_ck_table(cfg,event,ddl):
         if check_ck_database(cfg,event) > 0:
             if check_ck_tab_exists(cfg,event) > 0 :
                st = '{} table {}.{}'.format(re.split(r'\s+', ddl)[0],get_ck_schema(cfg, event),event['table'])
-               logging.info('{} ...'.format(st))
+               print('{} ...'.format(st))
                db.execute(st)
 
 def drop_ck_table(cfg,event,ddl):
@@ -430,8 +410,9 @@ def drop_ck_table(cfg,event,ddl):
     if check_ck_database(cfg,event) > 0:
         if check_ck_tab_exists(cfg,event) > 0 :
            st = '{} table {}.{}'.format(re.split(r'\s+', ddl)[0],get_ck_schema(cfg, event),event['table'])
-           logging.info('{} ...'.format(st))
+           print('{} ...'.format(st))
            db.execute(st)
+
 
 def get_mysql_columns(cfg,schema,table,column_name):
     db = get_ds_mysql_dict(cfg['db_mysql_ip'],
@@ -443,10 +424,10 @@ def get_mysql_columns(cfg,schema,table,column_name):
     st = """select table_name,column_name,data_type,is_nullable,datetime_precision
             from information_schema.columns  
              where table_schema='{}' and table_name='{}' and column_name='{}'""".format(schema,table,column_name.lower())
-    logging.info('get_mysql_columns>'+st)
+    print('get_mysql_columns>',st)
     cr.execute(st)
     rs =cr.fetchall()
-    logging.info('rs='+str(rs))
+    print('rs=',rs)
     return rs
 
 def get_ck_columns(cfg,schema,table):
@@ -457,12 +438,12 @@ def get_ck_columns(cfg,schema,table):
                    cfg['db_ck_pass'])
     event = {'schema': schema, 'table': table}
     st = """select name from system.columns where database='{}' and table='{}'""".format(get_ck_schema(cfg, event), event['table'])
-    logging.info('get_ck_columns='+st)
+    print('get_ck_columns=',st)
     rs = db.execute(st)
     v = ''
     for i in rs:
        v = v + "'{}',".format(i[0])
-    logging.info('v=',v)
+    print('v=',v)
     return v[0:-1]
 
 def mysql_type_convert_ck(p_type,p_is_null,p_datetime_precision):
@@ -501,14 +482,14 @@ def sync_ck_alter_add(cfg,event,column):
                       cfg['db_ck_user'],
                       cfg['db_ck_pass'])
     mysql_cols = get_mysql_columns(cfg,event['schema'],event['table'],column)
-    logging.info('mysql_cols>'+mysql_cols)
+    print('mysql_cols>',mysql_cols)
     for m in mysql_cols:
         v ="""alter table {}.{} add column {} {}
            """.format(get_ck_schema(cfg, event),
                       event['table'],
                       m['column_name'],
                       mysql_type_convert_ck(m['data_type'],m['is_nullable'],m['datetime_precision']))
-        logging.info('sync_ck_alter_add>>'+v)
+        print('sync_ck_alter_add>>',v)
         db_ck.execute(v)
 
 def sync_ck_alter_change_column_name(cfg,event,old_col,new_col):
@@ -519,7 +500,7 @@ def sync_ck_alter_change_column_name(cfg,event,old_col,new_col):
                    cfg['db_ck_pass'])
     v ="alter table {}.{} rename column if exists {} to {}".\
         format(get_ck_schema(cfg, event),event['table'],old_col.lower(),new_col.lower())
-    logging.info("sync_ck_alter_change_column_name>>>"+v)
+    print("sync_ck_alter_change_column_name>>>",v)
     db_ck.execute(v)
 
 def sync_ck_alter_change_column_type(cfg,event,column):
@@ -535,7 +516,7 @@ def sync_ck_alter_change_column_type(cfg,event,column):
                       event['table'],
                       m['column_name'],
                       mysql_type_convert_ck(m['data_type'],m['is_nullable'],m['datetime_precision']))
-        logging.info("sync_ck_alter_change_column_type>>>"+v)
+        print("sync_ck_alter_change_column_type>>>",v)
         db_ck.execute(v)
 
 def sync_ck_alter_drop(cfg,event,column):
@@ -545,7 +526,7 @@ def sync_ck_alter_drop(cfg,event,column):
                    cfg['db_ck_user'],
                    cfg['db_ck_pass'])
     v ="alter table {}.{} drop column {}".format(get_ck_schema(cfg, event),event['table'], column.lower())
-    logging.info('sync_ck_alter_drop>>>'+v)
+    print('sync_ck_alter_drop>>>',v)
     db_ck.execute(v)
 
 def sync_ck_alter(cfg,event,s):
@@ -573,59 +554,23 @@ def optimize_table(cfg,event):
     if check_ck_tab_exists_by_param(cfg,event) >0:
         st = '''optimize table {}.{} final'''.format(event['schema'],event['table'])
         db.execute(st)
-        logging.info('\033[0;31;40moptimize clickhouse table {}.{} complete!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
+        log('\033[0;31;40moptimize clickhouse table {}.{} complete!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
 
-def full_sync(cfg, event):
-    logging.info('full sync table:{}...'.format(event['tab']))
-    tab = event['table']
-    if (check_ck_tab_exists(cfg, event) == 0 \
-        or (check_ck_tab_exists(cfg, event) > 0 and check_ck_tab_exists_data(cfg, event) == 0)) \
-            and check_tab_exists_pk(cfg, event) == 1 and get_sync_table_int_pk_num(cfg, event) == 1:
-        i_counter = 0
-        ins_sql_header = get_tab_header(cfg, event)
-        n_batch_size = int(cfg['batch_size'])
-        cr_source = cfg['cr_mysql']
-        cr_desc = cfg['db_ck']
-        n_row = get_sync_table_min_id(cfg, event)
-        if n_row is None:
-            logging.info('Table:{0} data is empty ,skip full sync!'.format(tab))
-            return
-        n_tab_total_rows = get_sync_table_total_rows(cfg, event)
-        v_pk_col_name = get_sync_table_pk_names(cfg, event)
-        v_sync_table_cols = get_sync_table_cols(cfg, event)
-        while n_tab_total_rows > 0:
-            st = "select {} from `{}`.`{}` where {} between {} and {}" \
-                .format(v_sync_table_cols, event['schema'], tab, v_pk_col_name, str(n_row),
-                        str(n_row + n_batch_size))
-            cr_source.execute(st)
-            rs_source = cr_source.fetchall()
-            v_sql = ''
-            if len(rs_source) > 0:
-                for i in range(len(rs_source)):
-                    rs_source_desc = cr_source.description
-                    ins_val = ''
-                    for j in range(len(rs_source[i])):
-                        col_type = str(rs_source_desc[j][1])
-                        if rs_source[i][j] is None:
-                            ins_val = ins_val + "null,"
-                        elif col_type == '253':  # varchar,date
-                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
-                        elif col_type in ('1', '3', '8', '246'):  # int,decimal
-                            ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
-                        elif col_type == '12':  # datetime
-                            ins_val = ins_val + "'" + str(rs_source[i][j]).split('.')[0] + "',"
-                        else:
-                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
-                    v_sql = v_sql + '(' + ins_val[0:-1] + '),'
-                batch_sql = ins_sql_header + v_sql[0:-1]
-                cr_desc.execute(batch_sql)
-                i_counter = i_counter + len(rs_source)
-                logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
-                        format(tab, n_tab_total_rows, i_counter,round(i_counter / n_tab_total_rows * 100, 2)))
-            n_row = n_row + n_batch_size + 1
-            if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
-                break
-        logging.info('')
+def full_sync(cfg,event):
+    db = cfg['db_ck']
+    log('create clickhouse temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event),event['table']+'_tmp'))
+    st = get_ck_table_defi_mysql(cfg,event)
+    db.execute(st)
+
+    log('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event),event['table']))
+    col = get_cols_from_mysql(cfg, event)
+    st = """insert into {}.{} ({}) select {} from {}.{}
+         """.format(get_ck_schema(cfg, event),event['table'], col,col,get_ck_schema(cfg, event),event['table']+'_tmp')
+    db.execute(st)
+
+    log('drop temp table:{}.{}'.format(get_ck_schema(cfg, event), event['table'] + '_tmp'))
+    st = 'drop table {}.{}'.format(get_ck_schema(cfg, event),event['table']+'_tmp')
+    db.execute(st)
 
 def get_cols_from_mysql(cfg,event):
     db = cfg['db_mysql']
@@ -904,6 +849,74 @@ def process_batch_n(batch):
 
     return nbatch
 
+def ck_exec_multi(cfg,batch,flag='part'):
+    #nbatch = process_batch(batch)
+    exec_threading(cfg,batch,flag)
+
+def exec_threading(cfg,nbatch,flag):
+    threads = []
+    for tab in nbatch:
+        if len(nbatch[tab]) > 0:
+           log('\033[0;36;40mstart threading for {}，flag={}...\033[0m'.format(tab,flag))
+           thread = threading.Thread(target=exec_sql, args=(cfg, tab,nbatch[tab],flag,))
+           threads.append(thread)
+
+    for i in range(0, len(threads)):
+        threads[i].start()
+
+    for i in range(0, len(threads)):
+        threads[i].join()
+
+def exec_sql(cfg,tab,tab_batch,flag):
+    db = get_db_ck(cfg)
+    if flag == 'F':
+        if len(tab_batch) > 0:
+           log('exec full {} nbatch  for {}...'.format(len(tab_batch), tab))
+           for st in tab_batch:
+               if len(tab_batch) > 0 and st['amount'] % cfg['batch_size'] == 0:
+                  start_time = datetime.datetime.now()
+                  try:
+                      db.execute(st['sql'])
+                      log('Table:{}, event:{},time:{}s'.format(tab,st['event'],get_seconds(start_time)))
+                      #write_ckpt(cfg)
+                      time.sleep(cfg['sleep_time'])
+                  except:
+                      print('tab_batch=',tab_batch)
+                      print('exec=',st['sql'])
+                      traceback.print_exc()
+
+    else:
+        if len(tab_batch) > 0:
+            log('exec part {} nbatch for {}'.format(len(tab_batch), tab))
+            for st in tab_batch:
+                start_time = datetime.datetime.now()
+                log('Table:{}, event:{},time:{}s'.format(tab,st['event'], get_seconds(start_time)))
+                try:
+                    db.execute(st['sql'])
+                    #write_ckpt(cfg)
+                    time.sleep(cfg['sleep_time'])
+                except:
+                    print('tab_batch=', tab_batch)
+                    print('exec=', st['sql'])
+                    traceback.print_exc()
+
+def ck_exec(cfg,batch,flag='N'):
+    db = cfg ['db_ck']
+    #nbatch = process_batch(batch)
+    #nbatch = batch
+    for tab in batch:
+        if flag =='F':
+            log('exec nbatch {} for {}'.format(len(batch[tab]),tab))
+            for st in batch[tab]:
+                if len(batch[tab])>0 and len(batch[tab]) % cfg['batch_size'] == 0:
+                    db.execute(st['sql'])
+
+        else:
+            if len(batch[tab])>0:
+                log('exec nbatch {} for {}'.format(len(batch[tab]),tab))
+                for st in batch[tab]:
+                    db.execute(st['sql'])
+
 def check_sync(cfg,event,pks):
     res = False
     if pks.get(event['schema'] + '.' + event['table']) is None:
@@ -928,19 +941,25 @@ def check_batch_full_data(batch,cfg):
     return False
 
 def write_ckpt(cfg):
-    file, pos = get_file_and_pos(cfg)[0:2]
-    cfg['binlogfile'] = file
-    cfg['binlogpos']  = pos
-    ckpt = {
-       'binlogfile': file,
-       'binlogpos': pos,
-       'last_update_time': get_time(),
-       'pid':os.getpid()
-    }
+    if check_ckpt(cfg):
+        # last_file,last_pos = read_ckpt(cfg)
+        # if last_file == cfg['binlogfile']:
+        #   if cfg['binlogpos'] < last_pos:
+        #      cfg['binlogfile'] =last_file.split('.')[0]+'.'+str(int(last_file.split('.')[1])+1).rjust(6,'0')
+
+        ckpt = {
+            'binlogfile':cfg['binlogfile'],
+            'binlogpos' :cfg['binlogpos']
+        }
+    else:
+       file, pos = get_file_and_pos(cfg['db_mysql'])[0:2]
+       ckpt = {
+           'binlogfile': file,
+           'binlogpos': pos
+       }
+
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
-    logging.info('update ckpt:{}/{}'.format(cfg['binlogfile'],cfg['binlogpos'] ))
-    return file,pos
 
 def check_ckpt(cfg):
     return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
@@ -952,7 +971,9 @@ def read_ckpt(cfg):
         return ''
     else:
         binlog = json.loads(contents)
-        return binlog
+        file = binlog['binlogfile']
+        pos = binlog['binlogpos']
+        return file,pos
 
 def get_ds_mysql(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=True)
@@ -1043,20 +1064,14 @@ def get_config_from_db(tag):
             config['cr_mysql_log']        = config['db_mysql_log'].cursor()
 
         if check_ckpt(config):
-            ckpt = read_ckpt(config)
-            file = ckpt['binlogfile']
-            pos = ckpt['binlogpos']
-            pid = ckpt['pid']
-            if file not in get_binlog_files(config):
-                logging.info('ckpt:binlog file not exist mysql server,get current file,pos!!!')
-                file, pos = get_file_and_pos(config)[0:2]
+            file, pos = read_ckpt(config)
+            if file not in get_binlog_files(config['db_mysql']):
+               file, pos = get_file_and_pos(config['db_mysql'])[0:2]
         else:
-            file, pos = get_file_and_pos(config)[0:2]
-            pid = os.getpid()
+            file, pos = get_file_and_pos(config['db_mysql'])[0:2]
 
-        config['binlogfile'] = file
-        config['binlogpos']  = pos
-        config['pid']        = pid
+        config['binlogfile']            = file
+        config['binlogpos']             = pos
         config['ck_config']             = CK_TAB_CONFIG
         config['batch_size']            = config['batch_size_incr']
         config['sleep_time']            = float(config['sync_gap'])
@@ -1221,7 +1236,7 @@ def write_sync_log(config):
         url = 'http://124.127.103.190:21080/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
-           logging.info('Interface write_sync_log call failed!')
+           print('Interface write_sync_log call failed!')
     except:
          traceback.print_exc()
          sys.exit(0)
@@ -1250,7 +1265,7 @@ def init_cfg(cfg):
                 pkn[tab]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
                 col[tab]   = evt['column']
             else:
-                logging.info("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
+                log("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
                 types[tab] = None
                 pks[tab] = False
                 pkn[tab] = ''
@@ -1462,21 +1477,13 @@ def start_full_sync(cfg):
 
 
 def get_task_status(cfg):
-    if check_ckpt(cfg):
-        pid = read_ckpt(cfg).get('pid')
-        if pid :
-            if pid == os.getpid():
-               return False
-
-            if pid in psutil.pids():
-              return True
-            else:
-              return False
-        else:
-            return False
+    c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
+    r = os.popen(c).read()
+    if int(r) > 2 :
+       log('Gather Task already running!')
+       return True
     else:
-        logging.info('config file :{}.json not exists!'.format(cfg['sync_tag']))
-        return False
+       return False
 
 '''
   1.support single db multi table
@@ -1501,11 +1508,6 @@ if __name__ == "__main__":
         elif sys.argv[p] == "-debug":
             debug = True
 
-    # init logger
-    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
-                        format='[%(asctime)s-%(levelname)s:%(message)s]',
-                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
-
     # call api get config
     cfg = get_config_from_db(tag)
 
@@ -1519,19 +1521,8 @@ if __name__ == "__main__":
           log('load config faulure,exit sync!')
           sys.exit(0)
 
-       if read_real_sync_status()['msg']['value'] == 'STOP':
-           logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
-           sys.exit(0)
-
-       if read_real_sync_status()['msg']['value'] == 'STOP':
-           logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
-           sys.exit(0)
-
        # init go full sync
        start_full_sync(cfg)
 
        # parse binlog incr sync
        start_incr_syncer(cfg)
-
-    else:
-        logging.info('sync program:{} is running!'.format(tag))
