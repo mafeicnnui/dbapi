@@ -663,12 +663,8 @@ def write_ck_multi(cfg,tab):
     for m in rs_map:
        id_map[str(m['id'])] = str(m['map_id'])
 
-    #logging.info("rs_map:"+str(rs_map))
-    #logging.info("id_map:" + json.dumps(id_map))
     id = ','.join([str(x['id']) for x in rs_map])
-    #logging.info('id='+id)
     st_log = """select id,sync_table,statement,type from t_db_sync_log where id in({}) order by id""".format(id)
-    #logging.info("st_log="+st_log)
     cr_log.execute(st_log)
     rs_log = cr_log.fetchall()
     cfg['event_amount'] = len(rs_log)
@@ -728,7 +724,10 @@ def write_ck_multi(cfg,tab):
               logging.info('\033[0;36;40m'+r['statement']+'\033[0m')
               time.sleep(1)
 
-
+    # delete repeat data
+    event = {'schema': tab.split('.')[0], 'table': tab.split('.')[1]}
+    if check_ck_tab_exists(cfg,db_ck,event) and check_ck_tab_repeat_data(cfg,db_ck,event) >0:
+       optimize_table(cfg,db_ck,event)
 
 
 def get_tasks(cfg):
@@ -831,8 +830,30 @@ def read_real_sync_status():
         return res
     except:
         logging.info('read_real_sync_status failure!')
-        # logging.info(traceback.format_exc())
         return None
+
+def get_sync_table_pk_names(cfg,db,event):
+    st="""select name  from system.columns where database='{}' and table='{}' and is_in_primary_key=1 order by position"""\
+        .format(get_ck_schema(cfg, event),event['table'])
+    rs = db.execute(st)
+    v_col = ''
+    for i in list(rs):
+        v_col=v_col+i[0]+','
+    return v_col[0:-1]
+
+def check_ck_tab_repeat_data(cfg,db,event):
+   pk = get_sync_table_pk_names(cfg,db,event)
+   st="""select count(0) from (select  {} from {}.{} group by {} having count(0)>1)""".\
+          format(pk,get_ck_schema(cfg, event),event['table'],pk)
+   rs = db.execute(st)
+   return rs[0][0]
+
+def optimize_table(cfg,db,event):
+    if check_ck_tab_exists(cfg,db,event) >0:
+        st ='''optimize table {}.{} final'''.format(get_ck_schema(cfg, event),event['table'])
+        logging.info(st)
+        db.execute(st)
+        logging.info('\033[0;31;40moptimize clickhouse table {}.{} complete!\033[0m'.format(get_ck_schema(cfg, event),event['table']))
 
 if __name__=="__main__":
     tag = ""
@@ -840,7 +861,6 @@ if __name__=="__main__":
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
-
 
     # query system parameters to determine whether to run the  program
     if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
@@ -860,6 +880,9 @@ if __name__=="__main__":
     if not get_task_status(cfg):
        write_pid(cfg)
        print_dict(cfg)
-       start_sync(cfg)
+       try:
+         start_sync(cfg)
+       except:
+         logging.info(traceback.print_exc())
     else:
        logging.info('sync program:{} is running!'.format(tag))

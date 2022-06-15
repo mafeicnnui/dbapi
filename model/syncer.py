@@ -254,13 +254,13 @@ def write_remote_crontab_sync(cfg,ssh):
 
     v_agent_ = '''sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/config'''.format('db_agent', '数据库代理服务', 'db_agent.py', '*/1 * * * *', v_cmd_)
 
-    v_clear  = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '*/30 * * * *', v_cls)
+    v_clear  = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls)
 
-    v_clear_ = '''echo  -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '*/30 * * * *', v_cls)
+    v_clear_ = '''echo  -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls)
 
-    v_clear2 = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '*/30 * * * *', v_cls2)
+    v_clear2 = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls2)
 
-    v_clear2_ = '''echo -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '*/30 * * * *', v_cls2)
+    v_clear2_ = '''echo -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls2)
 
     v_cron2  = '''sed -i '/^$/{N;/\\n$/D};' /tmp/config'''
 

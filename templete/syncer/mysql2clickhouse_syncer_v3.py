@@ -457,6 +457,16 @@ def get_sync_table_total_rows(cfg,event):
     rs = cr.fetchone()
     return  rs[0]
 
+def get_sync_table_text_type(cfg,event):
+    db = cfg['db_mysql']
+    cr = db.cursor()
+    st = """select count(0) from information_schema.columns
+               where table_schema='{}' and table_name='{}' and data_type = 'text' """.format(event['schema'], event['table'])
+    cr.execute(st)
+    rs = cr.fetchone()
+    cr.close()
+    return rs[0]
+
 def get_mysql_rq(rq,step=1,type='DAY'):
     cr = cfg['cr_mysql']
     st = "select DATE_ADD('{}', INTERVAL {} {}) as rq ".format(rq,step,type)
@@ -1856,7 +1866,8 @@ def full_sync_many(cfg):
         if o != '':
            event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
            event['tab'] = event['schema'] + '.' + event['table']
-           if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0 and get_sync_table_total_rows(cfg, event) <= 5000000:
+           if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0 \
+                   and get_sync_table_total_rows(cfg, event) <= 5000000 and get_sync_table_text_type(cfg,event)==0 :
               cfg['sync_table_diff'].append(o)
               if check_ck_tab_exists(cfg, event) == 0:
                  logging.info('create table {} ...'.format(event['tab']))
@@ -1867,7 +1878,8 @@ def full_sync_many(cfg):
               logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
               full_sync(cfg,event)
 
-           if check_tab_exists_pk(cfg, event) > 0 and check_ck_tab_exists(cfg,event) == 0 and get_sync_table_total_rows(cfg, event) > 5000000:
+           if check_tab_exists_pk(cfg, event) > 0 and check_ck_tab_exists(cfg,event) == 0 \
+                   and (get_sync_table_total_rows(cfg, event) > 5000000 or  get_sync_table_text_type(cfg,event)>0):
                if check_ck_tab_exists(cfg, event) == 0:
                    logging.info('create table {} ...'.format(event['tab']))
                    create_ck_table_replace(cfg, event)

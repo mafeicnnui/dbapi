@@ -19,18 +19,11 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="mysql-&gt;mysql sync fix">
-      <change afterPath="$PROJECT_DIR$/templete/syncer/his/mysql2clickhouse_executer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templete/syncer/his/mysql2clickhouse_syncer_v3.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templete/syncer/his/mysql2clickhouse_syncer_v4.py" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v4.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v4.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -548,14 +541,10 @@
       <workItem from="1650845017898" duration="18066000" />
       <workItem from="1650952709570" duration="7965000" />
       <workItem from="1651019311591" duration="9767000" />
-      <workItem from="1655081834327" duration="502000" />
-    </task>
-    <task id="LOCAL-00034" summary="sync agent fix">
-      <created>1632627683513</created>
-      <option name="number" value="00034" />
-      <option name="presentableId" value="LOCAL-00034" />
-      <option name="project" value="LOCAL" />
-      <updated>1632627683513</updated>
+      <workItem from="1655081834327" duration="1811000" />
+      <workItem from="1655101930643" duration="169000" />
+      <workItem from="1655258129611" duration="4571000" />
+      <workItem from="1655271633573" duration="4585000" />
     </task>
     <task id="LOCAL-00035" summary="mysql2mysql bug fix">
       <created>1633678849944</created>
@@ -893,7 +882,14 @@
       <option name="project" value="LOCAL" />
       <updated>1650792809779</updated>
     </task>
-    <option name="localTasksCounter" value="83" />
+    <task id="LOCAL-00083" summary="bug fix">
+      <created>1655083184396</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1655083184396</updated>
+    </task>
+    <option name="localTasksCounter" value="84" />
     <servers />
   </component>
   <component name="TodoView">
@@ -921,7 +917,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="add monitor_agent" />
     <MESSAGE value="add doris sync support" />
     <MESSAGE value="add clickhouse sync support" />
     <MESSAGE value="add pg sync support" />
@@ -946,14 +941,14 @@
     <MESSAGE value="myysql2clickhouse archive" />
     <MESSAGE value="add log" />
     <MESSAGE value="mysql-&gt;mysql sync fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="mysql-&gt;mysql sync fix" />
+    <MESSAGE value="bug fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
   </component>
   <component name="WindowStateProjectService">
     <state x="2226" y="337" width="1171" height="683" key="#Deployment" timestamp="1650351954529">
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
     <state x="2226" y="337" width="1171" height="683" key="#Deployment/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351954529" />
-    <state x="335" y="152" key="#Deployment/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1646269338815" />
     <state x="2255" y="155" width="1124" height="683" key="#Deployment/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864192861" />
     <state x="2514" y="201" key="#Options" timestamp="1648020668804">
       <screen x="1920" y="3" width="1920" height="1040" />
@@ -963,7 +958,6 @@
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
     <state x="2393" y="269" key="#SSH_Configurations/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813152074" />
-    <state x="473" y="139" key="#SSH_Configurations/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1646269337805" />
     <state x="2393" y="142" key="#SSH_Configurations/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864190731" />
     <state x="2050" y="246" width="1092" height="699" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1648712801331">
       <screen x="1920" y="3" width="1920" height="1040" />
@@ -998,23 +992,16 @@
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
     <state x="2314" y="404" width="998" height="708" key="SettingsEditor/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351914035" />
-    <state x="244" y="138" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1646269344572" />
     <state x="2348" y="203" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648882854652" />
-    <state x="2472" y="382" key="Vcs.Push.Dialog.v2" timestamp="1650792814936">
+    <state x="2472" y="382" key="Vcs.Push.Dialog.v2" timestamp="1655083192573">
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
-    <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650792814936" />
-    <state x="552" y="252" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1645088763772" />
+    <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655083192573" />
     <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648716931832" />
-    <state x="515" y="444" width="596" height="532" key="find.popup" timestamp="1644302772430">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state x="515" y="444" width="596" height="532" key="find.popup/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1644302772430" />
     <state x="2426" y="851" key="publish.login" timestamp="1651051763869">
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
     <state x="2426" y="851" key="publish.login/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1651051763869" />
-    <state x="766" y="425" key="publish.login/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1646269725145" />
     <state x="2686" y="428" key="publish.login/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648869547472" />
     <state x="2543" y="355" width="672" height="678" key="search.everywhere.popup" timestamp="1649843223452">
       <screen x="1920" y="130" width="1920" height="1040" />
