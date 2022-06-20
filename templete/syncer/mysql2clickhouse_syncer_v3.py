@@ -316,7 +316,10 @@ def get_sync_table_id_minus(cfg,event):
     cr.execute(st)
     rs = cr.fetchone()
     #logging.info("get_sync_table_id_minus={} - minus:{}/3rn:{}".format(st, rs[0], 3 * rn))
-    if rs[0] > 3 * rn :
+    if rn <10000 :
+       return False
+
+    if rs[0] > 3 * rn:
        return True
     else:
        return False
