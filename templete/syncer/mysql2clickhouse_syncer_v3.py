@@ -1871,7 +1871,8 @@ def full_sync_many(cfg):
               cfg['sync_table_diff'].append(o)
               if check_ck_tab_exists(cfg, event) == 0:
                  logging.info('create table {} ...'.format(event['tab']))
-                 create_ck_table(cfg, event)
+                 #create_ck_table(cfg, event)
+                 create_ck_table_replace(cfg, event)
               else:
                  logging.info('Table {} exists!'.format(event['tab']))
               cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
