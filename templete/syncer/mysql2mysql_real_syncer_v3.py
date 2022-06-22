@@ -60,7 +60,7 @@ def get_obj_op(p_sql):
 
 def get_obj_name(p_sql):
     if p_sql.upper().count("CREATE") > 0 and p_sql.upper().count("TABLE") > 0 \
-        or p_sql.upper().count("TRUNCATE") > 0 and p_sql.upper().count("TABLE") > 0 \
+        or p_sql.upper().count("TRUNCATE") > 0 \
          or p_sql.upper().count("ALTER") > 0 and p_sql.upper().count("TABLE") > 0 \
            or p_sql.upper().count("DROP") > 0 and p_sql.upper().count("TABLE") > 0 \
              or p_sql.upper().count("DROP") > 0 and p_sql.upper().count("DATABASE") > 0 \
@@ -71,7 +71,11 @@ def get_obj_name(p_sql):
                         or p_sql.upper().count("CREATE") > 0 and p_sql.upper().count("TRIGGER") > 0  \
                            or p_sql.upper().count("CREATE") > 0 and p_sql.upper().count("DATABASE") > 0:
 
-       if p_sql.upper().count("CREATE") > 0 and p_sql.upper().count("INDEX") > 0 and p_sql.upper().count("UNIQUE") > 0:
+       if p_sql.upper().count("TRUNCATE") > 0 and p_sql.upper().count("TABLE") > 0:
+           obj = re.split(r'\s+', p_sql)[2].replace('`', '')
+       elif p_sql.upper().count("TRUNCATE") > 0 and p_sql.upper().count("TABLE") ==  0:
+           obj = re.split(r'\s+', p_sql)[1].replace('`', '')
+       elif p_sql.upper().count("CREATE") > 0 and p_sql.upper().count("INDEX") > 0 and p_sql.upper().count("UNIQUE") > 0:
            obj = re.split(r'\s+', p_sql)[3].replace('`', '')
        else:
            obj=re.split(r'\s+', p_sql)[2].replace('`', '')
@@ -733,7 +737,7 @@ def gen_sql(cfg,event):
     return sql
 
 def gen_ddl_sql(p_ddl):
-    if p_ddl.find('create table')>=0 or p_ddl.find('drop table')>=0  or p_ddl.find('truncate table')>=0:
+    if p_ddl.find('create table')>=0 or p_ddl.find('drop table')>=0  or p_ddl.find('truncate')>=0 or p_ddl.find('alter table')>=0:
        return p_ddl
     else:
        return None
@@ -1229,7 +1233,9 @@ def start_incr_sync(cfg):
                 cfg['binlog_pos'] = binlogevent.packet.log_pos
                 event = {"schema": bytes.decode(binlogevent.schema), "query": binlogevent.query.lower()}
                 if 'create' in event['query'] or 'drop' in event['query']  or 'alter' in event['query'] or 'truncate' in event['query']:
+                    logging.info('query:' + event['query'])
                     ddl = gen_ddl_sql(event['query'])
+                    logging.info('DDL:' + ddl)
                     event['table'] = get_obj_name(event['query']).lower()
                     event['tab'] = event['schema']+'.'+event['table']
 
