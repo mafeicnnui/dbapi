@@ -324,6 +324,20 @@ def get_sync_table_date_pk_num(cfg,event):
     rs = cr.fetchone()
     return rs[0]
 
+def get_sync_table_string_pk_num(cfg,event):
+    cr = cfg['cr_mysql']
+    st = """select count(0)
+              from information_schema.columns
+              where table_schema='{}'
+                and table_name='{}' 
+                and column_key='PRI'  
+                and data_type IN('varchar','text','longtext') 
+                order by ordinal_position
+          """.format(event['schema'],event['table'])
+    cr.execute(st)
+    rs = cr.fetchone()
+    return rs[0]
+
 def get_sync_table_id_minus(cfg,event):
     cr = cfg['cr_mysql']
     pk = get_sync_table_pk_names(cfg, event)
@@ -334,7 +348,7 @@ def get_sync_table_id_minus(cfg,event):
     cr.execute(st)
     rs = cr.fetchone()
     #logging.info("get_sync_table_id_minus={} - minus:{}/3rn:{}".format(st, rs[0], 3 * rn))
-    if rn <10000 :
+    if rn <100000 :
        return False
 
     if rs[0] > 3 * rn:
@@ -1023,7 +1037,8 @@ def full_sync(cfg, event):
     # one primary and date column
     if (check_ck_tab_exists(cfg, event) == 0 \
         or (check_ck_tab_exists(cfg, event) > 0 and check_ck_tab_exists_data(cfg, event) == 0)) \
-            and check_tab_exists_pk(cfg, event) == 1 and get_sync_table_date_pk_num(cfg, event) >= 1:
+            and check_tab_exists_pk(cfg, event) >= 1 \
+              and (get_sync_table_date_pk_num(cfg, event) >= 1 or get_sync_table_string_pk_num(cfg,event)>=1):
         i_counter = 0
         ins_sql_header = get_tab_header(cfg, event)
         cr_source = cfg['cr_mysql']
@@ -1833,28 +1848,29 @@ def start_incr_sync(cfg):
                 if 'create' in event['query'] or 'drop' in event['query']  or 'alter' in event['query'] or 'truncate' in event['query']:
                     logging.info('query:'+event['query'])
                     ddl = gen_ddl_sql(event['query'])
-                    logging.info('DDL:'+ddl)
-                    event['table'] = get_obj_name(event['query']).lower()
-                    event['tab'] = event['schema']+'.'+event['table']
+                    if ddl is not None:
+                        logging.info('DDL:'+ddl)
+                        event['table'] = get_obj_name(event['query']).lower()
+                        event['tab'] = event['schema']+'.'+event['table']
 
-                    if check_sync(cfg,event,pks) and ddl is not None:
-                       if check_ck_tab_exists(cfg,event) == 0:
-                          create_ck_table(cfg,event)
-                          cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
-                          logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
-                          full_sync_one(cfg, event)
-                          logging.info("\033[1;37;40m[{}] full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
-                          types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
-                          ddl_amount = ddl_amount +1
+                        if check_sync(cfg,event,pks) and ddl is not None:
+                           if check_ck_tab_exists(cfg,event) == 0:
+                              create_ck_table(cfg,event)
+                              cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
+                              logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
+                              full_sync_one(cfg, event)
+                              logging.info("\033[1;37;40m[{}] full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
+                              types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
+                              ddl_amount = ddl_amount +1
 
-                       if re.split(r'\s+', ddl.strip())[0].upper() == 'TRUNCATE':
-                           truncate_ck_table(cfg, event, ddl)
+                           if re.split(r'\s+', ddl.strip())[0].upper() == 'TRUNCATE':
+                               truncate_ck_table(cfg, event, ddl)
 
-                       if re.split(r'\s+', ddl.strip())[0].upper() == 'DROP':
-                           drop_ck_table(cfg, event, ddl)
+                           if re.split(r'\s+', ddl.strip())[0].upper() == 'DROP':
+                               drop_ck_table(cfg, event, ddl)
 
-                       if get_obj_op(ddl.strip())  in ('ALTER_TABLE_ADD','ALTER_TABLE_CHANGE','ALTER_TABLE_DROP'):
-                           alter_ck_table(cfg, event, ddl)
+                           if get_obj_op(ddl.strip())  in ('ALTER_TABLE_ADD','ALTER_TABLE_CHANGE','ALTER_TABLE_DROP'):
+                               alter_ck_table(cfg, event, ddl)
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
                     isinstance(binlogevent, UpdateRowsEvent) or \

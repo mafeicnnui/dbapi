@@ -191,6 +191,21 @@ def get_sync_table_int_pk_num(cfg,event):
     rs = cr.fetchone()
     return rs[0]
 
+def get_sync_table_date_pk_num(cfg,event):
+    cr = cfg['cr_mysql']
+    st = """select count(0)
+              from information_schema.columns
+              where table_schema='{}'
+                and table_name='{}' 
+                and column_key='PRI'  
+                and data_type IN('date','timestamp','datetime') 
+                order by ordinal_position
+          """.format(event['schema'],event['table'])
+    cr.execute(st)
+    rs = cr.fetchone()
+    return rs[0]
+
+
 def get_sync_table_id_minus(cfg,event):
     cr = cfg['cr_mysql']
     pk = get_sync_table_pk_names(cfg, event)
@@ -253,8 +268,9 @@ def get_sync_table_multi_pk_rq_col(cfg,event):
                 FROM information_schema.columns
                 WHERE table_schema='{}'
                 AND table_name='{}' 
-                AND data_type IN('timestamp','datetime')
-                AND is_nullable='NO'
+                AND data_type IN('date','timestamp','datetime')
+                AND is_nullable='NO' 
+                AND column_key IN('MUL','PRI')
                 AND column_name  = '{}'
           """
 
@@ -262,8 +278,9 @@ def get_sync_table_multi_pk_rq_col(cfg,event):
                     FROM information_schema.columns
                     WHERE table_schema='{}'
                     AND table_name='{}' 
-                    AND data_type IN('timestamp','datetime')
+                    AND data_type IN('date','timestamp','datetime')
                     AND is_nullable='NO'
+                    AND column_key IN('MUL','PRI')
                     AND column_name  not in ('create_time','create_dt','update_time','update_dt')
               """.format(event['schema'], event['table'])
 
@@ -271,8 +288,9 @@ def get_sync_table_multi_pk_rq_col(cfg,event):
                        FROM information_schema.columns
                        WHERE table_schema='{}'
                        AND table_name='{}' 
-                       AND data_type IN('timestamp','datetime')
+                       AND data_type IN('date','timestamp','datetime')
                        AND is_nullable='NO'
+                       AND column_key IN('MUL','PRI')
                        AND column_name  not in ('create_time','create_dt','update_time','update_dt') limit 1
                  """.format(event['schema'], event['table'])
 
@@ -281,14 +299,22 @@ def get_sync_table_multi_pk_rq_col(cfg,event):
                        FROM information_schema.columns
                        WHERE table_schema='{}'
                        AND table_name='{}' 
-                       AND data_type IN('timestamp','datetime')  limit 1
+                       AND column_key IN('MUL','PRI')
+                       AND data_type IN('date','timestamp','datetime')  limit 1
                  """.format(event['schema'], event['table'])
 
     st5 = """SELECT column_name
                        FROM information_schema.columns
                        WHERE table_schema='{}'
                        AND table_name='{}' 
-                       AND data_type IN('timestamp','datetime')  limit 1
+                       AND column_key IN('MUL','PRI')
+                       AND data_type IN('date','timestamp','datetime') 
+                       ORDER BY CASE 
+                                   WHEN column_name = 'create_time' THEN 1
+                                   WHEN column_name = 'create_dt' THEN 2
+                                   WHEN column_name = 'update_time' THEN 3
+                                   WHEN column_name = 'update_dt' THEN 4
+                                 ELSE 5 END limit 1
                  """.format(event['schema'], event['table'])
 
     cr.execute(st.format(event['schema'],event['table'],'create_time'))
@@ -353,6 +379,8 @@ def get_sync_table_total_rows(cfg,event):
 def full_sync(cfg,event):
     logging.info('full sync table:{}...'.format(event['tab']))
     tab = event['table']
+
+    # one primary key,int type and id continuous
     if (check_mysql_tab_exists(cfg, event) == 0 \
         or (check_mysql_tab_exists(cfg, event) > 0 and check_mysql_tab_sync(cfg, event) == 0)) \
             and check_tab_exists_pk(cfg, event) == 1 and get_sync_table_int_pk_num(cfg, event) == 1 and not get_sync_table_id_minus(cfg, event):
@@ -403,6 +431,7 @@ def full_sync(cfg,event):
             if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                 break
 
+    # one primary key,int type and id not continuous
     if (check_mysql_tab_exists(cfg, event) == 0 \
         or (check_mysql_tab_exists(cfg, event) > 0 and check_mysql_tab_sync(cfg, event) == 0)) \
             and check_tab_exists_pk(cfg, event) == 1 and get_sync_table_int_pk_num(cfg, event) == 1 and get_sync_table_id_minus(cfg, event):
@@ -458,6 +487,7 @@ def full_sync(cfg,event):
             if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                 break
 
+    # more primary key
     if (check_mysql_tab_exists(cfg, event) == 0 \
         or (check_mysql_tab_exists(cfg, event) > 0 and check_mysql_tab_sync(cfg, event) == 0)) \
             and check_tab_exists_pk(cfg, event) == 2 :
@@ -510,6 +540,62 @@ def full_sync(cfg,event):
 
             d_rq_start = d_rq_end
             d_rq_end = get_mysql_rq(d_rq_start,7)
+            if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
+                break
+
+    # one primary and date column
+    if (check_mysql_tab_exists(cfg, event) == 0 \
+        or (check_mysql_tab_exists(cfg, event) > 0 and check_mysql_tab_sync(cfg, event) == 0)) \
+            and check_tab_exists_pk(cfg, event) == 1 and get_sync_table_date_pk_num(cfg, event) >= 1:
+        i_counter = 0
+        ins_sql_header = get_tab_header(cfg, event)
+        cr_source = cfg['cr_mysql']
+        cr_desc = cfg['cr_mysql_dest']
+        d_min_rq = get_sync_table_min_rq(cfg, event)
+        if d_min_rq is None:
+            logging.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
+            return
+        n_tab_total_rows = get_sync_table_total_rows(cfg, event)
+        v_sync_col = get_sync_table_multi_pk_rq_col(cfg, event)
+        if v_sync_col == '':
+            logging.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
+            return
+        v_sync_table_cols = get_sync_table_cols(cfg, event)
+
+        d_rq_start = d_min_rq
+        d_rq_end = get_mysql_rq(d_min_rq, 7)
+        while n_tab_total_rows > 0:
+            st = "select {} from `{}`.`{}` where {} >= '{}' and  {}<'{}'" \
+                .format(v_sync_table_cols, event['schema'], tab, v_sync_col, d_rq_start, v_sync_col, d_rq_end)
+            logging.info('v3:' + st)
+            cr_source.execute(st)
+            rs_source = cr_source.fetchall()
+            v_sql = ''
+            if len(rs_source) > 0:
+                for i in range(len(rs_source)):
+                    rs_source_desc = cr_source.description
+                    ins_val = ''
+                    for j in range(len(rs_source[i])):
+                        col_type = str(rs_source_desc[j][1])
+                        if rs_source[i][j] is None:
+                            ins_val = ins_val + "null,"
+                        elif col_type == '253':  # varchar,date
+                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                        elif col_type in ('1', '3', '8', '246'):  # int,decimal
+                            ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
+                        elif col_type == '12':  # datetime
+                            ins_val = ins_val + "'" + str(rs_source[i][j]).split('.')[0] + "',"
+                        else:
+                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                    v_sql = v_sql + '(' + ins_val[0:-1] + '),'
+                batch_sql = ins_sql_header + v_sql[0:-1]
+                cr_desc.execute(batch_sql)
+                i_counter = i_counter + len(rs_source)
+                logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                             format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2)))
+
+            d_rq_start = d_rq_end
+            d_rq_end = get_mysql_rq(d_rq_start, 7)
             if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                 break
 

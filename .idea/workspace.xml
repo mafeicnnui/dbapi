@@ -21,9 +21,8 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,19 +74,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\syncer\his" />
-      <recent name="D:\work\dbapi\model" />
-      <recent name="D:\work\dbapi\service" />
-      <recent name="D:\work\dbapi\urls" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\syncer\his" />
       <recent name="D:\work\dbapi" />
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\minio" />
       <recent name="D:\work\dbapi\templete\datax" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\syncer\his" />
+      <recent name="D:\work\dbapi\model" />
+      <recent name="D:\work\dbapi\service" />
+      <recent name="D:\work\dbapi\urls" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -544,42 +543,18 @@
       <workItem from="1655081834327" duration="1811000" />
       <workItem from="1655101930643" duration="169000" />
       <workItem from="1655258129611" duration="4571000" />
-      <workItem from="1655271633573" duration="4585000" />
-    </task>
-    <task id="LOCAL-00035" summary="mysql2mysql bug fix">
-      <created>1633678849944</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1633678849944</updated>
-    </task>
-    <task id="LOCAL-00036" summary="mysql2mysql bug fix">
-      <created>1633760861716</created>
-      <option name="number" value="00036" />
-      <option name="presentableId" value="LOCAL-00036" />
-      <option name="project" value="LOCAL" />
-      <updated>1633760861716</updated>
-    </task>
-    <task id="LOCAL-00037" summary="add monitor_agent">
-      <created>1634031240790</created>
-      <option name="number" value="00037" />
-      <option name="presentableId" value="LOCAL-00037" />
-      <option name="project" value="LOCAL" />
-      <updated>1634031240790</updated>
-    </task>
-    <task id="LOCAL-00038" summary="add doris sync support">
-      <created>1635152941480</created>
-      <option name="number" value="00038" />
-      <option name="presentableId" value="LOCAL-00038" />
-      <option name="project" value="LOCAL" />
-      <updated>1635152941480</updated>
-    </task>
-    <task id="LOCAL-00039" summary="add doris sync support">
-      <created>1635237218888</created>
-      <option name="number" value="00039" />
-      <option name="presentableId" value="LOCAL-00039" />
-      <option name="project" value="LOCAL" />
-      <updated>1635237218888</updated>
+      <workItem from="1655271633573" duration="5959000" />
+      <workItem from="1655281391008" duration="1526000" />
+      <workItem from="1655350489401" duration="605000" />
+      <workItem from="1655687960390" duration="770000" />
+      <workItem from="1655714544497" duration="2198000" />
+      <workItem from="1655775484365" duration="38000" />
+      <workItem from="1655797211777" duration="714000" />
+      <workItem from="1655861120498" duration="9372000" />
+      <workItem from="1655889509677" duration="936000" />
+      <workItem from="1655966480009" duration="3178000" />
+      <workItem from="1655976417914" duration="8000" />
+      <workItem from="1656055607181" duration="684000" />
     </task>
     <task id="LOCAL-00040" summary="add doris sync support">
       <created>1635930883472</created>
@@ -889,7 +864,42 @@
       <option name="project" value="LOCAL" />
       <updated>1655083184396</updated>
     </task>
-    <option name="localTasksCounter" value="84" />
+    <task id="LOCAL-00084" summary="bug fix">
+      <created>1655276558167</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1655276558168</updated>
+    </task>
+    <task id="LOCAL-00085" summary="bug fix">
+      <created>1655704512987</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1655704512987</updated>
+    </task>
+    <task id="LOCAL-00086" summary="bug fix">
+      <created>1655716738394</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1655716738394</updated>
+    </task>
+    <task id="LOCAL-00087" summary="bug fix">
+      <created>1655864376718</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1655864376719</updated>
+    </task>
+    <task id="LOCAL-00088" summary="bug fix">
+      <created>1655880691253</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1655880691253</updated>
+    </task>
+    <option name="localTasksCounter" value="89" />
     <servers />
   </component>
   <component name="TodoView">
@@ -993,10 +1003,10 @@
     </state>
     <state x="2314" y="404" width="998" height="708" key="SettingsEditor/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351914035" />
     <state x="2348" y="203" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648882854652" />
-    <state x="2472" y="382" key="Vcs.Push.Dialog.v2" timestamp="1655083192573">
+    <state x="2472" y="382" key="Vcs.Push.Dialog.v2" timestamp="1655880694955">
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
-    <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655083192573" />
+    <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655880694955" />
     <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648716931832" />
     <state x="2426" y="851" key="publish.login" timestamp="1651051763869">
       <screen x="1920" y="130" width="1920" height="1040" />
