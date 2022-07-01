@@ -21,7 +21,10 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -74,19 +77,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\syncer\his" />
-      <recent name="D:\work\dbapi" />
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\minio" />
-      <recent name="D:\work\dbapi\templete\datax" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\syncer\his" />
       <recent name="D:\work\dbapi\model" />
       <recent name="D:\work\dbapi\service" />
       <recent name="D:\work\dbapi\urls" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete\syncer\his" />
+      <recent name="D:\work\dbapi" />
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\minio" />
+      <recent name="D:\work\dbapi\templete\datax" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -555,13 +558,12 @@
       <workItem from="1655966480009" duration="3178000" />
       <workItem from="1655976417914" duration="8000" />
       <workItem from="1656055607181" duration="684000" />
-    </task>
-    <task id="LOCAL-00040" summary="add doris sync support">
-      <created>1635930883472</created>
-      <option name="number" value="00040" />
-      <option name="presentableId" value="LOCAL-00040" />
-      <option name="project" value="LOCAL" />
-      <updated>1635930883472</updated>
+      <workItem from="1656063116924" duration="30000" />
+      <workItem from="1656294002848" duration="1023000" />
+      <workItem from="1656312604833" duration="1884000" />
+      <workItem from="1656464142850" duration="78000" />
+      <workItem from="1656469714793" duration="1085000" />
+      <workItem from="1656655884070" duration="997000" />
     </task>
     <task id="LOCAL-00041" summary="add doris sync support">
       <created>1636019260632</created>
@@ -899,7 +901,14 @@
       <option name="project" value="LOCAL" />
       <updated>1655880691253</updated>
     </task>
-    <option name="localTasksCounter" value="89" />
+    <task id="LOCAL-00089" summary="bug fix">
+      <created>1656063124181</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1656063124181</updated>
+    </task>
+    <option name="localTasksCounter" value="90" />
     <servers />
   </component>
   <component name="TodoView">
@@ -955,59 +964,65 @@
     <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2226" y="337" width="1171" height="683" key="#Deployment" timestamp="1650351954529">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state x="2226" y="-278" width="1171" height="683" key="#Deployment" timestamp="1656312659426">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
+    <state x="2226" y="-278" key="#Deployment/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656312659426" />
     <state x="2226" y="337" width="1171" height="683" key="#Deployment/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351954529" />
     <state x="2255" y="155" width="1124" height="683" key="#Deployment/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864192861" />
     <state x="2514" y="201" key="#Options" timestamp="1648020668804">
       <screen x="1920" y="3" width="1920" height="1040" />
     </state>
     <state x="2514" y="201" key="#Options/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648020668804" />
-    <state x="2393" y="269" key="#SSH_Configurations" timestamp="1649813152074">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state x="2393" y="-346" key="#SSH_Configurations" timestamp="1656312658849">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
+    <state x="2393" y="-346" key="#SSH_Configurations/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656312658849" />
     <state x="2393" y="269" key="#SSH_Configurations/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813152074" />
     <state x="2393" y="142" key="#SSH_Configurations/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864190731" />
     <state x="2050" y="246" width="1092" height="699" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1648712801331">
       <screen x="1920" y="3" width="1920" height="1040" />
     </state>
-    <state x="588" y="226" width="1092" height="699" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1647592129953" />
     <state x="2050" y="246" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648712801331" />
-    <state width="1877" height="390" key="GridCell.Tab.0.bottom" timestamp="1649813835097">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state width="1877" height="301" key="GridCell.Tab.0.bottom" timestamp="1656318349607">
+      <screen x="0" y="0" width="1920" height="1040" />
     </state>
+    <state width="1877" height="301" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
     <state width="1877" height="390" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="367" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1647593993130" />
     <state width="1877" height="8" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state width="1877" height="390" key="GridCell.Tab.0.center" timestamp="1649813835097">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state width="1877" height="301" key="GridCell.Tab.0.center" timestamp="1656318349607">
+      <screen x="0" y="0" width="1920" height="1040" />
     </state>
+    <state width="1877" height="301" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
     <state width="1877" height="390" key="GridCell.Tab.0.center/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="367" key="GridCell.Tab.0.center/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1647593993129" />
     <state width="1877" height="8" key="GridCell.Tab.0.center/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state width="1877" height="390" key="GridCell.Tab.0.left" timestamp="1649813835097">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state width="1877" height="301" key="GridCell.Tab.0.left" timestamp="1656318349606">
+      <screen x="0" y="0" width="1920" height="1040" />
     </state>
+    <state width="1877" height="301" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349606" />
     <state width="1877" height="390" key="GridCell.Tab.0.left/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="367" key="GridCell.Tab.0.left/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1647593993129" />
     <state width="1877" height="8" key="GridCell.Tab.0.left/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state width="1877" height="390" key="GridCell.Tab.0.right" timestamp="1649813835097">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state width="1877" height="301" key="GridCell.Tab.0.right" timestamp="1656318349607">
+      <screen x="0" y="0" width="1920" height="1040" />
     </state>
+    <state width="1877" height="301" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
     <state width="1877" height="390" key="GridCell.Tab.0.right/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="367" key="GridCell.Tab.0.right/0.0.1920.1040/1920.3.1920.1040@0.0.1920.1040" timestamp="1647593993130" />
     <state width="1877" height="8" key="GridCell.Tab.0.right/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
     <state x="2314" y="404" width="998" height="708" key="SettingsEditor" timestamp="1650351914035">
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
     <state x="2314" y="404" width="998" height="708" key="SettingsEditor/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351914035" />
     <state x="2348" y="203" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648882854652" />
-    <state x="2472" y="382" key="Vcs.Push.Dialog.v2" timestamp="1655880694955">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1656063128189">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656063128189" />
     <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655880694955" />
     <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648716931832" />
+    <state x="2582" y="-231" width="596" height="532" key="find.popup" timestamp="1656469864790">
+      <screen x="1920" y="-485" width="1920" height="1040" />
+    </state>
+    <state x="2582" y="-231" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656469864790" />
     <state x="2426" y="851" key="publish.login" timestamp="1651051763869">
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
@@ -1038,7 +1053,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1649813835087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1656312661284" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
   </component>
 </project>

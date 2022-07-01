@@ -136,21 +136,25 @@ if __name__ == "__main__":
 
     # set sync logger status is pause
     logging.info('set sync logger process is pause status[sync_tag:{}]!'.format(cfg['exec_tag']))
-    set_real_sync_status(cfg,'PAUSE')
+    set_real_sync_status(cfg,'STOP')
 
     # loop check sync log num
-    while True:
-        # get sync log num
-        num = get_real_sync_log_num(cfg)
-        logging.info('sync log num is {} for:{}'.format(str(num),cfg['exec_tag']))
-        if num == 0 :
-           logging.info('\nstart clear real sync log![{}]'.format(cfg['exec_tag']))
-           clear_real_sync_log(cfg)
-           logging.info('clear real sync log ok![{}]'.format(cfg['exec_tag']))
-           break
-        else:
-           time.sleep(1)
-           continue
+    # while True:
+    #     # get sync log num
+    #     num = get_real_sync_log_num(cfg)
+    #     logging.info('sync log num is {} for:{}'.format(str(num),cfg['exec_tag']))
+    #     if num == 0 :
+    #        logging.info('\nstart clear real sync log![{}]'.format(cfg['exec_tag']))
+    #        clear_real_sync_log(cfg)
+    #        logging.info('clear real sync log ok![{}]'.format(cfg['exec_tag']))
+    #        break
+    #     else:
+    #        time.sleep(1)
+    #        continue
+
+    logging.info('\nstart clear real sync log![{}]'.format(cfg['exec_tag']))
+    clear_real_sync_log(cfg)
+    logging.info('clear real sync log ok![{}]'.format(cfg['exec_tag']))
 
     # set sync logger status is running
     logging.info('set sync logger process is running status[{}]!'.format(cfg['exec_tag']))

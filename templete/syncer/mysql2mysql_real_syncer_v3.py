@@ -906,7 +906,7 @@ def get_ds_mysql_dest(ip,port,service ,user,password):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://124.127.103.190:21080/read_db_decrypt'
+        url = 'http://210.13.35.136:21080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -919,7 +919,7 @@ def aes_decrypt(p_password,p_key):
         sys.exit(0)
 
 def get_config_from_db(tag):
-    url = 'http://124.127.103.190:21080/read_config_sync'
+    url = 'http://210.13.35.136:21080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -1142,7 +1142,7 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://124.127.103.190:21080/write_sync_real_log'
+        url = 'http://210.13.35.136:21080/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
            logging.info('Interface write_sync_log call failed!')
@@ -1154,7 +1154,7 @@ def write_sync_log(config):
 
 def read_real_sync_status():
     try:
-        url = 'http://124.127.103.190:21080/get_mysql_real_sync_status'
+        url = 'http://210.13.35.136:21080/get_mysql_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -1321,24 +1321,25 @@ def start_incr_sync(cfg):
                 if 'create' in event['query'] or 'drop' in event['query']  or 'alter' in event['query'] or 'truncate' in event['query']:
                     logging.info('query:' + event['query'])
                     ddl = gen_ddl_sql(event['query'])
-                    logging.info('DDL:' + ddl)
-                    event['table'] = get_obj_name(event['query']).lower()
-                    event['tab'] = event['schema']+'.'+event['table']
+                    if ddl is not None:
+                      logging.info('DDL:' + ddl)
+                      event['table'] = get_obj_name(event['query']).lower()
+                      event['tab'] = event['schema']+'.'+event['table']
 
-                    if check_sync(cfg,event,pks) and ddl is not None:
-                       if check_mysql_tab_exists(cfg,event) == 0:
-                          create_mysql_table(cfg,event)
-                          cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
-                          logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
-                          full_sync_one(cfg, event)
-                          logging.info("\033[1;36;40m[{}] The table:{}  is fully synchronized!\033[0m".format(event['tab']))
-                          logging.info("\033[1;37;40m full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
-                          types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
-                          ddl_amount = ddl_amount +1
-                       else:
-                          logging.info('Execute DDL:{}'.format(ddl))
-                          cfg['db_mysql_dest'].cursor().execute(ddl)
-                       write_ckpt(cfg)
+                      if check_sync(cfg,event,pks):
+                        if check_mysql_tab_exists(cfg,event) == 0:
+                           create_mysql_table(cfg,event)
+                           cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
+                           logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
+                           full_sync_one(cfg, event)
+                           logging.info("\033[1;36;40m[{}] The table:{}  is fully synchronized!\033[0m".format(event['tab']))
+                           logging.info("\033[1;37;40m full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
+                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
+                           ddl_amount = ddl_amount +1
+                        else:
+                           logging.info('Execute DDL:{}'.format(ddl))
+                           cfg['db_mysql_dest'].cursor().execute(ddl)
+                        write_ckpt(cfg)
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
                     isinstance(binlogevent, UpdateRowsEvent) or \
@@ -1565,7 +1566,7 @@ def start_full_sync(cfg):
 
 def get_task_status(tag):
     cfg = {}
-    url = 'http://124.127.103.190:20080/read_config_sync'
+    url = 'http://210.13.35.136:20080/read_config_sync'
     res = requests.post(url, data={'tag': tag}, timeout=1).json()
     if res['code'] == 200:
         cfg = res['msg']

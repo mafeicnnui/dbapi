@@ -179,7 +179,7 @@ def format_sql(v_sql):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://124.127.103.190:21080/read_db_decrypt'
+        url = 'http://210.13.35.136:21080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -267,7 +267,7 @@ def get_sync_tables(cfg):
     return cfg
 
 def get_config_from_db(tag):
-    url = 'http://124.127.103.190:21080/read_config_sync'
+    url = 'http://210.13.35.136:21080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -363,7 +363,7 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://124.127.103.190:21080/write_sync_real_log'
+        url = 'http://210.13.35.136:21080/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
            print('Interface write_sync_log call failed!')
@@ -457,7 +457,7 @@ def get_tasks(cfg):
 
 def read_real_sync_status():
     try:
-        url = 'http://124.127.103.190:21080/get_mysql_real_sync_status'
+        url = 'http://210.13.35.136:21080/get_mysql_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
