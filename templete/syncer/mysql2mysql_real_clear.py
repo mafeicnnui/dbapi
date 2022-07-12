@@ -8,6 +8,8 @@
 import sys
 import time
 import traceback
+
+import os
 import requests
 import pymysql
 import warnings
@@ -40,7 +42,7 @@ def set_real_sync_status(cfg,p_status):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://124.127.103.190:21080/read_db_decrypt'
+        url = 'http://210.13.35.136:21080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -61,7 +63,7 @@ def get_ds_mysql_dict(ip,port,service ,user,password):
     return conn
 
 def get_config_from_db(tag):
-    url = 'http://124.127.103.190:21080/read_config_sync'
+    url = 'http://210.13.35.136:21080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config  = res['msg']
@@ -103,7 +105,7 @@ def get_seconds(b):
 
 def read_real_sync_status():
     try:
-        url = 'http://124.127.103.190:65480/get_mysql_real_sync_status'
+        url = 'http://210.13.35.136:21080/get_mysql_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -137,6 +139,12 @@ if __name__ == "__main__":
     # set sync logger status is pause
     logging.info('set sync logger process is pause status[sync_tag:{}]!'.format(cfg['exec_tag']))
     set_real_sync_status(cfg,'STOP')
+
+    logging.info('sleep 6s!')
+    time.sleep(6)
+    logging.info('delete {} log file!'.format(tag))
+    os.system("rm /tmp/{}*.log".format(tag))
+
 
     # loop check sync log num
     # while True:

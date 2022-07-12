@@ -621,7 +621,6 @@ def create_ck_table(cfg,event):
     else:
         logging.info('Table `{}` have no primary key,exit sync!'.format(event['table']))
 
-
 def create_ck_table_replace(cfg,event):
     db = cfg['db_ck']
     if check_tab_exists_pk(cfg,event) >0:
@@ -885,38 +884,70 @@ def full_sync(cfg, event):
         v_pk_col_name = get_sync_table_pk_names(cfg, event)
         v_sync_table_cols = get_sync_table_cols(cfg, event)
         while n_tab_total_rows > 0:
-            st = "select {} from `{}`.`{}` where {} between {} and {}" \
-                .format(v_sync_table_cols, event['schema'], tab, v_pk_col_name, str(n_row),
-                        str(n_row + n_batch_size))
-            logging.info('v1:' + st)
-            cr_source.execute(st)
-            rs_source = cr_source.fetchall()
-            v_sql = ''
-            if len(rs_source) > 0:
-                for i in range(len(rs_source)):
-                    rs_source_desc = cr_source.description
-                    ins_val = ''
-                    for j in range(len(rs_source[i])):
-                        col_type = str(rs_source_desc[j][1])
-                        if rs_source[i][j] is None:
-                            ins_val = ins_val + "null,"
-                        elif col_type == '253':  # varchar,date
-                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
-                        elif col_type in ('1', '3', '8', '246'):  # int,decimal
-                            ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
-                        elif col_type == '12':  # datetime
-                            ins_val = ins_val + "'" + str(rs_source[i][j]).split('.')[0] + "',"
-                        else:
-                            ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
-                    v_sql = v_sql + '(' + ins_val[0:-1] + '),'
-                batch_sql = ins_sql_header + v_sql[0:-1]
-                cr_desc.execute(batch_sql)
-                i_counter = i_counter + len(rs_source)
-                logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
-                        format(tab, n_tab_total_rows, i_counter,round(i_counter / n_tab_total_rows * 100, 2)))
-            n_row = n_row + n_batch_size + 1
-            if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
-                break
+            if n_tab_total_rows <= n_batch_size:
+                st = "select {} from `{}`.`{}` order by {} " \
+                    .format(v_sync_table_cols, event['schema'], tab, v_pk_col_name)
+                logging.info('v1.1:' + st)
+                cr_source.execute(st)
+                rs_source = cr_source.fetchall()
+                v_sql = ''
+                if len(rs_source) > 0:
+                    for i in range(len(rs_source)):
+                        rs_source_desc = cr_source.description
+                        ins_val = ''
+                        for j in range(len(rs_source[i])):
+                            col_type = str(rs_source_desc[j][1])
+                            if rs_source[i][j] is None:
+                                ins_val = ins_val + "null,"
+                            elif col_type == '253':  # varchar,date
+                                ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                            elif col_type in ('1', '3', '8', '246'):  # int,decimal
+                                ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
+                            elif col_type == '12':  # datetime
+                                ins_val = ins_val + "'" + str(rs_source[i][j]).split('.')[0] + "',"
+                            else:
+                                ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                        v_sql = v_sql + '(' + ins_val[0:-1] + '),'
+                    batch_sql = ins_sql_header + v_sql[0:-1]
+                    cr_desc.execute(batch_sql)
+                    i_counter = i_counter + len(rs_source)
+                    logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                                 format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2)))
+                if i_counter >= n_tab_total_rows :
+                    break
+            else:
+                st = "select {} from `{}`.`{}` where {} between {} and {}" \
+                    .format(v_sync_table_cols, event['schema'], tab, v_pk_col_name, str(n_row),
+                            str(n_row + n_batch_size))
+                logging.info('v1.2:' + st)
+                cr_source.execute(st)
+                rs_source = cr_source.fetchall()
+                v_sql = ''
+                if len(rs_source) > 0:
+                    for i in range(len(rs_source)):
+                        rs_source_desc = cr_source.description
+                        ins_val = ''
+                        for j in range(len(rs_source[i])):
+                            col_type = str(rs_source_desc[j][1])
+                            if rs_source[i][j] is None:
+                                ins_val = ins_val + "null,"
+                            elif col_type == '253':  # varchar,date
+                                ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                            elif col_type in ('1', '3', '8', '246'):  # int,decimal
+                                ins_val = ins_val + "'" + str(rs_source[i][j]) + "',"
+                            elif col_type == '12':  # datetime
+                                ins_val = ins_val + "'" + str(rs_source[i][j]).split('.')[0] + "',"
+                            else:
+                                ins_val = ins_val + "'" + format_sql(str(rs_source[i][j])) + "',"
+                        v_sql = v_sql + '(' + ins_val[0:-1] + '),'
+                    batch_sql = ins_sql_header + v_sql[0:-1]
+                    cr_desc.execute(batch_sql)
+                    i_counter = i_counter + len(rs_source)
+                    logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                            format(tab, n_tab_total_rows, i_counter,round(i_counter / n_tab_total_rows * 100, 2)))
+                n_row = n_row + n_batch_size + 1
+                if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
+                    break
 
     # one primary key,int type and id not continuous
     if (check_ck_tab_exists(cfg, event) == 0 \
@@ -1092,7 +1123,6 @@ def full_sync(cfg, event):
             d_rq_end = get_mysql_rq(d_rq_start, 1)
             if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                 break
-
 
 def get_cols_from_mysql(cfg,event):
     db = cfg['db_mysql']
@@ -1677,7 +1707,6 @@ def write_sync_log(config):
            logging.info('Interface write_sync_log success!')
     except:
         logging.info('write_sync_log failure!')
-        #logging.info(traceback.format_exc())
 
 def read_real_sync_status():
     try:
@@ -1686,7 +1715,6 @@ def read_real_sync_status():
         return res
     except:
         logging.info('read_real_sync_status failure!')
-        #logging.info(traceback.format_exc())
         return None
 
 def set_real_sync_status(cfg,p_status):

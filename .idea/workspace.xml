@@ -21,11 +21,9 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -563,14 +561,12 @@
       <workItem from="1656312604833" duration="1884000" />
       <workItem from="1656464142850" duration="78000" />
       <workItem from="1656469714793" duration="1085000" />
-      <workItem from="1656655884070" duration="997000" />
-    </task>
-    <task id="LOCAL-00041" summary="add doris sync support">
-      <created>1636019260632</created>
-      <option name="number" value="00041" />
-      <option name="presentableId" value="LOCAL-00041" />
-      <option name="project" value="LOCAL" />
-      <updated>1636019260632</updated>
+      <workItem from="1656655884070" duration="1017000" />
+      <workItem from="1656896411021" duration="1541000" />
+      <workItem from="1657247314847" duration="599000" />
+      <workItem from="1657253089685" duration="3997000" />
+      <workItem from="1657272262920" duration="793000" />
+      <workItem from="1657592968279" duration="2524000" />
     </task>
     <task id="LOCAL-00042" summary="add clickhouse sync support">
       <created>1636533468210</created>
@@ -908,7 +904,14 @@
       <option name="project" value="LOCAL" />
       <updated>1656063124181</updated>
     </task>
-    <option name="localTasksCounter" value="90" />
+    <task id="LOCAL-00090" summary="bug fix">
+      <created>1656662689488</created>
+      <option name="number" value="00090" />
+      <option name="presentableId" value="LOCAL-00090" />
+      <option name="project" value="LOCAL" />
+      <updated>1656662689489</updated>
+    </task>
+    <option name="localTasksCounter" value="91" />
     <servers />
   </component>
   <component name="TodoView">
@@ -970,10 +973,6 @@
     <state x="2226" y="-278" key="#Deployment/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656312659426" />
     <state x="2226" y="337" width="1171" height="683" key="#Deployment/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351954529" />
     <state x="2255" y="155" width="1124" height="683" key="#Deployment/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864192861" />
-    <state x="2514" y="201" key="#Options" timestamp="1648020668804">
-      <screen x="1920" y="3" width="1920" height="1040" />
-    </state>
-    <state x="2514" y="201" key="#Options/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648020668804" />
     <state x="2393" y="-346" key="#SSH_Configurations" timestamp="1656312658849">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
@@ -1013,10 +1012,10 @@
     </state>
     <state x="2314" y="404" width="998" height="708" key="SettingsEditor/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351914035" />
     <state x="2348" y="203" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648882854652" />
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1656063128189">
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1656662695899">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656063128189" />
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656662695899" />
     <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655880694955" />
     <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648716931832" />
     <state x="2582" y="-231" width="596" height="532" key="find.popup" timestamp="1656469864790">
@@ -1032,7 +1031,6 @@
       <screen x="1920" y="130" width="1920" height="1040" />
     </state>
     <state x="2543" y="355" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649843223452" />
-    <state x="2543" y="228" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1647998570882" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

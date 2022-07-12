@@ -8,6 +8,8 @@
 import sys
 import time
 import traceback
+
+import os
 import requests
 import pymysql
 import logging
@@ -36,7 +38,7 @@ def get_ds_ck(ip,port,service ,user,password):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://124.127.103.190:21080/read_db_decrypt'
+        url = 'http://210.13.35.136:20080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -86,18 +88,19 @@ def get_real_sync_log_num(cfg):
 
 def read_real_sync_status():
     try:
-        url = 'http://124.127.103.190:20080/get_real_sync_status'
+        url = 'http://210.13.35.136:20080/get_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
         logging.info('write event failure!')
         logging.info(traceback.format_exc())
+        traceback.print_exc()
         return None
 
 def set_real_sync_status(cfg,p_status):
     try:
         par = {'status': p_status}
-        url = 'http://124.127.103.190:20080/set_real_sync_status'.format(cfg['api_server'])
+        url = 'http://210.13.35.136:20080/set_real_sync_status'.format(cfg['api_server'])
         res = requests.post(url, data=par,timeout=3).json()
         logging.info("set_real_sync_status is ok")
         return res
@@ -107,7 +110,7 @@ def set_real_sync_status(cfg,p_status):
         sys.exit(0)
 
 def get_config_from_db(tag):
-    url = 'http://124.127.103.190:21080/read_config_sync'
+    url = 'http://210.13.35.136:20080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config  = res['msg']
@@ -178,12 +181,17 @@ if __name__ == "__main__":
           logging.info('load config failure,exit sync!')
           sys.exit(0)
 
-    # # print cfg
-    # print_dict(cfg)
+    # print cfg
+    print_dict(cfg)
 
     # set sync logger status is stop
     logging.info('set sync logger process is stop status!')
     set_real_sync_status(cfg,'STOP')
+    logging.info('sleep 6s!')
+
+    time.sleep(6)
+    logging.info('delete {} log file!'.format(tag))
+    os.system("rm /tmp/{}*.log".format(tag))
 
     # loop check sync log num
     # while True:
