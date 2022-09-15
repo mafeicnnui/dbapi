@@ -712,21 +712,21 @@ def write_ck_multi(cfg,tab):
         try:
            if r['type'] == 'insert':
                if check_ck_tab_exists_all(cfg, db_ck['cluster'], event) == 0:
-                   logging.info('Distributed table:{}.{} not exists,skip sync!'.format(get_ck_schema(cfg, event)+'_all', event['table']))
+                   logging.info('\033[1;36;40mDistributed table:{}.{} not exists,skip sync!\033[0m'.format(get_ck_schema(cfg, event)+'_all', event['table']))
                    continue
                else:
-                   logging.info('Distributed table:{}.{} exec sync statement!'.format(get_ck_schema(cfg, event) + '_all',event['table']))
+                   logging.info('\033[1;36;40mDistributed table:{}.{} exec statement!\033[0m'.format(get_ck_schema(cfg, event) + '_all',event['table']))
                    logging.info(r['statement'])
                    db_ck['cluster'].execute(r['statement'])
 
            if r['type'] == 'delete':
               for ip in  db_ck['shards']:
-                 logging.info('check local table {}.{} for shared : {}...'.format(get_ck_schema(cfg, event),event['table'],ip))
+                 logging.info('check local table {}.{} for sharding `{}`...'.format(get_ck_schema(cfg, event),event['table'],ip))
                  if check_ck_tab_exists(cfg, db_ck['shards'][ip], event) == 0:
                      logging.info('Local Table:{}.{} not exists,skip sync for delete event!'.format(get_ck_schema(cfg, event),event['table']))
                      continue
                  else:
-                     logging.info('exec sql for shared : {}...'.format(ip))
+                     logging.info('\033[1;36;40mLocal table {}.{} for sharding `{}`...\033[0m'.format(get_ck_schema(cfg, event),event['table'],ip))
                      logging.info(r['statement'])
                      db_ck['shards'][ip].execute(r['statement'])
                      logging.info('wait ck async task for table :{}/res:{}/type:{}/len:{}...'.
