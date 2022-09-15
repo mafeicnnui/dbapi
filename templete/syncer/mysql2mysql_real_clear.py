@@ -19,8 +19,9 @@ import datetime
 def clear_real_sync_log(cfg):
    db = cfg['db_log']
    cr = db.cursor()
+   logging.info("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
    cr.execute("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
-   cr.execute("alter table `t_db_sync_log` engine=innodb")
+   logging.info("delete from `t_db_sync_log` where sync_tag='{}' and status='1' ok!".format(cfg['exec_tag']))
 
 def get_real_sync_log_num(cfg):
    db = cfg['db_log']
@@ -33,16 +34,17 @@ def set_real_sync_status(cfg,p_status):
     try:
         par = {'status': p_status}
         url = 'http://{}/set_mysql_real_sync_status'.format(cfg['api_server'])
-        res = requests.post(url, data=par,timeout=3).json()
+        res = requests.post(url, data=par,timeout=10).json()
         return res
     except:
-         traceback.print_exc()
-         sys.exit(0)
+        logging.info("set_real_sync_status error")
+        logging.info(traceback.format_exc())
+        sys.exit(0)
 
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://210.13.35.136:21080/read_db_decrypt'
+        url = 'http://210.13.35.136:20080/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -63,7 +65,7 @@ def get_ds_mysql_dict(ip,port,service ,user,password):
     return conn
 
 def get_config_from_db(tag):
-    url = 'http://210.13.35.136:21080/read_config_sync'
+    url = 'http://210.13.35.136:20080/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config  = res['msg']
@@ -105,7 +107,7 @@ def get_seconds(b):
 
 def read_real_sync_status():
     try:
-        url = 'http://210.13.35.136:21080/get_mysql_real_sync_status'
+        url = 'http://210.13.35.136:20080/get_mysql_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -144,21 +146,6 @@ if __name__ == "__main__":
     time.sleep(6)
     logging.info('delete {} log file!'.format(tag))
     os.system("rm /tmp/{}*.log".format(tag))
-
-
-    # loop check sync log num
-    # while True:
-    #     # get sync log num
-    #     num = get_real_sync_log_num(cfg)
-    #     logging.info('sync log num is {} for:{}'.format(str(num),cfg['exec_tag']))
-    #     if num == 0 :
-    #        logging.info('\nstart clear real sync log![{}]'.format(cfg['exec_tag']))
-    #        clear_real_sync_log(cfg)
-    #        logging.info('clear real sync log ok![{}]'.format(cfg['exec_tag']))
-    #        break
-    #     else:
-    #        time.sleep(1)
-    #        continue
 
     logging.info('\nstart clear real sync log![{}]'.format(cfg['exec_tag']))
     clear_real_sync_log(cfg)

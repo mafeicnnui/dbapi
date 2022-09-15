@@ -56,9 +56,7 @@ def clear_real_sync_log(cfg):
    logging.info("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
    cr.execute("delete from `t_db_sync_log` where sync_tag='{}' and status='1'".format(cfg['exec_tag']))
    logging.info("delete from `t_db_sync_log` where sync_tag='{}' and status='1' ok!".format(cfg['exec_tag']))
-   logging.info("alter table `t_db_sync_log` engine=innodb")
-   cr.execute("alter table `t_db_sync_log` engine=innodb")
-   logging.info("alter table `t_db_sync_log` engine=innodb success!")
+
 
 def clear_ck_log(cfg):
     db = get_ds_ck(cfg['db_ck_ip'], cfg['db_ck_port'], cfg['db_ck_service'], cfg['db_ck_user'], cfg['db_ck_pass'])
@@ -101,7 +99,7 @@ def set_real_sync_status(cfg,p_status):
     try:
         par = {'status': p_status}
         url = 'http://210.13.35.136:20080/set_real_sync_status'.format(cfg['api_server'])
-        res = requests.post(url, data=par,timeout=3).json()
+        res = requests.post(url, data=par,timeout=10).json()
         logging.info("set_real_sync_status is ok")
         return res
     except:
@@ -192,23 +190,6 @@ if __name__ == "__main__":
     time.sleep(6)
     logging.info('delete {} log file!'.format(tag))
     os.system("rm /tmp/{}*.log".format(tag))
-
-    # loop check sync log num
-    # while True:
-    #     # get sync log num
-    #     num = get_real_sync_log_num(cfg)
-    #     logging.info('sync log num is {} for:{}'.format(str(num), cfg['exec_tag']))
-    #     if num == 0 :
-    #        logging.info('start clear real sync log!')
-    #        clear_real_sync_log(cfg)
-    #        logging.info('clear real sync log ok!')
-    #        clear_ck_log(cfg)
-    #        logging.info('clear ck log ok!')
-    #        break
-    #     else:
-    #        time.sleep(1)
-    #        continue
-
     logging.info('start clear real sync log!')
     clear_real_sync_log(cfg)
     logging.info('clear real sync log ok!')

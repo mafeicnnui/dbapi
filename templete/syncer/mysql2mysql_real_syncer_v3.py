@@ -1337,8 +1337,13 @@ def start_incr_sync(cfg):
                            types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                            ddl_amount = ddl_amount +1
                         else:
-                           logging.info('Execute DDL:{}'.format(ddl))
-                           cfg['db_mysql_dest'].cursor().execute(ddl)
+                           try:
+                               logging.info('Execute DDL:{}'.format(ddl))
+                               logging.info('use {}'.format(event['schema']))
+                               cfg['db_mysql_dest'].cursor().execute('use {}'.format(event['schema']))
+                               cfg['db_mysql_dest'].cursor().execute(ddl)
+                           except:
+                               traceback.print_exc()
                         write_ckpt(cfg)
 
             if isinstance(binlogevent, DeleteRowsEvent) or \

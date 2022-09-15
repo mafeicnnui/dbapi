@@ -682,7 +682,7 @@ def write_ck_multi(cfg,tab):
            logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_ck_schema(cfg,event),event['table']))
            continue
         try:
-           logging.info(r['statement'])
+           #logging.info(r['statement'])
            db_ck.execute(r['statement'])
            logging.info('wait ck async task for table :{}/res:{}/type:{}/len:{}...'.
                          format(event['table'],
@@ -707,7 +707,7 @@ def write_ck_multi(cfg,tab):
 
                upd = "update t_db_sync_log set status='1' where id in({})".format(uid[0:-1])
                try:
-                   logging.info(upd)
+                   #logging.info(upd)
                    cr_log.execute(upd)
                    logging.info('Task {} execute complete!'.format(tab))
                except:
@@ -737,9 +737,10 @@ def get_tasks(cfg):
                            cfg['db_mysql_user_log'],
                            cfg['db_mysql_pass_log'])
     cr = db.cursor()
-    st = """SELECT sync_table,count(0) as amount FROM t_db_sync_log 
-               WHERE  status='0' and sync_tag='{}' and instr('{}',sync_table)>0 
-                 GROUP BY sync_table limit {}""".format(cfg['exec_tag'],cfg['sync_table'],cfg['process_num'])
+    st = """SELECT sync_table,count(0) as amount 
+             FROM (select * from t_db_sync_log  WHERE  status='0' and sync_tag='{}' limit 100000) as x 
+               WHERE  instr('{}',x.sync_table)>0 
+                 GROUP BY x.sync_table limit {}""".format(cfg['exec_tag'],cfg['sync_table'],cfg['process_num'])
     cr.execute(st)
     rs =cr.fetchall()
     return  rs
@@ -825,7 +826,7 @@ def read_pid(cfg):
 
 def read_real_sync_status():
     try:
-        url = 'http://124.127.103.190:21080/get_real_sync_status'
+        url = 'http://210.13.35.136:21080/get_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -864,7 +865,7 @@ if __name__=="__main__":
 
     # query system parameters to determine whether to run the  program
     if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
-        print("\033[1;37;40m execute log task {} terminate!\033[0m".format(tag))
+        print("\033[1;37;40m Running execute log task {} failure!\033[0m".format(tag))
         sys.exit(0)
 
 
