@@ -87,14 +87,15 @@ SELECT a.sync_tag,a.sync_ywlx,
         a.log_db_id AS log_db_id,
         a.log_db_name AS log_db_name,
         CASE WHEN d.service='' THEN 
-        CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,IFNULL(a.sync_schema,'information_schema')),':',d.user,':',d.password)
+          CONCAT(d.ip,':',d.port,':',IFNULL(a.sync_schema_dest,IFNULL(a.sync_schema,'information_schema')),':',d.user,':',d.password)
         ELSE
-        CONCAT(d.ip,':',d.port,':',IFNULL(d.service,'information_schema') ,':',d.user,':',d.password)
-        END AS sync_db_dest,                          
+          CONCAT(d.ip,':',d.port,':',IFNULL(d.service,'information_schema') ,':',d.user,':',d.password)
+        END AS sync_db_dest,
+        d.db_type as dest_db_type,
         a.server_id,b.server_desc,a.run_time,a.api_server,
         LOWER(a.sync_table) AS sync_table,a.batch_size,a.batch_size_incr,a.sync_gap,a.sync_col_name,a.sync_repair_day,
         a.sync_col_val,a.sync_time_type,a.script_path,a.script_file,a.comments,a.python3_home,
-        a.status,a.process_num,a.apply_timeout,a.desc_db_prefix,
+        a.status,a.process_num,a.apply_timeout,a.desc_db_prefix,a.ch_cluster_name,
         b.server_ip,b.server_port,b.server_user,b.server_pass,c.proxy_server,
         (SELECT dmmc FROM t_dmmx WHERE dm='36' AND dmm='01') AS proxy_local_port,
         (SELECT `value` FROM t_sys_settings WHERE `key`='send_server') AS send_server,
