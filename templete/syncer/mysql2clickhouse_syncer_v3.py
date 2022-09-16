@@ -85,7 +85,7 @@ def get_ds_mysql_dict(ip,port,service ,user,password):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://210.13.35.136:20080/read_db_decrypt'
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -1377,14 +1377,6 @@ def get_binlog_files(cfg):
         files.append(r[0])
     return files
 
-# def merge_insert(data):
-#     header = data[0]['sql'].split(' values ')[0]
-#     body = ''
-#     for d in data:
-#         body = body +d['sql'].split(' values ')[1][0:-1]+','
-#     sql = header+' values '+body[0:-1]
-#     return {'event':'insert','sql': sql ,'amount':len(data)}
-
 def process_batch(batch):
     # delete [] batch
     n_batch = {}
@@ -1457,7 +1449,7 @@ def read_ckpt(cfg):
         return binlog
 
 def get_config_from_db(tag):
-    url = 'http://210.13.35.136:20080/read_config_sync'
+    url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -1699,7 +1691,7 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://210.13.35.136:20080/write_sync_real_log'
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
            logging.info('Interface write_sync_log failed!')
@@ -1710,7 +1702,7 @@ def write_sync_log(config):
 
 def read_real_sync_status():
     try:
-        url = 'http://210.13.35.136:20080/get_real_sync_status'
+        url = 'http://$$API_SERVER$$/get_real_sync_status'
         res = requests.post(url,timeout=3).json()
         return res
     except:
@@ -1720,7 +1712,7 @@ def read_real_sync_status():
 def set_real_sync_status(cfg,p_status):
     try:
         par = {'status': p_status}
-        url = 'http://210.13.35.136:20080/set_real_sync_status'.format(cfg['api_server'])
+        url = 'http://$$API_SERVER$$/set_real_sync_status'.format(cfg['api_server'])
         res = requests.post(url, data=par,timeout=3).json()
         logging.info("set_real_sync_status is ok")
         return res
@@ -2208,10 +2200,9 @@ def start_full_sync(cfg):
     logging.info("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     full_sync_many(cfg)
 
-
 def get_task_status(tag):
     cfg = {}
-    url = 'http://210.13.35.136:20080/read_config_sync'
+    url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data={'tag': tag}, timeout=1).json()
     if res['code'] == 200:
        cfg = res['msg']

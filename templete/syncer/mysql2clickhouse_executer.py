@@ -37,7 +37,7 @@ def format_sql(v_sql):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://210.13.35.136:20080/read_db_decrypt'
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -127,7 +127,7 @@ def get_sync_tables(cfg):
     return cfg
 
 def get_config_from_db(tag):
-    url = 'http://210.13.35.136:20080/read_config_sync'
+    url = 'http://$$API_SERVER$$/read_config_sync'
     res = requests.post(url, data= { 'tag': tag},timeout=1).json()
     if res['code'] == 200:
         config                           = res['msg']
@@ -518,7 +518,7 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://210.13.35.136:20080/write_sync_real_log'
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
         if res.status_code != 200:
            logging.info('Interface write_sync_log call failed!')
@@ -652,7 +652,7 @@ def write_ck_multi(cfg,tab):
                                cfg['db_mysql_user_log'],
                                cfg['db_mysql_pass_log'])
     cr_log = db_log.cursor()
-    st_map = """ select MAX(id) as id,
+    st_map = """select MAX(id) as id,
                         GROUP_CONCAT(id) as map_id
                   from (select * from `t_db_sync_log`
                          where sync_tag='{}' AND sync_table='{}' 

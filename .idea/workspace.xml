@@ -19,11 +19,12 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="clickhouse sync update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_cluster.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_cluster.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -566,49 +567,32 @@
       <workItem from="1657247314847" duration="599000" />
       <workItem from="1657253089685" duration="3997000" />
       <workItem from="1657272262920" duration="793000" />
-      <workItem from="1657592968279" duration="2524000" />
-    </task>
-    <task id="LOCAL-00042" summary="add clickhouse sync support">
-      <created>1636533468210</created>
-      <option name="number" value="00042" />
-      <option name="presentableId" value="LOCAL-00042" />
-      <option name="project" value="LOCAL" />
-      <updated>1636533468210</updated>
-    </task>
-    <task id="LOCAL-00043" summary="add clickhouse sync support">
-      <created>1636621361026</created>
-      <option name="number" value="00043" />
-      <option name="presentableId" value="LOCAL-00043" />
-      <option name="project" value="LOCAL" />
-      <updated>1636621361026</updated>
-    </task>
-    <task id="LOCAL-00044" summary="add clickhouse sync support">
-      <created>1636685078694</created>
-      <option name="number" value="00044" />
-      <option name="presentableId" value="LOCAL-00044" />
-      <option name="project" value="LOCAL" />
-      <updated>1636685078694</updated>
-    </task>
-    <task id="LOCAL-00045" summary="add clickhouse sync support">
-      <created>1636709263936</created>
-      <option name="number" value="00045" />
-      <option name="presentableId" value="LOCAL-00045" />
-      <option name="project" value="LOCAL" />
-      <updated>1636709263936</updated>
-    </task>
-    <task id="LOCAL-00046" summary="add clickhouse sync support">
-      <created>1636956745670</created>
-      <option name="number" value="00046" />
-      <option name="presentableId" value="LOCAL-00046" />
-      <option name="project" value="LOCAL" />
-      <updated>1636956745670</updated>
-    </task>
-    <task id="LOCAL-00047" summary="add clickhouse sync support">
-      <created>1637045971733</created>
-      <option name="number" value="00047" />
-      <option name="presentableId" value="LOCAL-00047" />
-      <option name="project" value="LOCAL" />
-      <updated>1637045971733</updated>
+      <workItem from="1657592968279" duration="3917000" />
+      <workItem from="1657609862080" duration="607000" />
+      <workItem from="1657676535620" duration="5969000" />
+      <workItem from="1658362723984" duration="9017000" />
+      <workItem from="1658987108341" duration="116000" />
+      <workItem from="1659513944426" duration="609000" />
+      <workItem from="1659690453590" duration="677000" />
+      <workItem from="1660025998387" duration="6275000" />
+      <workItem from="1660808878995" duration="1817000" />
+      <workItem from="1660814515982" duration="540000" />
+      <workItem from="1660878289890" duration="641000" />
+      <workItem from="1660892632431" duration="1397000" />
+      <workItem from="1661137884751" duration="743000" />
+      <workItem from="1661743106158" duration="330000" />
+      <workItem from="1661751221924" duration="2796000" />
+      <workItem from="1661830367771" duration="7408000" />
+      <workItem from="1661907590616" duration="2010000" />
+      <workItem from="1662032869208" duration="74000" />
+      <workItem from="1662454971442" duration="675000" />
+      <workItem from="1662539387365" duration="804000" />
+      <workItem from="1663040595957" duration="12657000" />
+      <workItem from="1663062135948" duration="1242000" />
+      <workItem from="1663116922839" duration="9436000" />
+      <workItem from="1663133758632" duration="11965000" />
+      <workItem from="1663203332743" duration="18780000" />
+      <workItem from="1663311165103" duration="3432000" />
     </task>
     <task id="LOCAL-00048" summary="add clickhouse sync support">
       <created>1637314417130</created>
@@ -911,7 +895,49 @@
       <option name="project" value="LOCAL" />
       <updated>1656662689489</updated>
     </task>
-    <option name="localTasksCounter" value="91" />
+    <task id="LOCAL-00091" summary="log clear add log file">
+      <created>1657595795044</created>
+      <option name="number" value="00091" />
+      <option name="presentableId" value="LOCAL-00091" />
+      <option name="project" value="LOCAL" />
+      <updated>1657595795045</updated>
+    </task>
+    <task id="LOCAL-00092" summary="support clickhouse cluster">
+      <created>1663222505225</created>
+      <option name="number" value="00092" />
+      <option name="presentableId" value="LOCAL-00092" />
+      <option name="project" value="LOCAL" />
+      <updated>1663222505226</updated>
+    </task>
+    <task id="LOCAL-00093" summary="sync api update">
+      <created>1663222534728</created>
+      <option name="number" value="00093" />
+      <option name="presentableId" value="LOCAL-00093" />
+      <option name="project" value="LOCAL" />
+      <updated>1663222534728</updated>
+    </task>
+    <task id="LOCAL-00094" summary="clickhouse sync update">
+      <created>1663222557449</created>
+      <option name="number" value="00094" />
+      <option name="presentableId" value="LOCAL-00094" />
+      <option name="project" value="LOCAL" />
+      <updated>1663222557449</updated>
+    </task>
+    <task id="LOCAL-00095" summary="clickhouse sync update">
+      <created>1663223966476</created>
+      <option name="number" value="00095" />
+      <option name="presentableId" value="LOCAL-00095" />
+      <option name="project" value="LOCAL" />
+      <updated>1663223966476</updated>
+    </task>
+    <task id="LOCAL-00096" summary="clickhouse sync update">
+      <created>1663234316957</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1663234316957</updated>
+    </task>
+    <option name="localTasksCounter" value="97" />
     <servers />
   </component>
   <component name="TodoView">
@@ -939,10 +965,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="add doris sync support" />
-    <MESSAGE value="add clickhouse sync support" />
-    <MESSAGE value="add pg sync support" />
-    <MESSAGE value="ck sync update" />
     <MESSAGE value="db mgr fix" />
     <MESSAGE value="ck part support" />
     <MESSAGE value="pg sync fix" />
@@ -964,73 +986,66 @@
     <MESSAGE value="add log" />
     <MESSAGE value="mysql-&gt;mysql sync fix" />
     <MESSAGE value="bug fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
+    <MESSAGE value="log clear add log file" />
+    <MESSAGE value="support clickhouse cluster" />
+    <MESSAGE value="sync api update" />
+    <MESSAGE value="clickhouse sync update" />
+    <option name="LAST_COMMIT_MESSAGE" value="clickhouse sync update" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2226" y="-278" width="1171" height="683" key="#Deployment" timestamp="1656312659426">
+    <state x="2017" y="-217" width="1169" height="683" key="#Deployment" timestamp="1663203911176">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2226" y="-278" key="#Deployment/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656312659426" />
-    <state x="2226" y="337" width="1171" height="683" key="#Deployment/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351954529" />
-    <state x="2255" y="155" width="1124" height="683" key="#Deployment/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864192861" />
-    <state x="2393" y="-346" key="#SSH_Configurations" timestamp="1656312658849">
+    <state x="2017" y="-217" width="1169" height="683" key="#Deployment/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203911176" />
+    <state x="2393" y="-346" key="#SSH_Configurations" timestamp="1663203910121">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2393" y="-346" key="#SSH_Configurations/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656312658849" />
-    <state x="2393" y="269" key="#SSH_Configurations/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813152074" />
-    <state x="2393" y="142" key="#SSH_Configurations/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648864190731" />
-    <state x="2050" y="246" width="1092" height="699" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1648712801331">
-      <screen x="1920" y="3" width="1920" height="1040" />
+    <state x="2393" y="-346" key="#SSH_Configurations/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203910121" />
+    <state x="2334" y="-310" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1663051061361">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2050" y="246" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648712801331" />
-    <state width="1877" height="301" key="GridCell.Tab.0.bottom" timestamp="1656318349607">
-      <screen x="0" y="0" width="1920" height="1040" />
+    <state x="2334" y="-310" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663051061361" />
+    <state width="1877" height="411" key="GridCell.Tab.0.bottom" timestamp="1663234333810">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
     <state width="1877" height="301" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
-    <state width="1877" height="390" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="8" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state width="1877" height="301" key="GridCell.Tab.0.center" timestamp="1656318349607">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="301" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
-    <state width="1877" height="390" key="GridCell.Tab.0.center/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="8" key="GridCell.Tab.0.center/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state width="1877" height="301" key="GridCell.Tab.0.left" timestamp="1656318349606">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="301" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349606" />
-    <state width="1877" height="390" key="GridCell.Tab.0.left/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="8" key="GridCell.Tab.0.left/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state width="1877" height="301" key="GridCell.Tab.0.right" timestamp="1656318349607">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="301" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
-    <state width="1877" height="390" key="GridCell.Tab.0.right/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649813835097" />
-    <state width="1877" height="8" key="GridCell.Tab.0.right/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648867613481" />
-    <state x="2314" y="404" width="998" height="708" key="SettingsEditor" timestamp="1650351914035">
-      <screen x="1920" y="130" width="1920" height="1040" />
-    </state>
-    <state x="2314" y="404" width="998" height="708" key="SettingsEditor/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1650351914035" />
-    <state x="2348" y="203" key="SettingsEditor/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648882854652" />
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1656662695899">
+    <state width="1877" height="411" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
+    <state width="1877" height="411" key="GridCell.Tab.0.center" timestamp="1663234333810">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656662695899" />
+    <state width="1877" height="301" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
+    <state width="1877" height="411" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
+    <state width="1877" height="411" key="GridCell.Tab.0.left" timestamp="1663234333810">
+      <screen x="1920" y="-485" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="301" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349606" />
+    <state width="1877" height="411" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
+    <state width="1877" height="411" key="GridCell.Tab.0.right" timestamp="1663234333810">
+      <screen x="1920" y="-485" width="1920" height="1040" />
+    </state>
+    <state width="1877" height="301" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-485.1920.1040@0.0.1920.1040" timestamp="1656318349607" />
+    <state width="1877" height="411" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
+    <state x="1974" y="-371" key="SettingsEditor" timestamp="1663203917184">
+      <screen x="1920" y="-485" width="1920" height="1040" />
+    </state>
+    <state x="1974" y="-371" key="SettingsEditor/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203917184" />
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1663234320071">
+      <screen x="1920" y="-485" width="1920" height="1040" />
+    </state>
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234320071" />
     <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655880694955" />
-    <state x="2472" y="255" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648716931832" />
     <state x="2582" y="-231" width="596" height="532" key="find.popup" timestamp="1656469864790">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
     <state x="2582" y="-231" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656469864790" />
-    <state x="2426" y="851" key="publish.login" timestamp="1651051763869">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state x="2686" y="-60" key="publish.login" timestamp="1663312478655">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2426" y="851" key="publish.login/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1651051763869" />
-    <state x="2686" y="428" key="publish.login/0.0.1920.1040/1920.3.1920.1040@1920.3.1920.1040" timestamp="1648869547472" />
-    <state x="2543" y="355" width="672" height="678" key="search.everywhere.popup" timestamp="1649843223452">
-      <screen x="1920" y="130" width="1920" height="1040" />
+    <state x="2686" y="-60" key="publish.login/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663312478655" />
+    <state x="2543" y="-260" width="672" height="678" key="search.everywhere.popup" timestamp="1663056913114">
+      <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2543" y="355" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1649843223452" />
+    <state x="2543" y="-260" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663056913114" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1051,7 +1066,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1656312661284" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1663232663156" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
   </component>
 </project>

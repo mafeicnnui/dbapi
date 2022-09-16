@@ -663,7 +663,6 @@ def create_ck_table(cfg,event):
     else:
         logging.info('Table `{}` have no primary key,exit sync!'.format(event['table']))
 
-
 def truncate_ck_table(cfg,event,ddl):
     db = cfg['db_ck']
     if check_tab_exists_pk(cfg,event) >0:
@@ -1394,14 +1393,6 @@ def get_binlog_files(cfg):
     for r in rs:
         files.append(r[0])
     return files
-
-# def merge_insert(data):
-#     header = data[0]['sql'].split(' values ')[0]
-#     body = ''
-#     for d in data:
-#         body = body +d['sql'].split(' values ')[1][0:-1]+','
-#     sql = header+' values '+body[0:-1]
-#     return {'event':'insert','sql': sql ,'amount':len(data)}
 
 def process_batch(batch):
     # delete [] batch
