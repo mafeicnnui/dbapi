@@ -21,8 +21,6 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="clickhouse sync update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_cluster.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_cluster.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
     </list>
@@ -592,14 +590,16 @@
       <workItem from="1663116922839" duration="9436000" />
       <workItem from="1663133758632" duration="11965000" />
       <workItem from="1663203332743" duration="18780000" />
-      <workItem from="1663311165103" duration="3432000" />
-    </task>
-    <task id="LOCAL-00048" summary="add clickhouse sync support">
-      <created>1637314417130</created>
-      <option name="number" value="00048" />
-      <option name="presentableId" value="LOCAL-00048" />
-      <option name="project" value="LOCAL" />
-      <updated>1637314417131</updated>
+      <workItem from="1663311165103" duration="4161000" />
+      <workItem from="1663637403219" duration="1249000" />
+      <workItem from="1663753905103" duration="627000" />
+      <workItem from="1663808421273" duration="330000" />
+      <workItem from="1663809286046" duration="1115000" />
+      <workItem from="1663892341695" duration="1767000" />
+      <workItem from="1664268505952" duration="1639000" />
+      <workItem from="1664327810630" duration="17000" />
+      <workItem from="1664431166673" duration="833000" />
+      <workItem from="1664518357675" duration="7126000" />
     </task>
     <task id="LOCAL-00049" summary="add pg sync support">
       <created>1637833214386</created>
@@ -937,7 +937,14 @@
       <option name="project" value="LOCAL" />
       <updated>1663234316957</updated>
     </task>
-    <option name="localTasksCounter" value="97" />
+    <task id="LOCAL-00097" summary="clickhouse sync update">
+      <created>1663318599240</created>
+      <option name="number" value="00097" />
+      <option name="presentableId" value="LOCAL-00097" />
+      <option name="project" value="LOCAL" />
+      <updated>1663318599241</updated>
+    </task>
+    <option name="localTasksCounter" value="98" />
     <servers />
   </component>
   <component name="TodoView">
@@ -1029,18 +1036,18 @@
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
     <state x="1974" y="-371" key="SettingsEditor/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203917184" />
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1663234320071">
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2" timestamp="1663318603299">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234320071" />
-    <state x="2472" y="382" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.130.1920.1040@1920.130.1920.1040" timestamp="1655880694955" />
+    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663318603299" />
     <state x="2582" y="-231" width="596" height="532" key="find.popup" timestamp="1656469864790">
       <screen x="1920" y="-485" width="1920" height="1040" />
     </state>
     <state x="2582" y="-231" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1656469864790" />
-    <state x="2686" y="-60" key="publish.login" timestamp="1663312478655">
-      <screen x="1920" y="-485" width="1920" height="1040" />
+    <state x="2686" y="245" key="publish.login" timestamp="1664528741299">
+      <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
+    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1664528741299" />
     <state x="2686" y="-60" key="publish.login/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663312478655" />
     <state x="2543" y="-260" width="672" height="678" key="search.everywhere.popup" timestamp="1663056913114">
       <screen x="1920" y="-485" width="1920" height="1040" />

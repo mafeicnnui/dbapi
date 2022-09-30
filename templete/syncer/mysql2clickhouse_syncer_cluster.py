@@ -23,12 +23,14 @@ from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
 from clickhouse_driver import Client
 
-CK_TAB_CONFIG = '''ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{{shard}}/{}' , '{{replica}}')
+# 分区列必须为非空日期时间列 $$PARTITION$$
+
+CK_TAB_CONFIG = '''ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/{{shard}}/{}' , '{{replica}}')   
    PRIMARY KEY ($$PK_NAMES$$)
    ORDER BY ($$PK_NAMES$$)
 '''
 
-CK_TAB_CONFIG_ALL = '''ENGINE = Distributed({},{}, {}, id)'''
+CK_TAB_CONFIG_ALL = '''ENGINE = Distributed({},{}, {}, {})'''
 
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -255,7 +257,7 @@ def get_ck_table_defi_all(cfg,event):
             st = st + ' `{}` {},\n'.format(i[0],'Float64' if not is_col_null(i[2]) else 'Nullable(Float64)' )
         else:
             st = st + ' `{}` {},\n'.format(i[0],'String'  if not is_col_null(i[2]) else 'Nullable(String)' )
-    st = st[0:-2]+') \n' + cfg['ck_config_all'].format(cfg['ch_cluster_name'],get_ck_schema(cfg,event),event['table'])
+    st = st[0:-2]+') \n' + cfg['ck_config_all'].format(cfg['ch_cluster_name'],get_ck_schema(cfg,event),event['table'],get_table_pk_names(cfg,event))
     return st
 
 def check_ck_tab_exists(cfg,event):
@@ -1992,72 +1994,6 @@ def start_incr_sync(cfg):
     finally:
         stream.close()
 
-def full_sync_many(cfg):
-    cfg['cr_mysql'].execute('FLUSH /*!40101 LOCAL */ TABLES')
-    cfg['cr_mysql'].execute('FLUSH TABLES WITH READ LOCK')
-    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
-    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
-    cfg['full_binlog_file'], cfg['full_binlog_pos'] = get_file_and_pos(cfg)[0:2]
-    logging.info('full sync checkpoint:{}/{}'.format(cfg['full_binlog_file'], cfg['full_binlog_pos']))
-    cfg['cr_mysql'].execute('UNLOCK TABLES')
-    cfg['sync_table_diff'] = []
-    for o in cfg['sync_table']:
-        if o != '':
-           event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
-           event['tab'] = event['schema'] + '.' + event['table']
-           if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0 \
-                   and get_sync_table_total_rows(cfg, event) <= 5000000 and get_sync_table_text_type(cfg,event)==0 :
-              cfg['sync_table_diff'].append(o)
-              if check_ck_tab_exists(cfg, event) == 0:
-                 logging.info('create table {} ...'.format(event['tab']))
-                 create_ck_table(cfg, event)
-              else:
-                 logging.info('Table {} exists!'.format(event['tab']))
-              cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
-              logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
-              full_sync(cfg,event)
-
-           if check_tab_exists_pk(cfg, event) > 0 and check_ck_tab_exists(cfg,event) == 0 \
-                   and (get_sync_table_total_rows(cfg, event) > 5000000 or  get_sync_table_text_type(cfg,event)>0):
-               if check_ck_tab_exists(cfg, event) == 0:
-                   logging.info('create table {} ...'.format(event['tab']))
-                   create_ck_table(cfg, event)
-               else:
-                   logging.info('Table {} exists!'.format(event['tab']))
-               cr_desc = cfg['db_ck']
-               logging.info('create ck temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event)+'_all',event['table'] + '_tmp'))
-               st = get_ck_table_defi_mysql(cfg, event)
-               logging.info(st)
-               cr_desc.execute(st)
-               cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
-               logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
-               logging.info('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event), event['table']))
-               col = get_cols_from_mysql(cfg, event)
-               st = """insert into {}.{} ({}) select {} from {}.{}
-                      """.format(get_ck_schema(cfg, event)+'_all', event['table'], col, col, get_ck_schema(cfg, event)+'_all',event['table'] + '_tmp')
-               logging.info(st)
-               cr_desc.execute(st)
-               logging.info('drop temp table:{}.{}'.format(get_ck_schema(cfg, event)+'_all', event['table'] + '_tmp'))
-               st = 'drop table {}.{}'.format(get_ck_schema(cfg, event)+'_all', event['table'] + '_tmp')
-               cr_desc.execute(st)
-    cfg['db_mysql'].commit()
-
-def full_sync_one(cfg,event):
-    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
-    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
-    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
-    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
-    file, pos = get_file_and_pos(cfg)[0:2]
-    cfg['full_checkpoint'][event['tab']] = {
-        'binlog_file': file,
-        'binlog_pos': pos
-    }
-    cfg['cr_mysql'].execute('UNLOCK TABLES')
-    if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists_data(cfg, event) == 0:
-        event['tab'] = event['schema']+'.'+event['table']
-        full_sync(cfg,event)
-    cfg['db_mysql'].commit()
-
 def apply_diff_logs(cfg):
     if list(set(cfg['sync_table']) - set(cfg['sync_table_diff'])) == [] or cfg['sync_table_diff'] == []:
        return
@@ -2127,9 +2063,15 @@ def apply_diff_logs(cfg):
                           logging.info("\033[1;37;40m[{}] full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                           ddl_amount = ddl_amount +1
-                       else:
-                          logging.info('Execute DDL:{}'.format(ddl))
-                          cfg['db_mysql_dest'].cursor().execute(ddl)
+
+                       if re.split(r'\s+', ddl.strip())[0].upper() == 'TRUNCATE':
+                          truncate_ck_table(cfg, event, ddl)
+
+                       if re.split(r'\s+', ddl.strip())[0].upper() == 'DROP':
+                          drop_ck_table(cfg, event, ddl)
+
+                       if get_obj_op(ddl.strip()) in ('ALTER_TABLE_ADD', 'ALTER_TABLE_CHANGE', 'ALTER_TABLE_DROP'):
+                          alter_ck_table(cfg, event, ddl)
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
                     isinstance(binlogevent, UpdateRowsEvent) or \
@@ -2213,10 +2155,75 @@ def apply_diff_logs(cfg):
     finally:
         stream.close()
 
+def full_sync_many(cfg):
+    cfg['cr_mysql'].execute('FLUSH /*!40101 LOCAL */ TABLES')
+    cfg['cr_mysql'].execute('FLUSH TABLES WITH READ LOCK')
+    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
+    cfg['full_binlog_file'], cfg['full_binlog_pos'] = get_file_and_pos(cfg)[0:2]
+    logging.info('full sync checkpoint:{}/{}'.format(cfg['full_binlog_file'], cfg['full_binlog_pos']))
+    cfg['cr_mysql'].execute('UNLOCK TABLES')
+    cfg['sync_table_diff'] = []
+    for o in cfg['sync_table']:
+        if o != '':
+           event = {'schema': o.split('$')[0].split('.')[0], 'table': o.split('$')[0].split('.')[1],'column': o.split('$')[0].split('.')[2]}
+           event['tab'] = event['schema'] + '.' + event['table']
+           if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists(cfg, event) == 0 \
+                   and get_sync_table_total_rows(cfg, event) <= 5000000 and get_sync_table_text_type(cfg,event)==0 :
+              cfg['sync_table_diff'].append(o)
+              if check_ck_tab_exists(cfg, event) == 0:
+                 logging.info('create table {} ...'.format(event['tab']))
+                 create_ck_table(cfg, event)
+              else:
+                 logging.info('Table {} exists!'.format(event['tab']))
+              cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
+              logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
+              full_sync(cfg,event)
+
+           if check_tab_exists_pk(cfg, event) > 0 and check_ck_tab_exists(cfg,event) == 0 \
+                   and (get_sync_table_total_rows(cfg, event) > 5000000 or  get_sync_table_text_type(cfg,event)>0):
+               if check_ck_tab_exists(cfg, event) == 0:
+                   logging.info('create table {} ....'.format(event['tab']))
+                   create_ck_table(cfg, event)
+               else:
+                   logging.info('Table {} exists!'.format(event['tab']))
+               cr_desc = cfg['db_ck']
+               logging.info('create ck temporary table: {}.{} ok!'.format(get_ck_schema(cfg, event)+'_all',event['table'] + '_tmp'))
+               st = get_ck_table_defi_mysql(cfg, event)
+               logging.info(st)
+               cr_desc.execute(st)
+               cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
+               logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
+               logging.info('full sync table:{}.{} ...'.format(get_ck_schema(cfg, event), event['table']))
+               col = get_cols_from_mysql(cfg, event)
+               st = """insert into {}.{} ({}) select {} from {}.{}
+                      """.format(get_ck_schema(cfg, event)+'_all', event['table'], col, col, get_ck_schema(cfg, event)+'_all',event['table'] + '_tmp')
+               logging.info(st)
+               cr_desc.execute(st)
+               logging.info('drop temp table:{}.{}'.format(get_ck_schema(cfg, event)+'_all', event['table'] + '_tmp'))
+               st = 'drop table {}.{}'.format(get_ck_schema(cfg, event)+'_all', event['table'] + '_tmp')
+               cr_desc.execute(st)
+    cfg['db_mysql'].commit()
+
+def full_sync_one(cfg,event):
+    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
+    cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+    cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
+    file, pos = get_file_and_pos(cfg)[0:2]
+    cfg['full_checkpoint'][event['tab']] = {
+        'binlog_file': file,
+        'binlog_pos': pos
+    }
+    cfg['cr_mysql'].execute('UNLOCK TABLES')
+    if check_tab_exists_pk(cfg,event) >0 and check_ck_tab_exists_data(cfg, event) == 0:
+        event['tab'] = event['schema']+'.'+event['table']
+        full_sync(cfg,event)
+    cfg['db_mysql'].commit()
+
 def start_full_sync(cfg):
     logging.info("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     full_sync_many(cfg)
-
 
 def get_task_status(tag):
     cfg = {}

@@ -23,15 +23,15 @@ from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
 from clickhouse_driver import Client
 
-#CK_TAB_CONFIG = '''ENGINE = MergeTree() $$PARTITION$$
-##   PRIMARY KEY ($$PK_NAMES$$)
-#   ORDER BY ($$PK_NAMES$$)
-#'''
-
-CK_TAB_CONFIG = '''ENGINE = MergeTree() 
-   PRIMARY KEY ($$PK_NAMES$$)
-   ORDER BY ($$PK_NAMES$$)
+CK_TAB_CONFIG = '''ENGINE = MergeTree() $$PARTITION$$
+  PRIMARY KEY ($$PK_NAMES$$)
+  ORDER BY ($$PK_NAMES$$)
 '''
+
+# CK_TAB_CONFIG = '''ENGINE = MergeTree()
+#    PRIMARY KEY ($$PK_NAMES$$)
+#    ORDER BY ($$PK_NAMES$$)
+# '''
 
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
