@@ -601,7 +601,7 @@ def monitor(config):
 
    for idx in config['templete_monitor_indexes']:
 
-       if idx['index_code'] in ['mysql_slow_time','mysql_slow_time_2','mysql_slow_time_3'] :
+       if idx['index_code'].count('mysql_slow_time')>0:
            # check master
            print('mysql_slow_time...')
            content = get_slow_sql(config,idx['index_threshold'],'master')
@@ -618,7 +618,7 @@ def monitor(config):
                                    config.get('receiver'), title, content)
                    print("slave slow query mail send success!")
 
-       if idx['index_code'] in ['mysql_tran_time','mysql_tran_time_2','mysql_tran_time_3']:
+       if idx['index_code'].count('mysql_tran_time')>0:
            # check master
            print('mysql_tran_time...')
            content = get_big_tran(config, idx['index_threshold'], 'master')
@@ -636,7 +636,7 @@ def monitor(config):
                                    config.get('receiver'), title, content)
                    print("slave big transaction mail send success!")
 
-       if idx['index_code'] in ['mysql_lock_block_time','mysql_lock_block_time_2','mysql_lock_block_time_3']:
+       if idx['index_code'].count('mysql_lock_block_time')>0:
            print('mysql_lock_block_time...')
            # check master
            content = get_block_txn(config, idx['index_threshold'], 'master')
@@ -658,7 +658,7 @@ def monitor(config):
                                    config.get('receiver'), title, content)
                    print("slave lock wait  mail send success!")
 
-       if idx['index_code'] in ['mysql_kill_time','mysql_kill_time_2','mysql_kill_time_3']:
+       if idx['index_code'].count('mysql_kill_time')>0:
            # check master
            print('mysql_kill_time...')
            content = kill_slow_sql(config, idx['index_threshold'], 'master')

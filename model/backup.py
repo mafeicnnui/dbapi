@@ -61,21 +61,21 @@ async def get_db_config(p_tag):
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
     if rs['db_type'] == '0':
         if rs['binlog_status'] == '1':
-           try:
-                print('from ds read master an slave status!')
-                ds = await get_ds_by_dsid(rs['ds_id'])
-                ms = await async_processer.query_dict_one_by_ds(ds,'show master status')
-                sv = await async_processer.query_dict_one_by_ds(ds,'show slave status')
-                ro = await async_processer.query_dict_one_by_ds(ds,"SHOW VARIABLES LIKE 'read_only'")
-                print('ro=',ro)
-                if ms is not None:
-                   rs['ds'] = ms
-                if sv is not None:
-                   rs['sv'] = sv
-                if ro is not None:
-                   rs['ro'] = False if ro['value'] == 'OFF' else True
-                print('from ds read master an slave status ok!')
-           except:
+           # try:
+           #      print('from ds read master and slave status!')
+           #      ds = await get_ds_by_dsid(rs['ds_id'])
+           #      ms = await async_processer.query_dict_one_by_ds(ds,'show master status')
+           #      sv = await async_processer.query_dict_one_by_ds(ds,'show slave status')
+           #      ro = await async_processer.query_dict_one_by_ds(ds,"SHOW VARIABLES LIKE 'read_only'")
+           #      print('ro=',ro)
+           #      if ms is not None:
+           #         rs['ds'] = ms
+           #      if sv is not None:
+           #         rs['sv'] = sv
+           #      if ro is not None:
+           #         rs['ro'] = False if ro['value'] == 'OFF' else True
+           #      print('from ds read master and slave status ok!')
+           # except:
                 try:
                     print('from ds read master and slave status failure,try from related_id={} read ...'.format(rs['related_id']))
                     ds = await get_ds_by_dsid(rs['related_id'])
@@ -96,7 +96,7 @@ async def get_db_config(p_tag):
                 except:
                     traceback.print_exc()
                     print('Read master and slave status failure!')
-                    pass
+                    return {'code': 500, 'msg': traceback.format_exc()}
     return {'code': 200, 'msg': rs}
 
 async def save_backup_total(config):

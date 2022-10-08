@@ -9,13 +9,6 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="hopson@10.2.39.17:65508_dba_tools">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
       <paths name="hopson@10.2.39.17:65508_dbops">
         <serverdata>
           <mappings>
@@ -23,14 +16,7 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="hopson@10.2.39.17:65508_dbops2.0">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="hopson@10.2.39.17:65508_easebase">
+      <paths name="hopson@10.2.39.17:65508_webssh">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
@@ -45,13 +31,6 @@
         </serverdata>
       </paths>
       <paths name="hopson@10.2.39.18:65508_dbops">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="hopson@10.2.39.18:65508_easebase">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
@@ -86,17 +65,10 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="root@192.168.20.128:22">
+      <paths name="hopson@10.2.39.59:65508_dbapi">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@192.168.20.13:22">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="dbapi" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
