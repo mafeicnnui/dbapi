@@ -15,6 +15,7 @@ import json
 import urllib.parse
 import urllib.request
 import ssl
+import requests
 
 def get_now():
     return datetime.datetime.now()
@@ -34,6 +35,39 @@ def get_year():
 def get_ds_es(p_ip,p_port):
     conn = Elasticsearch([p_ip],port=p_port)
     return conn
+
+def get_ds_es_auth(p_ip,p_port,p_user,p_pass):
+    conn = Elasticsearch(
+        ["{}:{}".format(p_ip, p_port)],
+        http_auth=(p_user, p_pass),
+        sniff_on_start=False,
+        sniff_on_connection_fail=False,
+        sniffer_timeout=None)
+    return conn
+
+def get_ds_es_auth_https(p_ip,p_port,p_user,p_pass):
+    conn = Elasticsearch(
+        ["https://{}:{}".format(p_ip,p_port)],
+        http_auth=(p_user,p_pass),
+        sniff_on_start=False,
+        sniff_on_connection_fail=False,
+        sniffer_timeout=None)
+    return conn
+
+def aes_decrypt(p_password,p_key):
+    data = {
+        'password': p_password,
+        'key':p_key
+    }
+    url = 'http://$$API_SERVER$$/read_db_decrypt'
+    res = requests.post(url, data=data).json()
+
+    if res['code'] == 200:
+        print('call interface aes_decrypt success!')
+        return res['msg']
+    else:
+        print('call interface aes_decrypt error:{}'.format(res['msg']))
+        sys.exit(0)
 
 def print_dict(config):
     print('-'.ljust(125,'-'))
@@ -81,7 +115,11 @@ def read_config(tag):
         config['year'] = get_year()
         config['day']  = get_date()
         config['bk_path']=config['bk_base']+'/'+get_date()
-        config['db_es'] = get_ds_es(config['db_ip'],config['db_port'])
+        if config['db_user'] is not None:
+           config['new_pass'] =  aes_decrypt(config['db_pass'], config['db_user'])
+           config['db_es'] = get_ds_es_auth(config['db_ip'], config['db_port'],config['db_user'],config['new_pass'])
+        else:
+           config['db_es'] = get_ds_es(config['db_ip'],config['db_port'])
         return config
     else:
         print('接口调用失败!,{0}'.format(res['msg']))
@@ -191,16 +229,14 @@ def write_log(msg):
 
 def db_backup(config):
     db_es                   = config['db_es']
-    idx_list                = db_es.indices.get('*')
-    idx_list2               = db_es.indices.get_aliases().keys()
+    #idx_list                = db_es.indices.get('*')
+    idx_list               = db_es.indices.get_aliases().keys()
     bk_begin_time           = get_now()
     n_elaspsed_backup_total = 0
     n_elaspsed_gzip_total   = 0
     g_status                = '0'
-    #print('idx_list=',idx_list)
-    print('idx_list2=', idx_list2)
 
-    for idx in idx_list:
+    for idx in [i for i in idx_list if i[0]!='.']:
         error  = ''
         status = '0'
         os.system('mkdir -p {0}'.format(config['bk_path']))
@@ -215,8 +251,17 @@ def db_backup(config):
                 file_name  = idx_name + '.tar.gz'
                 full_name = config['bk_path'] + '/' + file_name
                 err_name   = '/tmp/' + idx + '_' + get_date() + '.err'
-                cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5} --type=data". \
-                    format(config['bk_cmd'], config['db_ip'], config['db_port'], idx, config['bk_path'],idx_name)
+                if config['db_user'] is not None:
+                    cmd = "{0} --input=http://{1}:{2}@{3}:{4}/{5}  --output={6}/{7} --type=data". \
+                        format(config['bk_cmd'],
+                               config['db_user'], config['new_pass'],
+                               config['db_ip'], config['db_port'],
+                               idx, config['bk_path'],idx_name)
+                else:
+                    cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5} --type=data". \
+                        format(config['bk_cmd'],
+                               config['db_ip'], config['db_port'],
+                               idx, config['bk_path'], idx_name)
                 print(cmd)
                 result = os.system(cmd)
                 if result != 0:
@@ -254,8 +299,17 @@ def db_backup(config):
                 idx_name   = 'es_{0}_mapping.json'.format(idx)
                 file_name  = idx_name + '.tar.gz'
                 full_name  = config['bk_path'] + '/' + file_name
-                cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5} --type=mapping". \
-                    format(config['bk_cmd'], config['db_ip'], config['db_port'], idx, config['bk_path'], idx_name)
+                if config['db_user'] is not None:
+                    cmd = "{0} --input=http://{1}:{2}@{3}:{4}/{5}  --output={6}/{7} --type=mapping". \
+                        format(config['bk_cmd'],
+                               config['db_user'], config['new_pass'],
+                               config['db_ip'], config['db_port'],
+                               idx, config['bk_path'], idx_name)
+                else:
+                    cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5} --type=mapping". \
+                        format(config['bk_cmd'],
+                               config['db_ip'], config['db_port'],
+                               idx, config['bk_path'], idx_name)
                 print(cmd)
                 result = os.system(cmd)
                 if result != 0:
@@ -295,8 +349,17 @@ def db_backup(config):
             file_name  = idx_name + '.tar.gz'
             full_name  = config['bk_path'] + '/' + file_name
             err_name   = '/tmp/' + idx + '_' + get_date() + '.err'
-            cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5}". \
-                format(config['bk_cmd'], config['db_ip'], config['db_port'], idx, config['bk_path'], idx_name)
+            if config['db_user'] is not None:
+                cmd = "{0} --input=http://{1}:{2}@{3}:{4}/{5}  --output={6}/{7}". \
+                    format(config['bk_cmd'],
+                           config['db_user'], config['new_pass'],
+                           config['db_ip'], config['db_port'],
+                           idx, config['bk_path'], idx_name)
+            else:
+                cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5}". \
+                    format(config['bk_cmd'],
+                           config['db_ip'], config['db_port'],
+                           idx, config['bk_path'], idx_name)
             print(cmd)
             result = os.system(cmd)
             if result != 0:
@@ -334,8 +397,15 @@ def db_backup(config):
             idx_name   = 'es_{0}_mapping.json'.format(idx)
             file_name  = idx_name + '.tar.gz'
             full_name  = config['bk_path'] + '/' + file_name
-            cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5} --type=mapping ". \
-                format(config['bk_cmd'], config['db_ip'], config['db_port'], idx, config['bk_path'], idx_name)
+            if config['db_user'] is not None:
+                cmd = "{0} --input=http://{1}:{2}@{3}:{4}/{5}  --output={6}/{7} --type=mapping ". \
+                    format(config['bk_cmd'],
+                           config['db_user'], config['new_pass'],
+                           config['db_ip'], config['db_port'],
+                           idx, config['bk_path'], idx_name)
+            else:
+                cmd = "{0} --input=http://{1}:{2}/{3}  --output={4}/{5} --type=mapping ". \
+                    format(config['bk_cmd'], config['db_ip'], config['db_port'], idx, config['bk_path'], idx_name)
             print(cmd)
             result = os.system(cmd)
             if result != 0:
