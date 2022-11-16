@@ -48,6 +48,7 @@ async def get_db_config(p_tag):
                     a.expire,a.bk_base,a.script_path,a.script_file,a.bk_cmd,a.run_time,
                     b.server_ip,b.server_port,b.server_user,b.server_pass,b.server_os,
                     a.comments,a.python3_home,a.backup_databases,a.api_server,a.status,a.binlog_status,
+                    a.oss_status,a.oss_path,a.oss_cloud,
                     (select dmmc from t_dmmx where dm='36' and dmm='01') as proxy_local_port,
                     (select `value` from t_sys_settings where `key`='send_server') as send_server,
                     (select `value` from t_sys_settings where `key`='send_port') as send_port,

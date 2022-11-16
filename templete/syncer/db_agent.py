@@ -816,6 +816,16 @@ class Application(tornado.web.Application):
             (r"/get_ck_tables",          get_ck_tables),
             (r"/get_ck_query",           get_ck_query),
             (r"/get_ck_query_dict",      get_ck_query_dict),
+
+            # ElasticSearch 数据库查询接口
+            (r"/get_es_indexes", get_mongo_databases),
+            (r"/get_es_mapping", get_mongo_collections),
+            (r"/get_es_query", get_mongo_query),
+
+            # Redis 数据库查询接口
+            (r"/get_redis_dbs", get_mongo_databases),
+            (r"/get_redis_query", get_mongo_collections),
+
         ]
         tornado.web.Application.__init__(self, handlers)
 

@@ -208,7 +208,6 @@ def check_binlog_server(config):
     else:
        return False
 
-
 def db_backup(config):
     print_dict(config)
     db=config['db_mysql']
@@ -348,6 +347,37 @@ def db_backup(config):
     config['status']          = g_status
     write_backup_total(config)
     update_backup_status(config['db_tag'],'0')
+
+    # check oss backup
+    if config['oss_status'] == '1':
+        if config['oss_cloud'] == '1':
+            oss_cmd = 'ossutil64 cp -r -u {}/ {}/{}/'.format(config['bk_path'], config['oss_path'], get_date())
+            print(oss_cmd)
+            os.system(oss_cmd)
+            # check binlog backup
+            if config.get('binlog_status') == '1':
+                oss_cmd = 'ossutil64 cp -r -u {}/mysqlbinlog/ {}/mysqlbinlog/'.format(config['bk_base'],
+                                                                                      config['oss_path'])
+                print(oss_cmd)
+                os.system(oss_cmd)
+
+        if config['oss_cloud'] == '2':
+            with open(config['bk_base'] + '/upload_oss.sh', 'w') as f:
+                oss_cmd = 'coscmd upload -r -s --skipmd5 {}/ {}/{}/'.format(config['bk_path'], config['oss_path'], get_date())
+                print(oss_cmd)
+                #os.system(oss_cmd)
+                f.write(oss_cmd+'\n')
+                # check binlog backup
+                if config.get('binlog_status') == '1':
+                    oss_cmd = 'coscmd upload -r -s --skipmd5 {}/mysqlbinlog/ {}/mysqlbinlog/'.\
+                               format(config['bk_base'],config['oss_path'])
+                    print(oss_cmd)
+                    #os.system(oss_cmd)
+                    f.write(oss_cmd+'\n')
+            print('sh {}'.format(config['bk_base'] + '/upload_oss.sh'))
+            os.system('sh {}'.format(config['bk_base'] + '/upload_oss.sh'))
+
+
     # delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
     print(v_del)
@@ -472,6 +502,28 @@ def db_backup_mydumper(config):
     config['status']          = g_status
     write_backup_total(config)
     update_backup_status(config['db_tag'], '0')
+
+    # check oss backup
+    if config['oss_status'] =='1':
+       if config['oss_cloud'] == '1':
+           oss_cmd = 'ossutil64 cp -r -u {}/ {}/{}/'.format(config['bk_path'],config['oss_path'],get_date())
+           print(oss_cmd)
+           os.system(oss_cmd)
+           # check binlog backup
+           if config.get('binlog_status') == '1':
+              oss_cmd = 'ossutil64 cp -r -u {}/mysqlbinlog/ {}/mysqlbinlog/'.format(config['bk_base'],config['oss_path'])
+              print(oss_cmd)
+              os.system(oss_cmd)
+
+       if config['oss_cloud'] == '2':
+           oss_cmd = 'coscmd upload -r -s {}/ {}/{}/'.format(config['bk_path'], config['oss_path'], get_date())
+           print(oss_cmd)
+           os.system(oss_cmd)
+           # check binlog backup
+           if config.get('binlog_status') == '1':
+              oss_cmd = 'coscmd upload -r -s {}/mysqlbinlog/ {}/mysqlbinlog/'.format(config['bk_base'],config['oss_path'])
+              print(oss_cmd)
+              os.system(oss_cmd)
 
     #delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
