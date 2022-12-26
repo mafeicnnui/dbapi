@@ -750,8 +750,8 @@ def start_sync(cfg):
     sleep_time = datetime.datetime.now()
     with ProcessPoolExecutor(max_workers=cfg['process_num']) as executor:
         while True:
-            if not read_real_sync_status() is None:
-                if  read_real_sync_status()['msg']['value'] == 'STOP':
+            if not read_real_sync_status(cfg['sync_tag']) is None:
+                if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                     logging.info("\033[1;37;40m execute log task {} terminate!\033[0m".format(cfg['sync_tag']))
                     sys.exit(0)
 
@@ -824,10 +824,11 @@ def read_pid(cfg):
         ckpt = json.loads(contents)
         return ckpt
 
-def read_real_sync_status():
+def read_real_sync_status(p_tag):
     try:
-        url = 'http://210.13.35.136:21080/get_real_sync_status'
-        res = requests.post(url,timeout=3).json()
+        par = {'tag': p_tag}
+        url = 'http://$$API_SERVER$$/get_real_sync_status'
+        res = requests.post(url,data=par,timeout=3).json()
         return res
     except:
         logging.info('read_real_sync_status failure!')
@@ -864,7 +865,7 @@ if __name__=="__main__":
             tag = sys.argv[p + 1]
 
     # query system parameters to determine whether to run the  program
-    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
         print("\033[1;37;40m Running execute log task {} failure!\033[0m".format(tag))
         sys.exit(0)
 

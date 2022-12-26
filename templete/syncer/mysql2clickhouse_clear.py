@@ -84,20 +84,19 @@ def get_real_sync_log_num(cfg):
    logging.info("get_real_sync_log_num={}".format(rs['num']))
    return rs['num']
 
-def read_real_sync_status():
+def read_real_sync_status(p_tag):
     try:
+        par = {'tag': p_tag}
         url = 'http://$$API_SERVER$$/get_real_sync_status'
-        res = requests.post(url,timeout=3).json()
+        res = requests.post(url,data=par,timeout=3).json()
         return res
     except:
-        logging.info('write event failure!')
-        logging.info(traceback.format_exc())
-        traceback.print_exc()
+        logging.info('read_real_sync_status failure!')
         return None
 
 def set_real_sync_status(cfg,p_status):
     try:
-        par = {'status': p_status}
+        par = {'status': p_status,'tag':cfg['sync_tag']}
         url = 'http://$$API_SERVER$$/set_real_sync_status'.format(cfg['api_server'])
         res = requests.post(url, data=par,timeout=10).json()
         logging.info("set_real_sync_status is ok")
@@ -164,7 +163,7 @@ if __name__ == "__main__":
             tag = sys.argv[p + 1]
 
     # check sys parameter
-    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
           logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
           sys.exit(0)
 

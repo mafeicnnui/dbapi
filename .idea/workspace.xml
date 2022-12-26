@@ -21,8 +21,15 @@
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="support oss">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/backup/mongo_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/mongo_backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/backup/redis_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/redis_backup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/syncer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_clear.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/urls/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/urls/syncer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -631,14 +638,8 @@
       <workItem from="1668490825029" duration="3809000" />
       <workItem from="1668563804138" duration="1218000" />
       <workItem from="1668581469755" duration="1231000" />
-      <workItem from="1668663945539" duration="2187000" />
-    </task>
-    <task id="LOCAL-00054" summary="ck sync update">
-      <created>1638949099318</created>
-      <option name="number" value="00054" />
-      <option name="presentableId" value="LOCAL-00054" />
-      <option name="project" value="LOCAL" />
-      <updated>1638949099319</updated>
+      <workItem from="1668663945539" duration="2426000" />
+      <workItem from="1672032733942" duration="9485000" />
     </task>
     <task id="LOCAL-00055" summary="ck sync update">
       <created>1638956143028</created>
@@ -976,7 +977,14 @@
       <option name="project" value="LOCAL" />
       <updated>1668581493689</updated>
     </task>
-    <option name="localTasksCounter" value="103" />
+    <task id="LOCAL-00103" summary="support oss">
+      <created>1668668289718</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1668668289719</updated>
+    </task>
+    <option name="localTasksCounter" value="104" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1023,64 +1031,50 @@
     <option name="LAST_COMMIT_MESSAGE" value="support oss" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2017" y="88" width="1027" height="683" key="#Deployment" timestamp="1668492755979">
+    <state x="2017" y="88" width="1027" height="683" key="#Deployment" timestamp="1672038300298">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2017" y="88" width="1027" height="683" key="#Deployment/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668492755979" />
-    <state x="2017" y="-217" width="1169" height="683" key="#Deployment/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203911176" />
-    <state x="2015" y="150" key="#SSH_Configurations" timestamp="1668492591979">
+    <state x="2017" y="88" width="1027" height="683" key="#Deployment/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672038300298" />
+    <state x="2015" y="150" key="#SSH_Configurations" timestamp="1672038211691">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2015" y="150" key="#SSH_Configurations/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668492591979" />
-    <state x="2393" y="-346" key="#SSH_Configurations/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203910121" />
+    <state x="2015" y="150" key="#SSH_Configurations/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672038211691" />
     <state x="2334" y="-5" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1668156489665">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state x="2334" y="-5" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668156489665" />
-    <state x="2334" y="-310" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663051061361" />
     <state width="1877" height="203" key="GridCell.Tab.0.bottom" timestamp="1668159636974">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state width="1877" height="203" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state width="1877" height="411" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
     <state width="1877" height="203" key="GridCell.Tab.0.center" timestamp="1668159636974">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state width="1877" height="203" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state width="1877" height="411" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
     <state width="1877" height="203" key="GridCell.Tab.0.left" timestamp="1668159636973">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state width="1877" height="203" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636973" />
-    <state width="1877" height="411" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
     <state width="1877" height="203" key="GridCell.Tab.0.right" timestamp="1668159636974">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state width="1877" height="203" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state width="1877" height="411" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663234333810" />
-    <state x="2263" y="-5" key="SettingsEditor" timestamp="1668492425084">
+    <state x="2263" y="-5" key="SettingsEditor" timestamp="1672038312561">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668492425084" />
-    <state x="1974" y="-371" key="SettingsEditor/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663203917184" />
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1668581498822">
+    <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672038312561" />
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1668668292444">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668581498822" />
-    <state x="2472" y="-233" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663318603299" />
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668668292444" />
     <state x="2582" y="74" width="596" height="532" key="find.popup" timestamp="1666840156076">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state x="2582" y="74" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1666840156076" />
-    <state x="2686" y="245" key="publish.login" timestamp="1668666111283">
+    <state x="2686" y="245" key="publish.login" timestamp="1668668068394">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668666111283" />
-    <state x="2686" y="-60" key="publish.login/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663312478655" />
-    <state x="2543" y="-260" width="672" height="678" key="search.everywhere.popup" timestamp="1663056913114">
-      <screen x="1920" y="-485" width="1920" height="1040" />
-    </state>
-    <state x="2543" y="-260" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.-485.1920.1040@1920.-485.1920.1040" timestamp="1663056913114" />
+    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668668068394" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

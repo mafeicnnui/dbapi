@@ -1700,10 +1700,11 @@ def write_sync_log(config):
     except:
         logging.info('write_sync_log failure!')
 
-def read_real_sync_status():
+def read_real_sync_status(p_tag):
     try:
+        par = {'tag': p_tag}
         url = 'http://$$API_SERVER$$/get_real_sync_status'
-        res = requests.post(url,timeout=3).json()
+        res = requests.post(url,data=par,timeout=3).json()
         return res
     except:
         logging.info('read_real_sync_status failure!')
@@ -1803,21 +1804,21 @@ def start_incr_sync(cfg):
 
             if get_seconds(sync_time) >= 3 and cfg['full_checkpoint'] == {} :
                 sync_time = datetime.datetime.now()
-                if not read_real_sync_status() is None:
-                    if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                if not read_real_sync_status(cfg['sync_tag']) is None:
+                    if read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                        while True:
                             time.sleep(1)
-                            if  read_real_sync_status()['msg']['value']  == 'PAUSE':
+                            if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']  == 'PAUSE':
                                logging.info("\033[1;37;40m sync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                continue
-                            elif   read_real_sync_status()['msg']['value'] == 'STOP':
+                            elif   read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                                logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
-                               sys.exit(0)
+                               break
                             else:
                                break
-                    elif  read_real_sync_status()['msg']['value']  == 'STOP':
+                    elif  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']  == 'STOP':
                         logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
-                        sys.exit(0)
+                        break
 
             if get_seconds(gather_time) >= int(cfg['sync_gap']):
                cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
@@ -1898,19 +1899,19 @@ def start_incr_sync(cfg):
 
                 if get_seconds(sync_time) >= 3 and cfg['full_checkpoint'] == {} :
                     sync_time = datetime.datetime.now()
-                    if not read_real_sync_status() is None:
-                        if  read_real_sync_status()['msg']['value'] == 'PAUSE':
+                    if not read_real_sync_status(cfg['sync_tag']) is None:
+                        if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                             while True:
                                 time.sleep(1)
-                                if  read_real_sync_status()['msg']['value'] == 'PAUSE':
+                                if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                                     logging.info("\033[1;37;40m sync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                     continue
-                                elif read_real_sync_status()['msg']['value']== 'STOP':
+                                elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']== 'STOP':
                                     logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                     sys.exit(0)
                                 else:
                                     break
-                        elif  read_real_sync_status()['msg']['value'] == 'STOP':
+                        elif  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                             logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                             sys.exit(0)
 
@@ -2123,15 +2124,15 @@ def apply_diff_logs(cfg):
                     if  read_real_sync_status()['msg']['value'] == 'PAUSE':
                         while True:
                             time.sleep(1)
-                            if  read_real_sync_status()['msg']['value'] == 'PAUSE':
+                            if  read_real_sync_status()['msg']['real_sync_status'] == 'PAUSE':
                                 logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                 continue
-                            elif read_real_sync_status()['msg']['value']== 'STOP':
+                            elif read_real_sync_status()['msg']['real_sync_status']== 'STOP':
                                 logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                 sys.exit(0)
                             else:
                                 break
-                    elif  read_real_sync_status()['msg']['value'] == 'STOP':
+                    elif  read_real_sync_status()['msg']['real_sync_status'] == 'STOP':
                         logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                         sys.exit(0)
 
@@ -2237,7 +2238,7 @@ if __name__ == "__main__":
             debug = True
 
     # check sys parameter
-    if read_real_sync_status()['msg']['value'] == 'STOP':
+    if read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
           logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
           sys.exit(0)
 

@@ -44,7 +44,7 @@ def set_real_sync_status(cfg,p_status):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://210.13.35.136:20080/read_db_decrypt'
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -105,14 +105,16 @@ def get_seconds(b):
     a=datetime.datetime.now()
     return int((a-b).total_seconds())
 
-def read_real_sync_status():
+def read_real_sync_status(p_tag):
     try:
-        url = 'http://210.13.35.136:20080/get_mysql_real_sync_status'
-        res = requests.post(url,timeout=3).json()
+        par = {'tag': p_tag}
+        url = 'http://$$API_SERVER$$/get_real_sync_status'
+        res = requests.post(url,data=par,timeout=3).json()
         return res
     except:
-         logging.info(traceback.format_exc())
-         return None
+        logging.info('read_real_sync_status failure!')
+        return None
+
 
 if __name__ == "__main__":
     tag = ""
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     cfg = get_config_from_db(tag)
 
     # query system parameters to determine whether to run the  program
-    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
         logging.info("\033[1;37;40mclear log task {} terminate!\033[0m".format(cfg['sync_tag']))
         sys.exit(0)
 

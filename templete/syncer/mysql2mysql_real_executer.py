@@ -455,14 +455,15 @@ def get_tasks(cfg):
     rs = cr.fetchall()
     return  rs
 
-def read_real_sync_status():
+def read_real_sync_status(p_tag):
     try:
-        url = 'http://210.13.35.136:21080/get_mysql_real_sync_status'
-        res = requests.post(url,timeout=3).json()
+        par = {'tag': p_tag}
+        url = 'http://$$API_SERVER$$/get_real_sync_status'
+        res = requests.post(url,data=par,timeout=3).json()
         return res
     except:
-         traceback.print_exc()
-         sys.exit(0)
+        logging.info('read_real_sync_status failure!')
+        return None
 
 def start_syncer(cfg):
     apply_time = datetime.datetime.now()
@@ -498,20 +499,20 @@ def start_syncer(cfg):
 
                if get_seconds(sync_time) >= 3:
                    sync_time = datetime.datetime.now()
-                   if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                   if read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                        while True:
                            time.sleep(1)
-                           if read_real_sync_status()['msg']['value'] == 'PAUSE':
+                           if read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                                logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                continue
-                           elif read_real_sync_status()['msg']['value'] == 'STOP':
+                           elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                                logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
-                               sys.exit(0)
+                               break
                            else:
                                break
-                   elif read_real_sync_status()['msg']['value'] == 'STOP':
+                   elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                        logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
-                       sys.exit(0)
+                       break
 
 
 
@@ -586,7 +587,7 @@ if __name__=="__main__":
     cfg = get_config_from_db(tag)
 
     # query system parameters to determine whether to run the  program
-    if read_real_sync_status() == None or read_real_sync_status()['msg']['value'] == 'STOP':
+    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
         logging.info("\033[1;37;40mclear log task {} terminate!\033[0m".format(cfg['sync_tag']))
         sys.exit(0)
 

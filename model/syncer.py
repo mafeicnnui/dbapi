@@ -25,38 +25,19 @@ async def check_sync_task_status(p_tag):
     rs = await async_processer.query_one(st)
     return rs[0]
 
-async def get_real_sync_status():
+async def get_real_sync_status(p_tag):
     try:
-        st = "select `value` from t_sys_settings where `key`='REAL_SYNC_STATUS'"
+        st = "select real_sync_status from t_db_sync_config where sync_tag='{}'".format(p_tag)
         rs = await async_processer.query_dict_one(st)
         return {'code':200,'msg':rs}
     except Exception as e:
         traceback.print_exc()
         return {'code':-1,'msg':str(e)}
 
-async def set_real_sync_status(p_status):
+async def set_real_sync_status(p_tag,p_status):
     try:
-        st = "update t_sys_settings set `value`='{}' where `key`='REAL_SYNC_STATUS'".format(p_status)
-        rs = await async_processer.exec_sql(st)
-        return {'code':200,'msg':'success'}
-    except Exception as e:
-        traceback.print_exc()
-        return {'code':-1,'msg':str(e)}
-
-
-async def get_mysql_real_sync_status():
-    try:
-        st = "select `value` from t_sys_settings where `key`='MYSQL_REAL_SYNC_STATUS'"
-        rs = await async_processer.query_dict_one(st)
-        return {'code':200,'msg':rs}
-    except Exception as e:
-        traceback.print_exc()
-        return {'code':-1,'msg':str(e)}
-
-async def set_mysql_real_sync_status(p_status):
-    try:
-        st = "update t_sys_settings set `value`='{}' where `key`='MYSQL_REAL_SYNC_STATUS'".format(p_status)
-        rs = await async_processer.exec_sql(st)
+        st = "update t_db_sync_config set real_sync_status='{}' where sync_tag='{}'".format(p_status,p_tag)
+        await async_processer.exec_sql(st)
         return {'code':200,'msg':'success'}
     except Exception as e:
         traceback.print_exc()
@@ -103,7 +84,8 @@ SELECT a.sync_tag,a.sync_ywlx,
         (SELECT `value` FROM t_sys_settings WHERE `key`='sender') AS sender,
         (SELECT `value` FROM t_sys_settings WHERE `key`='sendpass') AS sendpass,
         (SELECT `value` FROM t_sys_settings WHERE `key`='receiver') AS receiver,
-        (SELECT `value` FROM t_sys_settings WHERE `key`='REAL_SYNC_STATUS') AS real_sync_status
+        -- (SELECT `value` FROM t_sys_settings WHERE `key`='REAL_SYNC_STATUS') AS real_sync_status
+        a.real_sync_status
 FROM t_db_sync_config a,t_server b,t_db_source c,t_db_source d
   WHERE a.server_id=b.id AND a.sour_db_id=c.id  AND a.desc_db_id=d.id 
     and a.sync_tag ='{0}' ORDER BY a.id,a.sync_ywlx
