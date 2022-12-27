@@ -284,19 +284,19 @@ def db_backup(config):
         bk_cmd         = ''
         if config.get('ds') is not None and not config.get('ro') :
             bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
-                      '--routines --force --master-data=2 --databases {5} -r {6} &>{7}'.\
+                      '--routines --force --quick --master-data=2 --databases {5} -r {6} &>{7}'.\
                       format(config['bk_cmd'],config['db_user'],config['newpass'],
                              config['db_ip'] ,config['db_port'],db[0],file_name,err_name)
 
         if  config.get('sv') is not None and config.get('ro'):
             bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
-                      '--routines --force --dump-slave=2 --databases {5} -r {6} &>{7}'. \
+                      '--routines --force --quick --dump-slave=2 --databases {5} -r {6} &>{7}'. \
                       format(config['bk_cmd'], config['db_user'], config['newpass'],
                              config['db_ip'], config['db_port'], db[0], file_name, err_name)
 
         if config.get('ds') is  None and config.get('sv') is  None :
             bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
-                      '--routines --force --master-data=2 --databases {5} -r {6} &>{7}'.\
+                      '--routines --force --quick --master-data=2 --databases {5} -r {6} &>{7}'.\
                       format(config['bk_cmd'],config['db_user'],config['newpass'],
                              config['db_ip'] ,config['db_port'],db[0],file_name,err_name)
 

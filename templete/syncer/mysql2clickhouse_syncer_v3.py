@@ -424,6 +424,15 @@ def get_sync_table_multi_pk_rq_col(cfg,event):
                                  ELSE 5 END limit 1
                  """.format(event['schema'], event['table'])
 
+    st6 = "SELECT COUNT(0) FROM {}.{} WHERE {} is null"
+
+    st7 = """SELECT GROUP_CONCAT(column_name)
+             FROM information_schema.columns
+                WHERE table_schema='{}'  AND table_name='{}' 
+                  AND data_type IN('date','timestamp','datetime')  
+                  AND is_nullable='YES'"""
+
+
     cr.execute(st.format(event['schema'],event['table'],'create_time'))
     rs = cr.fetchone()
     if rs[0] >0 :
@@ -457,6 +466,53 @@ def get_sync_table_multi_pk_rq_col(cfg,event):
         cr.execute(st5)
         rs = cr.fetchone()
         return rs[0]
+
+    # 检查表中日期列数据日期列空数据为0，如果为0则采用该日期列进行同步
+    try:
+        cr.execute(st6.format(event['schema'], event['table'], 'create_time'))
+        rs = cr.fetchone()
+        if rs[0] == 0:
+            return 'create_time'
+    except:
+        pass
+
+    try:
+        cr.execute(st6.format(event['schema'], event['table'], 'create_dt'))
+        rs = cr.fetchone()
+        if rs[0] == 0:
+            return 'create_dt'
+    except:
+        pass
+
+    try:
+        cr.execute(st6.format(event['schema'], event['table'], 'update_time'))
+        rs = cr.fetchone()
+        if rs[0] == 0:
+            return 'update_time'
+    except:
+        pass
+
+    try:
+        cr.execute(st6.format(event['schema'], event['table'], 'update_dt'))
+        rs = cr.fetchone()
+        if rs[0] == 0:
+            return 'update_dt'
+    except:
+        pass
+
+    # 可空日期列如果数据都不为空，则取第一个可空日期列做为全量同步列
+    cr.execute(st7.format(event['schema'], event['table']))
+    rs = cr.fetchone()
+    if rs[0] is not None:
+       for c in rs[0].split(','):
+            try:
+                cr.execute(st6.format(event['schema'], event['table'], c))
+                rs2 = cr.fetchone()
+                if rs2[0] == 0:
+                    return c
+            except:
+                pass
+
 
     cr.close()
     return ''
@@ -973,7 +1029,7 @@ def full_sync(cfg, event):
         while n_tab_total_rows > 0:
             st = "select {} from `{}`.`{}` where {} >= '{}' and  {}<'{}'" \
                 .format(v_sync_table_cols, event['schema'], tab, v_sync_col, d_rq_start, v_sync_col, d_rq_end)
-            logging.info('v2:'+st)
+            logging.info('v2:'+st+',counter='+str(i_counter)+',total_rows='+str(n_tab_total_rows))
             cr_source.execute(st)
             rs_source = cr_source.fetchmany(cfg['batch_size'])
             while rs_source:
@@ -2121,18 +2177,18 @@ def apply_diff_logs(cfg):
 
                 if get_seconds(sync_time) >= 3:
                     sync_time = datetime.datetime.now()
-                    if  read_real_sync_status()['msg']['value'] == 'PAUSE':
+                    if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                         while True:
                             time.sleep(1)
-                            if  read_real_sync_status()['msg']['real_sync_status'] == 'PAUSE':
+                            if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
                                 logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                 continue
-                            elif read_real_sync_status()['msg']['real_sync_status']== 'STOP':
+                            elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']== 'STOP':
                                 logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                 sys.exit(0)
                             else:
                                 break
-                    elif  read_real_sync_status()['msg']['real_sync_status'] == 'STOP':
+                    elif  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                         logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                         sys.exit(0)
 
