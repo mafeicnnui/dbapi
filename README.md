@@ -6,9 +6,9 @@
 
 ## 二、客户端介绍
          
-  备份客户端：
+  - 备份客户端：
 
-| 脚本描述          | 功能描述          | 备注              |
+| 脚本描述          | 脚本名称         | 备注              |
 | ----------------- | :---------------- | ----------------- |
 | mysql备份脚本     | mysql_backup.py   | 支持windows,linux |
 | sqlserver备份脚本 | mssql_backup.py   | 支持windows,linux |
@@ -16,6 +16,24 @@
 | mongo备份脚本     | mongo_backup.py   | 支持linux         |
 | elastic备份脚本   | elastic_backup.py | 支持linux         |
 | redis备份脚本     | redis_backup.py   | 支持linux         |
+
+
+- 同步客户端：
+
+| 脚本描述                  | 脚本名称                      | 备注              |
+| ------------------------- | :---------------------------- | ----------------- |
+| mysql->mysq同步l脚本      | mysql2mysql_sync.py           | 离线同步          |
+| sqlserver->mysql同步脚本  | mssql2mysql_sync.py           | 离线同步          |
+| pg->mysql同步脚本         | pg2mysql_sync.py              | 离线同步          |
+| mysql-->doris同步脚本     | mysql2doris_sync.py           | 离线同步          |
+| mysql->mysql实时同步脚本  | mysql2mysql_real_syncer_v3.py | 实时同步-采集日志 |
+| mysql->mysql实时同步脚本  | mysql2mysql_real_executer.py  | 实时同步-应用日志 |
+| mysql->mysql实时同步脚本  | mysql2mysql_real_clear.py     | 实时同步-日志清理 |
+| mysql->clickhouse实时同步 | mysql2clickhouse_syncer_v3.py | 实时同步-采集日志 |
+| mysql->clickhouse实时同步 | mysql2clickhouse_executer.py  | 实时同步-应用日志 |
+| mysql->clickhouse实时同步 | mysql2clickhouse_clear.py     | 实时同步-日志清理 |
+|                           |                               |                   |
+
 
 
 ## 三、安装部署  

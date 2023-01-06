@@ -19,12 +19,9 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="real sync optimize">
-      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="README.md update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/backup/mysql_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/mysql_backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,19 +74,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\syncer\his" />
-      <recent name="D:\work\dbapi" />
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\minio" />
-      <recent name="D:\work\dbapi\templete\datax" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\syncer\his" />
       <recent name="D:\work\dbapi\model" />
       <recent name="D:\work\dbapi\service" />
       <recent name="D:\work\dbapi\urls" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete\syncer\his" />
+      <recent name="D:\work\dbapi" />
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\minio" />
+      <recent name="D:\work\dbapi\templete\datax" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -641,14 +638,7 @@
       <workItem from="1672276989897" duration="77000" />
       <workItem from="1672800563286" duration="1253000" />
       <workItem from="1672880811297" duration="3915000" />
-      <workItem from="1672968414011" duration="942000" />
-    </task>
-    <task id="LOCAL-00057" summary="ck sync update">
-      <created>1639381724436</created>
-      <option name="number" value="00057" />
-      <option name="presentableId" value="LOCAL-00057" />
-      <option name="project" value="LOCAL" />
-      <updated>1639381724437</updated>
+      <workItem from="1672968414011" duration="1785000" />
     </task>
     <task id="LOCAL-00058" summary="db mgr fix">
       <created>1640575668464</created>
@@ -986,7 +976,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672122091138</updated>
     </task>
-    <option name="localTasksCounter" value="106" />
+    <task id="LOCAL-00106" summary="README.md update">
+      <created>1672969374517</created>
+      <option name="number" value="00106" />
+      <option name="presentableId" value="LOCAL-00106" />
+      <option name="project" value="LOCAL" />
+      <updated>1672969374517</updated>
+    </task>
+    <option name="localTasksCounter" value="107" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1005,7 +1002,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="ck sync agent update" />
     <MESSAGE value="db alert commit" />
     <MESSAGE value="db task commit" />
     <MESSAGE value="server alert update" />
@@ -1030,7 +1026,8 @@
     <MESSAGE value="backup api fix" />
     <MESSAGE value="support oss" />
     <MESSAGE value="real sync optimize" />
-    <option name="LAST_COMMIT_MESSAGE" value="real sync optimize" />
+    <MESSAGE value="README.md update" />
+    <option name="LAST_COMMIT_MESSAGE" value="README.md update" />
   </component>
   <component name="WindowStateProjectService">
     <state x="2017" y="88" width="1027" height="683" key="#Deployment" timestamp="1672968598225">
@@ -1069,10 +1066,10 @@
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968604113" />
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672122096133">
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672969386085">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672122096133" />
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672969386085" />
     <state x="2582" y="74" width="596" height="532" key="find.popup" timestamp="1672801223462">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
