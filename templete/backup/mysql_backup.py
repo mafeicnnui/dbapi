@@ -159,7 +159,7 @@ def update_backup_status(db_tag,status):
     url = 'http://$$API_SERVER$$/update_backup_status'
     res = requests.post(url, data=data).json()
     if res['code'] == 200:
-       print('call interface update_backup_status :{}!'.format('running' if status =='1' else 'complete'))
+       print('call interface update_backup_status {}!'.format('running' if status =='1' else 'complete'))
     else:
        print('call interface update_backup_status error :{}'.format(res['msg']))
        sys.exit(0)
@@ -363,13 +363,14 @@ def db_backup(config):
 
         if config['oss_cloud'] == '2':
             with open(config['bk_base'] + '/upload_oss.sh', 'w') as f:
-                oss_cmd = 'coscmd upload -r -s --skipmd5 {}/ {}/{}/'.format(config['bk_path'], config['oss_path'], get_date())
+                oss_cmd = 'coscmd upload -r -s --skipmd5 {}/ {}/{}/ &>/dev/null'.\
+                    format(config['bk_path'], config['oss_path'], get_date())
                 print(oss_cmd)
                 #os.system(oss_cmd)
                 f.write(oss_cmd+'\n')
                 # check binlog backup
                 if config.get('binlog_status') == '1':
-                    oss_cmd = 'coscmd upload -r -s --skipmd5 {}/mysqlbinlog/ {}/mysqlbinlog/'.\
+                    oss_cmd = 'coscmd upload -r -s --skipmd5 {}/mysqlbinlog/ {}/mysqlbinlog/ &>/dev/null'.\
                                format(config['bk_base'],config['oss_path'])
                     print(oss_cmd)
                     #os.system(oss_cmd)
@@ -380,6 +381,11 @@ def db_backup(config):
 
     # delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
+    print(v_del)
+    os.system(v_del)
+
+    # delete recent 7 day binlog
+    v_del = '''find {0} -name "*mysql-bin*" -type f -mtime +{2} -exec rm -rf '''.format(config['bk_base'], config['year'],config['expire']) + '''{} \; -prune'''
     print(v_del)
     os.system(v_del)
 
@@ -527,6 +533,11 @@ def db_backup_mydumper(config):
 
     #delete recent 7 day data
     v_del='''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'],config['expire']) +'''{} \; -prune'''
+    print(v_del)
+    os.system(v_del)
+
+    # delete recent 7 day binlog
+    v_del = '''find {0} -name "*mysql-bin*" -type f -mtime +{2} -exec rm -rf '''.format(config['bk_base'],config['year'], config['expire']) + '''{} \; -prune'''
     print(v_del)
     os.system(v_del)
 

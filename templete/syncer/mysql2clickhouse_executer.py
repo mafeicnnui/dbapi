@@ -753,7 +753,8 @@ def start_sync(cfg):
             if not read_real_sync_status(cfg['sync_tag']) is None:
                 if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
                     logging.info("\033[1;37;40m execute log task {} terminate!\033[0m".format(cfg['sync_tag']))
-                    sys.exit(0)
+                    # sys.exit(0)
+                    return
 
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()
@@ -761,7 +762,8 @@ def start_sync(cfg):
                logging.info("\033[1;36;40m apply config success\033[0m")
                if cfg is None:
                    logging.info('load config failure,exit sync!')
-                   sys.exit(0)
+                   # sys.exit(0)
+                   return
 
             tasks = get_tasks(cfg)
             if tasks!=():

@@ -9,14 +9,14 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="hopson@10.2.39.17:65508_dbops">
+      <paths name="hopson@10.2.39.17:65508_dba_tools">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="hopson@10.2.39.17:65508_webssh">
+      <paths name="hopson@10.2.39.17:65508_dbops">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
@@ -33,7 +33,7 @@
       <paths name="hopson@10.2.39.18:65508_dbops">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="dbapi" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

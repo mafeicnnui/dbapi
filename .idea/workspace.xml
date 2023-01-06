@@ -20,9 +20,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="real sync optimize">
+      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/backup/mysql_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/mysql_backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2clickhouse_executer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -635,14 +637,11 @@
       <workItem from="1672032733942" duration="10347000" />
       <workItem from="1672104552052" duration="1535000" />
       <workItem from="1672106534875" duration="672000" />
-      <workItem from="1672111424488" duration="5081000" />
-    </task>
-    <task id="LOCAL-00056" summary="ck sync update">
-      <created>1639032068868</created>
-      <option name="number" value="00056" />
-      <option name="presentableId" value="LOCAL-00056" />
-      <option name="project" value="LOCAL" />
-      <updated>1639032068869</updated>
+      <workItem from="1672111424488" duration="6360000" />
+      <workItem from="1672276989897" duration="77000" />
+      <workItem from="1672800563286" duration="1253000" />
+      <workItem from="1672880811297" duration="3915000" />
+      <workItem from="1672968414011" duration="942000" />
     </task>
     <task id="LOCAL-00057" summary="ck sync update">
       <created>1639381724436</created>
@@ -980,7 +979,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672045545896</updated>
     </task>
-    <option name="localTasksCounter" value="105" />
+    <task id="LOCAL-00105" summary="real sync optimize">
+      <created>1672122091137</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1672122091138</updated>
+    </task>
+    <option name="localTasksCounter" value="106" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1027,18 +1033,18 @@
     <option name="LAST_COMMIT_MESSAGE" value="real sync optimize" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2017" y="88" width="1027" height="683" key="#Deployment" timestamp="1672106511791">
+    <state x="2017" y="88" width="1027" height="683" key="#Deployment" timestamp="1672968598225">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2017" y="88" width="1027" height="683" key="#Deployment/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672106511791" />
+    <state x="2017" y="88" width="1027" height="683" key="#Deployment/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968598225" />
     <state x="2514" y="18" key="#Options" timestamp="1672106493115">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state x="2514" y="18" key="#Options/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672106493115" />
-    <state x="2015" y="150" key="#SSH_Configurations" timestamp="1672106278700">
+    <state x="2161" y="132" key="#SSH_Configurations" timestamp="1672968597396">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2015" y="150" key="#SSH_Configurations/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672106278700" />
+    <state x="2161" y="132" key="#SSH_Configurations/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968597396" />
     <state x="2334" y="-5" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1668156489665">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
@@ -1059,22 +1065,22 @@
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state width="1877" height="203" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state x="2263" y="-5" key="SettingsEditor" timestamp="1672106292289">
+    <state x="2263" y="-5" key="SettingsEditor" timestamp="1672968604113">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672106292289" />
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672045550813">
+    <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968604113" />
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672122096133">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672045550813" />
-    <state x="2582" y="74" width="596" height="532" key="find.popup" timestamp="1666840156076">
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672122096133" />
+    <state x="2582" y="74" width="596" height="532" key="find.popup" timestamp="1672801223462">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2582" y="74" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1666840156076" />
-    <state x="2686" y="245" key="publish.login" timestamp="1672106521843">
+    <state x="2582" y="74" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672801223462" />
+    <state x="2686" y="245" key="publish.login" timestamp="1672968580924">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672106521843" />
+    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968580924" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
