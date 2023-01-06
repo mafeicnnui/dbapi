@@ -18,6 +18,7 @@
 | redis备份脚本     | redis_backup.py   | 支持linux         |
 
 
+
 - 同步客户端：
 
 | 脚本描述                  | 脚本名称                      | 备注              |
@@ -34,7 +35,15 @@
 | mysql->clickhouse实时同步 | mysql2clickhouse_clear.py     | 实时同步-日志清理 |
 |                           |                               |                   |
 
+- 采集客户端：
 
+- 告警客户端：
+
+- 归档客户端：
+
+- 传输客户端：
+
+- dataX客户端：
 
 ## 三、安装部署  
 

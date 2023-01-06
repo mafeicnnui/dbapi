@@ -638,14 +638,7 @@
       <workItem from="1672276989897" duration="77000" />
       <workItem from="1672800563286" duration="1253000" />
       <workItem from="1672880811297" duration="3915000" />
-      <workItem from="1672968414011" duration="1785000" />
-    </task>
-    <task id="LOCAL-00058" summary="db mgr fix">
-      <created>1640575668464</created>
-      <option name="number" value="00058" />
-      <option name="presentableId" value="LOCAL-00058" />
-      <option name="project" value="LOCAL" />
-      <updated>1640575668464</updated>
+      <workItem from="1672968414011" duration="1896000" />
     </task>
     <task id="LOCAL-00059" summary="ck part support">
       <created>1640597426111</created>
@@ -983,7 +976,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672969374517</updated>
     </task>
-    <option name="localTasksCounter" value="107" />
+    <task id="LOCAL-00107" summary="README.md update">
+      <created>1672970215321</created>
+      <option name="number" value="00107" />
+      <option name="presentableId" value="LOCAL-00107" />
+      <option name="project" value="LOCAL" />
+      <updated>1672970215321</updated>
+    </task>
+    <option name="localTasksCounter" value="108" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1066,10 +1066,10 @@
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
     <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968604113" />
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672969386085">
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672970218147">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672969386085" />
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672970218147" />
     <state x="2582" y="74" width="596" height="532" key="find.popup" timestamp="1672801223462">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
