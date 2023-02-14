@@ -339,7 +339,7 @@ def db_backup_linux(config):
     write_backup_total(config)
 
     print('delete recent {} day backup...'.format(config['expire']))
-    v_del = '''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf'''.format(config['bk_base'], config['year'],config['expire']) + '''{} \; -prune'''
+    v_del = '''find {0} -name "*{1}*" -type d -mtime +{2} -exec rm -rf '''.format(config['bk_base'], config['year'],config['expire']) + '''{} \; -prune'''
     print(v_del)
     os.system(v_del)
 
