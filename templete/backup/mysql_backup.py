@@ -12,7 +12,7 @@ import os
 import sys
 import traceback
 import warnings
-
+import time
 import pymysql
 import requests
 
@@ -352,31 +352,21 @@ def db_backup(config):
     if config['oss_status'] == '1':
         if config['oss_cloud'] == '1':
             oss_cmd = 'ossutil64 cp -r -u {}/ {}/{}/'.format(config['bk_path'], config['oss_path'], get_date())
-            print(oss_cmd)
             os.system(oss_cmd)
             # check binlog backup
             if config.get('binlog_status') == '1':
-                oss_cmd = 'ossutil64 cp -r -u {}/mysqlbinlog/ {}/mysqlbinlog/'.format(config['bk_base'],
-                                                                                      config['oss_path'])
-                print(oss_cmd)
+                oss_cmd = 'ossutil64 cp -r -u {}/mysqlbinlog/ {}/mysqlbinlog/'.format(config['bk_base'],config['oss_path'])
                 os.system(oss_cmd)
 
         if config['oss_cloud'] == '2':
-            with open(config['bk_base'] + '/upload_oss.sh', 'w') as f:
-                oss_cmd = 'coscmd upload -r -s --skipmd5 {}/ {}/{}/ &>/dev/null'.\
-                    format(config['bk_path'], config['oss_path'], get_date())
-                print(oss_cmd)
-                #os.system(oss_cmd)
-                f.write(oss_cmd+'\n')
-                # check binlog backup
-                if config.get('binlog_status') == '1':
-                    oss_cmd = 'coscmd upload -r -s --skipmd5 {}/mysqlbinlog/ {}/mysqlbinlog/ &>/dev/null'.\
-                               format(config['bk_base'],config['oss_path'])
-                    print(oss_cmd)
-                    #os.system(oss_cmd)
-                    f.write(oss_cmd+'\n')
-            print('sh {}'.format(config['bk_base'] + '/upload_oss.sh'))
-            os.system('sh {}'.format(config['bk_base'] + '/upload_oss.sh'))
+            oss_cmd = '/usr/local/bin/coscmd upload -r -s --skipmd5 {}/ {}/{}/'.\
+                format(config['bk_path'], config['oss_path'], get_date())
+            os.system(oss_cmd)
+
+            if config.get('binlog_status') == '1':
+                oss_cmd = '/usr/local/bin/coscmd upload -r -s --skipmd5 {}/mysqlbinlog/ {}/mysqlbinlog/'.\
+                           format(config['bk_base'],config['oss_path'])
+                os.system(oss_cmd)
 
 
     # delete recent 7 day data
