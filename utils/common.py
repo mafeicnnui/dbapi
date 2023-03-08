@@ -37,7 +37,7 @@ class read_db_decrypt(tornado.web.RequestHandler):
 
 def format_sql(v_sql):
     if v_sql is not None:
-       return v_sql.replace("\\","\\\\").replace("'","\\'")
+       return v_sql.replace("\\","\\\\").replace("'","\\'").replace('"','\\"')
     else:
        return v_sql
 

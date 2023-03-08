@@ -5,8 +5,9 @@
 # @File : monitor.py.py
 # @Software: PyCharm
 
+import json
 import traceback
-from utils.common import aes_decrypt,exec_ssh_cmd,gen_transfer_file,get_time2
+from utils.common import aes_decrypt,exec_ssh_cmd,gen_transfer_file,get_time2,format_sql
 from utils.mysql_async import async_processer
 from utils.common import ssh_helper,ftp_helper
 
@@ -29,13 +30,27 @@ async def get_itmes_from_templete_ids(p_templete):
        t=t+i['index_code']+','
     return t[0:-1]
 
+async def get_itmes_from_templete_ids_vals(p_templete):
+    st = "SELECT index_name,index_code,index_threshold FROM t_monitor_index \
+              WHERE id IN(SELECT index_id FROM `t_monitor_templete_index` \
+                           WHERE templete_id={}) AND STATUS='1'".format(p_templete)
+    rs = await async_processer.query_dict_list(st)
+    return rs
 
 async def get_itmes_from_monitor_templete(p_templete):
     st = "SELECT index_code,index_threshold FROM t_monitor_index \
               WHERE id IN(SELECT index_id FROM `t_monitor_templete_index` \
-                           WHERE INSTR('{0}',templete_id)>0) AND STATUS='1'".format(p_templete)
+                           WHERE templete_id={}) AND STATUS='1'".format(p_templete)
     rs = await async_processer.query_dict_list(st)
     return rs
+
+async def get_tjd_api_request_body(p_market_id):
+    try:
+        st = "SELECT dmmc as data FROM t_dmmx WHERE dm=48 AND dmm='{}'".format(p_market_id)
+        rs = await async_processer.query_dict_one(st)
+        return rs
+    except:
+        return '{ "appId":"", "parkCode":""}'
 
 async def get_db_monitor_config(p_tag):
     if await check_server_monitor_status(p_tag)>0:
@@ -58,14 +73,21 @@ async def get_db_monitor_config(p_tag):
                    (select `value` from t_sys_settings where `key`='send_port') as send_port,
                    (select `value` from t_sys_settings where `key`='sender') as sender,
                    (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
-                   a.receiver  as receiver 
+                   a.receiver  as receiver,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_TIMEOUT') as API_REQUEST_TIMEOUT,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_TIMEOUT_SLEEP') as API_REQUEST_TIMEOUT_SLEEP,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_GAP_SLEEP') as API_REQUEST_GAP_SLEEP,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_RECOVER_SLEEP') as API_REQUEST_RECOVER_SLEEP
         FROM t_monitor_task a JOIN t_server b ON a.server_id=b.id 
            LEFT JOIN t_db_source c  ON  a.db_id=c.id  
         where a.task_tag ='{0}' ORDER BY a.id'''.format(p_tag)
     rs = await async_processer.query_dict_one(st)
     rs['server_pass'] = await aes_decrypt(rs['server_pass'], rs['server_user'])
     rs['templete_indexes'] = await get_itmes_from_templete_ids(rs['templete_id'])
+    rs['templete_indexes_values'] = await get_itmes_from_templete_ids_vals(rs['templete_id'])
     rs['templete_monitor_indexes'] = await get_itmes_from_monitor_templete(rs['templete_id'])
+    rs['tjd_api_request_body'] = await get_tjd_api_request_body(rs['market_id'])
+
     if rs.get('id_ro') is not None and rs.get('id_ro') !='':
        rs['ds_ro'] = await async_processer.query_dict_one("select * from t_db_source where id={}".format(rs['id_ro']))
     return {'code': 200, 'msg': rs}
@@ -93,6 +115,22 @@ async def save_monitor_log(config):
     except:
         traceback.print_exc()
         return {'code': -1, 'msg': 'failure'}
+
+async def save_api_log(config):
+    st = '''insert into t_monitor_api_log 
+              (market_id,server_id,api_interface,api_status,response_time,api_message,request_body,index_code,index_name,update_time) 
+             values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}',now())
+            '''.format(config.get('market_id',''),config.get('server_id',''),
+                       config.get('api_interface',''),config.get('api_status',''),
+                       config.get('response_time',''),config.get('response_text',''),
+                       config.get('request_body', ''),config.get('index_code',''),
+                       config.get('index_name',''))
+    try:
+        await async_processer.exec_sql(st)
+        return {'code': 200, 'msg': 'success'}
+    except:
+        traceback.print_exc()
+        return {'code': -1, 'msg': traceback.format_exc()}
 
 async def write_remote_crontab_monitor(cfg,ssh):
     v_cmd   = '{0}/db_monitor.sh {1} {2}'.format(cfg['msg']['script_path'],cfg['msg']['script_file'], cfg['msg']['task_tag'])

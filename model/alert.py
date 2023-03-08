@@ -53,7 +53,12 @@ async def get_db_alert_config(p_tag):
                    (select `value` from t_sys_settings where `key`='send_server') as send_server,
                    (select `value` from t_sys_settings where `key`='send_port') as send_port,
                    (select `value` from t_sys_settings where `key`='sender') as sender,
-                   (select `value` from t_sys_settings where `key`='sendpass') as sendpass
+                   (select `value` from t_sys_settings where `key`='sendpass') as sendpass,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_TIMEOUT') as API_REQUEST_TIMEOUT,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_TIMEOUT_SLEEP') as API_REQUEST_TIMEOUT_SLEEP,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_GAP_SLEEP') as API_REQUEST_GAP_SLEEP,
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_RECOVER_SLEEP') as API_REQUEST_RECOVER_SLEEP,
+                   (select `value` from t_sys_settings where `key`='API_INTERFACE_MAIL') as API_INTERFACE_MAIL
         FROM t_alert_task a JOIN t_server b ON a.server_id=b.id 
         where a.task_tag ='{0}' ORDER BY a.id'''.format(p_tag)
     rs = await async_processer.query_dict_one(st)

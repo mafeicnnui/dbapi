@@ -787,10 +787,17 @@ class get_ck_query_dict(tornado.web.RequestHandler):
             result['column'] = ''
             self.write(result)
 
+class health(tornado.web.RequestHandler):
+    def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.write('health check success!')
+
 define("port", default=sys.argv[1], help="run on the given port", type=int)
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
+            # 健康检查接口
+            (r"/health", health),
             # sqlserver 数据库查询接口
             (r"/get_mssql_tables",       get_mssql_tables),
             (r"/get_mssql_columns",      get_mssql_columns),

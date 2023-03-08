@@ -19,9 +19,17 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="README.md update">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
+      <change afterPath="$PROJECT_DIR$/templete/gather/gather_tjd_agent.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templete/monitor/api_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/alert.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/alert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/monitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/monitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/syncer/db_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/db_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/urls/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/urls/monitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/common.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,20 +75,13 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/templete/syncer" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/templete/monitor" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\syncer\his" />
-      <recent name="D:\work\dbapi\model" />
-      <recent name="D:\work\dbapi\service" />
-      <recent name="D:\work\dbapi\urls" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\syncer\his" />
       <recent name="D:\work\dbapi" />
@@ -88,8 +89,37 @@
       <recent name="D:\work\dbapi\templete\minio" />
       <recent name="D:\work\dbapi\templete\datax" />
     </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete\monitor" />
+      <recent name="D:\work\dbapi\templete\gather" />
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\syncer\his" />
+      <recent name="D:\work\dbapi\model" />
+    </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
+    <configuration name="api_agent" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="dbapi" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/templete/monitor" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/templete/monitor/api_agent.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="backup" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="dbapi" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -192,42 +222,20 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="elastic_backup" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="dbapi" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/templete" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="D:\work\dbapi\agent\backup\elastic_backup.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <list>
       <item itemvalue="Python.datax_sync" />
       <item itemvalue="Python.dbapi" />
-      <item itemvalue="Python.elastic_backup" />
       <item itemvalue="Python.common" />
       <item itemvalue="Python.backup" />
+      <item itemvalue="Python.api_agent" />
     </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.dbapi" />
+        <item itemvalue="Python.api_agent" />
         <item itemvalue="Python.backup" />
         <item itemvalue="Python.common" />
         <item itemvalue="Python.datax_sync" />
-        <item itemvalue="Python.elastic_backup" />
       </list>
     </recent_temporary>
   </component>
@@ -638,28 +646,27 @@
       <workItem from="1672276989897" duration="77000" />
       <workItem from="1672800563286" duration="1253000" />
       <workItem from="1672880811297" duration="3915000" />
-      <workItem from="1672968414011" duration="1896000" />
-    </task>
-    <task id="LOCAL-00059" summary="ck part support">
-      <created>1640597426111</created>
-      <option name="number" value="00059" />
-      <option name="presentableId" value="LOCAL-00059" />
-      <option name="project" value="LOCAL" />
-      <updated>1640597426111</updated>
-    </task>
-    <task id="LOCAL-00060" summary="ck part support">
-      <created>1640597659504</created>
-      <option name="number" value="00060" />
-      <option name="presentableId" value="LOCAL-00060" />
-      <option name="project" value="LOCAL" />
-      <updated>1640597659504</updated>
-    </task>
-    <task id="LOCAL-00061" summary="ck part support">
-      <created>1640681770229</created>
-      <option name="number" value="00061" />
-      <option name="presentableId" value="LOCAL-00061" />
-      <option name="project" value="LOCAL" />
-      <updated>1640681770230</updated>
+      <workItem from="1672968414011" duration="1941000" />
+      <workItem from="1673315567626" duration="5992000" />
+      <workItem from="1673498437901" duration="760000" />
+      <workItem from="1676249892200" duration="635000" />
+      <workItem from="1676260133286" duration="28000" />
+      <workItem from="1676273733162" duration="897000" />
+      <workItem from="1676359216810" duration="193000" />
+      <workItem from="1676953260512" duration="940000" />
+      <workItem from="1677143809078" duration="196000" />
+      <workItem from="1677464679557" duration="7467000" />
+      <workItem from="1677545557113" duration="9313000" />
+      <workItem from="1677562467120" duration="28000" />
+      <workItem from="1677570657512" duration="4513000" />
+      <workItem from="1677634936338" duration="23736000" />
+      <workItem from="1677718323447" duration="26588000" />
+      <workItem from="1677804964181" duration="5122000" />
+      <workItem from="1677829553525" duration="651000" />
+      <workItem from="1678066288859" duration="2728000" />
+      <workItem from="1678081329930" duration="2066000" />
+      <workItem from="1678160102796" duration="769000" />
+      <workItem from="1678254331158" duration="5431000" />
     </task>
     <task id="LOCAL-00062" summary="pg sync fix">
       <created>1640769358898</created>
@@ -983,7 +990,28 @@
       <option name="project" value="LOCAL" />
       <updated>1672970215321</updated>
     </task>
-    <option name="localTasksCounter" value="108" />
+    <task id="LOCAL-00108" summary="README.md update">
+      <created>1672970316490</created>
+      <option name="number" value="00108" />
+      <option name="presentableId" value="LOCAL-00108" />
+      <option name="project" value="LOCAL" />
+      <updated>1672970316490</updated>
+    </task>
+    <task id="LOCAL-00109" summary="bug fix">
+      <created>1676359362191</created>
+      <option name="number" value="00109" />
+      <option name="presentableId" value="LOCAL-00109" />
+      <option name="project" value="LOCAL" />
+      <updated>1676359362191</updated>
+    </task>
+    <task id="LOCAL-00110" summary="bug fix">
+      <created>1676359390613</created>
+      <option name="number" value="00110" />
+      <option name="presentableId" value="LOCAL-00110" />
+      <option name="project" value="LOCAL" />
+      <updated>1676359390613</updated>
+    </task>
+    <option name="localTasksCounter" value="111" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1016,7 +1044,6 @@
     <MESSAGE value="myysql2clickhouse archive" />
     <MESSAGE value="add log" />
     <MESSAGE value="mysql-&gt;mysql sync fix" />
-    <MESSAGE value="bug fix" />
     <MESSAGE value="log clear add log file" />
     <MESSAGE value="support clickhouse cluster" />
     <MESSAGE value="sync api update" />
@@ -1027,57 +1054,68 @@
     <MESSAGE value="support oss" />
     <MESSAGE value="real sync optimize" />
     <MESSAGE value="README.md update" />
-    <option name="LAST_COMMIT_MESSAGE" value="README.md update" />
+    <MESSAGE value="bug fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2017" y="88" width="1027" height="683" key="#Deployment" timestamp="1672968598225">
+    <state x="295" y="183" width="1273" height="848" key="#Deployment" timestamp="1678262432371">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="-1823" y="-233" key="#Deployment/0.0.1920.1040/-1920.-425.1920.1040@-1920.-425.1920.1040" timestamp="1677726975514" />
+    <state x="295" y="183" width="1273" height="848" key="#Deployment/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678262432371" />
+    <state x="2017" y="88" width="1027" height="683" key="#Deployment/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677571348149" />
+    <state x="2514" y="18" key="#Options" timestamp="1677550767201">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2017" y="88" width="1027" height="683" key="#Deployment/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968598225" />
-    <state x="2514" y="18" key="#Options" timestamp="1672106493115">
+    <state x="2514" y="18" key="#Options/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677550767201" />
+    <state x="241" y="158" width="1271" height="882" key="#SSH_Configurations" timestamp="1678262416669">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="-1679" y="-267" key="#SSH_Configurations/0.0.1920.1040/-1920.-425.1920.1040@-1920.-425.1920.1040" timestamp="1677726929695" />
+    <state x="241" y="158" width="1271" height="882" key="#SSH_Configurations/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678262416669" />
+    <state x="2161" y="132" key="#SSH_Configurations/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677571314726" />
+    <state x="410" y="166" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1678254495947">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="410" y="166" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678254495947" />
+    <state width="1867" height="256" key="GridCell.Tab.0.bottom" timestamp="1678264606819">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1867" height="256" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678264606819" />
+    <state width="1877" height="337" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677575318871" />
+    <state width="1867" height="256" key="GridCell.Tab.0.center" timestamp="1678264606819">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1867" height="256" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678264606819" />
+    <state width="1877" height="337" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677575318871" />
+    <state width="1867" height="256" key="GridCell.Tab.0.left" timestamp="1678264606819">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1867" height="256" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678264606819" />
+    <state width="1877" height="337" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677575318871" />
+    <state width="1867" height="256" key="GridCell.Tab.0.right" timestamp="1678264606819">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="1867" height="256" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678264606819" />
+    <state width="1877" height="337" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677575318871" />
+    <state x="76" y="157" key="SettingsEditor" timestamp="1678254433900">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="76" y="157" key="SettingsEditor/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678254433900" />
+    <state x="1996" y="29" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677571295226" />
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1676359401683">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2514" y="18" key="#Options/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672106493115" />
-    <state x="2161" y="132" key="#SSH_Configurations" timestamp="1672968597396">
+    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1676359401683" />
+    <state x="2582" y="-115" width="980" height="721" key="find.popup" timestamp="1677489787285">
       <screen x="1920" y="-180" width="1920" height="1040" />
     </state>
-    <state x="2161" y="132" key="#SSH_Configurations/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968597396" />
-    <state x="2334" y="-5" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1668156489665">
-      <screen x="1920" y="-180" width="1920" height="1040" />
+    <state x="2582" y="-115" width="980" height="721" key="find.popup/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677489787285" />
+    <state x="766" y="425" key="publish.login" timestamp="1678254961305">
+      <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="2334" y="-5" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668156489665" />
-    <state width="1877" height="203" key="GridCell.Tab.0.bottom" timestamp="1668159636974">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="203" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state width="1877" height="203" key="GridCell.Tab.0.center" timestamp="1668159636974">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="203" key="GridCell.Tab.0.center/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state width="1877" height="203" key="GridCell.Tab.0.left" timestamp="1668159636973">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="203" key="GridCell.Tab.0.left/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636973" />
-    <state width="1877" height="203" key="GridCell.Tab.0.right" timestamp="1668159636974">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="203" key="GridCell.Tab.0.right/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1668159636974" />
-    <state x="2263" y="-5" key="SettingsEditor" timestamp="1672968604113">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state x="2263" y="-5" key="SettingsEditor/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968604113" />
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2" timestamp="1672970218147">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state x="2472" y="72" key="Vcs.Push.Dialog.v2/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672970218147" />
-    <state x="2582" y="74" width="596" height="532" key="find.popup" timestamp="1672801223462">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state x="2582" y="74" width="596" height="532" key="find.popup/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672801223462" />
-    <state x="2686" y="245" key="publish.login" timestamp="1672968580924">
-      <screen x="1920" y="-180" width="1920" height="1040" />
-    </state>
-    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1672968580924" />
+    <state x="766" y="425" key="publish.login/0.0.1920.1040/-1920.-425.1920.1040@0.0.1920.1040" timestamp="1678254961305" />
+    <state x="2686" y="245" key="publish.login/0.0.1920.1040/1920.-180.1920.1040@1920.-180.1920.1040" timestamp="1677570684027" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1099,7 +1137,8 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/dbapi$backup.coverage" NAME="backup Coverage Results" MODIFIED="1665208548371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/model" />
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1668156657825" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1678255326027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$api_agent.coverage" NAME="api_agent Coverage Results" MODIFIED="1677735525314" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/templete/monitor" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
   </component>
 </project>
