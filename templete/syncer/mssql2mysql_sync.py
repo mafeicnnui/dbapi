@@ -112,7 +112,7 @@ def format_sql(v_sql):
     return v_sql.replace("\\", "\\\\").replace("'", "\\'")
 
 def get_ds_mysql(ip, port, service, user, password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8',autocommit=True)
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8',autocommit=False)
     return conn
 
 def get_ds_sqlserver(ip, port, service, user, password):

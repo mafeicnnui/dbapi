@@ -6,11 +6,12 @@
 # @func    : monitor interface
 # @Software: PyCharm
 
-from  service.monitor  import read_config_monitor,\
-                              read_config_db,\
-                              push_script_remote_monitor,\
-                              write_monitor_log,\
-                              write_api_log \
+from service.monitor import read_config_monitor, \
+    read_config_db, \
+    push_script_remote_monitor, \
+    write_monitor_log, \
+    write_api_log, \
+    write_redis_log
 
 monitor = [
     (r"/read_config_monitor", read_config_monitor),
@@ -18,4 +19,5 @@ monitor = [
     (r"/push_script_remote_monitor", push_script_remote_monitor),
     (r"/write_monitor_log", write_monitor_log),
     (r"/write_api_log", write_api_log),
+    (r"/write_redis_log", write_redis_log),
 ]

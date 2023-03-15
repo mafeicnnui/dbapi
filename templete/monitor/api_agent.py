@@ -19,7 +19,7 @@ ALERT_MESSAGE = '''项目编码：{}
 响应编码：{}
 响应内容：{}
 失败时间：{}
-失败时长：{}s
+失败时长：{}
 告警时间：{}'''
 
 RECOVER_TITLE = "停简单接口恢复通知"
@@ -65,6 +65,11 @@ def get_time():
 def get_seconds(b):
     a=datetime.datetime.now()
     return int((a-b).total_seconds())
+
+def get_readable_time(seconds):
+    m,s = divmod(seconds,60)
+    h,m = divmod(m,60)
+    return '{}时{}分{}秒'.format(h,m,s)
 
 def get_file_and_pos():
     cr = get_db().cursor()
@@ -263,8 +268,9 @@ def monitor(cfg):
                                                   event["data"]['api_interface'],'failure')
                                    warn_info = get_warn_info(event['data']['server_id'], event['data']['index_code'])
 
-                                   if (warn_info['is_send_alt_mail'] == 'N' and warn_info['fail_times'] > 1 or \
-                                         warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times']>0 and warn_info['fail_times'] % fail_times == 0) :
+                                   if (warn_info['is_send_alt_mail'] == 'N' and warn_info['fail_times'] > 1
+                                       or  warn_info['is_send_alt_mail'] == 'Y' and warn_info['fail_times']>0
+                                          and warn_info['fail_times'] % fail_times == 0  and warn_info['is_send_alt_mail_times'] <=10 ) :
                                        print('warn_fail_times=',warn_info['fail_times'])
                                        print('fail_times=',fail_times)
                                        print('fail_times-2=',warn_info['fail_times'] % fail_times)
@@ -280,7 +286,7 @@ def monitor(cfg):
                                                             event["data"]['api_status'],
                                                             event["data"]['api_message'],
                                                             warn_info['first_failure_time'],
-                                                            get_seconds(warn_info['first_failure_time']),
+                                                            get_readable_time(get_seconds(warn_info['first_failure_time'])),
                                                             event["data"]['update_time'])
                                        print(message)
                                        send_message(cfg['api_interface_mail'], ALERT_TITLE, message)

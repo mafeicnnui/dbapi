@@ -110,7 +110,7 @@ def get_date():
     return datetime.datetime.now().strftime("%Y%m%d")
 
 def get_ds_mysql(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4')
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=False)
     return conn
 
 def get_ds_sqlserver(ip,port,service,user,password):

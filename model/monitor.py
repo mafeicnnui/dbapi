@@ -77,7 +77,9 @@ async def get_db_monitor_config(p_tag):
                    (select `value` from t_sys_settings where `key`='API_REQUEST_TIMEOUT') as API_REQUEST_TIMEOUT,
                    (select `value` from t_sys_settings where `key`='API_REQUEST_TIMEOUT_SLEEP') as API_REQUEST_TIMEOUT_SLEEP,
                    (select `value` from t_sys_settings where `key`='API_REQUEST_GAP_SLEEP') as API_REQUEST_GAP_SLEEP,
-                   (select `value` from t_sys_settings where `key`='API_REQUEST_RECOVER_SLEEP') as API_REQUEST_RECOVER_SLEEP
+                   (select `value` from t_sys_settings where `key`='API_REQUEST_RECOVER_SLEEP') as API_REQUEST_RECOVER_SLEEP,
+                   (select `value` from t_sys_settings where `key`='REDIS_AGENT_SLEEP') as REDIS_AGENT_SLEEP,
+                   (select `value` from t_sys_settings where `key`='REDIS_SLOWLOG_EXPIRD') as REDIS_SLOWLOG_EXPIRD
         FROM t_monitor_task a JOIN t_server b ON a.server_id=b.id 
            LEFT JOIN t_db_source c  ON  a.db_id=c.id  
         where a.task_tag ='{0}' ORDER BY a.id'''.format(p_tag)
@@ -126,6 +128,41 @@ async def save_api_log(config):
                        config.get('request_body', ''),config.get('index_code',''),
                        config.get('index_name',''))
     try:
+        await async_processer.exec_sql(st)
+        return {'code': 200, 'msg': 'success'}
+    except:
+        traceback.print_exc()
+        return {'code': -1, 'msg': traceback.format_exc()}
+
+async def save_redis_log(res):
+    try:
+        # write mx log
+        batch_id=''
+        for i in res['data']:
+            batch_id = i.get('batch_id','')
+            st = '''insert into t_monitor_redis_log(dbid,batch_id,start_time,duration,command,index_code,index_name,create_time) 
+                     values('{0}','{1}','{2}','{3}','{4}','{5}','{6}',now())
+                    '''.format(i.get('dbid',''),
+                               i.get('batch_id',''),
+                               i.get('start_time',''),
+                               i.get('duration',''),
+                               i.get('command',''),
+                               i.get('index_code', ''),
+                               i.get('index_name', '')
+                               )
+            await async_processer.exec_sql(st)
+        # write hz log
+        st = '''INSERT INTO t_monitor_redis_hz_log(dbid,batch_id,command,avg_duration,start_time,end_time,create_time)
+SELECT dbid,
+       batch_id,
+       command,
+       AVG(duration) AS duration,
+       MIN(start_time) AS start_time,
+       MAX(start_time) AS end_time,
+       NOW()
+ FROM t_monitor_redis_log WHERE batch_id ={}
+ GROUP BY dbid,batch_id,command
+        '''.format(batch_id)
         await async_processer.exec_sql(st)
         return {'code': 200, 'msg': 'success'}
     except:
