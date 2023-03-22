@@ -16,11 +16,12 @@ ALERT_MESSAGE = '''项目编码：{}
 项目名称：{}
 采集主机：{}
 接口地址：{}
-响应编码：{}
-响应内容：{}
 失败时间：{}
 失败时长：{}
-告警时间：{}'''
+告警时间：{}
+响应编码：{}
+响应内容：{}
+'''
 
 RECOVER_TITLE = "停简单接口恢复通知"
 RECOVER_MESSAGE = '''项目编码：{}
@@ -283,11 +284,12 @@ def monitor(cfg):
                                                             get_market_mame(event["data"]['market_id']),
                                                             get_server_desc(event['data']['server_id']),
                                                             event["data"]['api_interface'],
-                                                            event["data"]['api_status'],
-                                                            event["data"]['api_message'],
                                                             warn_info['first_failure_time'],
                                                             get_readable_time(get_seconds(warn_info['first_failure_time'])),
-                                                            event["data"]['update_time'])
+                                                            event["data"]['update_time'],
+                                                            event["data"]['api_status'],
+                                                            event["data"]['api_message']
+                                                           )
                                        print(message)
                                        send_message(cfg['api_interface_mail'], ALERT_TITLE, message)
 
