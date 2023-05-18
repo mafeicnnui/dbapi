@@ -9,11 +9,11 @@ from email.mime.text import MIMEText
 from urllib import parse
 
 STAT_RANGE=10
-SEND_USER='190343'
-SEND_MAIL='190343@lifeat.cn'
 SEND_URL="ops.zhitbar.cn:59521/monitor/redis/slowlog?{}"
-# SEND_USER='190343|190205|609717'
-# SEND_MAIL='190343@lifeat.cn,190205@lifeat.cn,609479@hopson.com.cn,609717@hopson.com.cn'
+# SEND_USER='190343'
+# SEND_MAIL='190343@lifeat.cn'
+SEND_USER='190343|190205|609717|850686'
+SEND_MAIL='190343@lifeat.cn,190205@lifeat.cn,609479@hopson.com.cn,609717@hopson.com.cn'
 
 ALERT_TITLE = 'REDIS慢日志告警'
 ALERT_MESSAGE = '''实例名称：{}
@@ -173,9 +173,8 @@ def get_batch_id():
     st = """SELECT GROUP_CONCAT( DISTINCT batch_id) as batch_id 
               FROM t_monitor_redis_log a
                 where a.start_time between DATE_SUB(NOW(), INTERVAL {} MINUTE) and now()
-                    AND NOT EXISTS(select 1 from t_monitor_redis_whitelist b 
-                                WHERE a.dbid = b.dbid 
-                                  AND a.command = b.command and b.status='1')
+                     AND a.command NOT IN(SELECT command FROM t_monitor_redis_whitelist b 
+                                     WHERE a.dbid=b.dbid and b.status='1')
                   """.format(STAT_RANGE)
     cr.execute(st)
     rs=cr.fetchone()
@@ -186,9 +185,8 @@ def check_slowlog():
     cr = db.cursor()
     st = """SELECT count(0) FROM t_monitor_redis_log a
              WHERE a.start_time between DATE_SUB(NOW(), INTERVAL {} MINUTE) and now()
-               AND NOT EXISTS(select 1 from t_monitor_redis_whitelist b 
-                               WHERE a.dbid = b.dbid 
-                                 AND a.command = b.command and b.status='1')""".format(STAT_RANGE)
+                AND a.command NOT IN(SELECT command FROM t_monitor_redis_whitelist b 
+                                     WHERE a.dbid=b.dbid and b.status='1')""".format(STAT_RANGE)
     cr.execute(st)
     rs = cr.fetchone()
     if rs[0]>0:
