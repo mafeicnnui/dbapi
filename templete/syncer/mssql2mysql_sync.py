@@ -2185,9 +2185,6 @@ def sync(config, debug, workdir):
         # check  recently 7 day data
         check_sqlserver_data(config)
 
-        # clearing desc table
-        # cleaning_table(config)
-
         disconnect(config)
 
         # update sync task status is complete
