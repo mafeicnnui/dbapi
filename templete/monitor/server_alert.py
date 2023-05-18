@@ -20,7 +20,7 @@ import json
   功能：全局配置
 '''
 config = {
-    "chat_interface":"https://api.hopsontong.com/wxcp/message/template/send",
+    "chat_interface":"https://api.hopsontone.com/wxcp/message/template/send",
     "mysql":"10.2.39.18:3306:puppet:puppet:Puppet@123",
     "warn_level":"紧急"
 }
