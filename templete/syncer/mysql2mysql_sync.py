@@ -787,19 +787,24 @@ def sync_mysql_init(config,debug):
                            or check_mysql_tab_exists_pk(config,tab) == 1 and get_sync_table_int_pk_num(config,tab) == 0):
                 i_counter        = 0
                 ins_sql_header   = get_tab_header(config,tab)
-                print('ins_sql_header=',ins_sql_header)
                 n_batch_size     = int(config['batch_size'])
                 db_source        = config['db_mysql_sour']
                 cr_source        = db_source.cursor()
                 db_desc          = config['db_mysql_desc']
                 cr_desc          = db_desc.cursor()
+                v_pk_cols        = get_sync_table_pk_vals(db_source, tab)
+                v_pk_names       = get_sync_table_pk_names(db_source, tab)
 
-                print('delete table:{0} all data!'.format(tab))
-                cr_desc.execute('delete from `{0}`'.format(tab))
+                print('delete table:{0} all data,please wait...!'.format(tab))
+                st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+                cr_desc.execute(st_desc)
+                rs_desc = cr_desc.fetchall()
+                for r in list(rs_desc):
+                    v_del = get_sync_where(v_pk_names, r[0])
+                    cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
                 print('delete table:{0} all data ok!'.format(tab))
 
                 n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
-                #v_sql            = "select * from {0}".format(tab)
                 v_sql = "select {0} from `{1}`".format(get_sync_table_cols(config, tab),tab)
                 cr_source.execute(v_sql)
                 rs_source = cr_source.fetchmany(n_batch_size)
@@ -859,26 +864,27 @@ def sync_mysql_init_n(config,debug):
                 cr_source        = db_source.cursor()
                 db_desc          = config['db_mysql_desc']
                 cr_desc          = db_desc.cursor()
-                print('truncate table:{0} all data!'.format(tab))
-                cr_desc.execute('truncate table `{0}`'.format(tab))
-                print('truncate table:{0} all data ok!'.format(tab))
+                n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
+                v_pk_cols        = get_sync_table_pk_vals(db_source, tab)
+                v_pk_names       = get_sync_table_pk_names(db_source, tab)
+
+                print('delete table:{0} all data,please wait...!'.format(tab))
+                st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+                cr_desc.execute(st_desc)
+                rs_desc = cr_desc.fetchall()
+                for r in list(rs_desc):
+                    v_del = get_sync_where(v_pk_names, r[0])
+                    cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
+                print('delete table:{0} all data ok!'.format(tab))
+
                 n_row = get_sync_table_min_id(db_source, tab)
                 if n_row is None :
                    print('Table:{0} data is empty ,skip full sync!'.format(tab))
                    continue
-                n_tab_total_rows = get_sync_table_total_rows(db_source, tab, '')
-                v_pk_col_name = get_sync_table_pk_names(db_source,tab)
-
-                print('a=',n_tab_total_rows)
-                print('b=',v_pk_col_name)
-                print('c=',str(n_row))
-                print('d=',get_sync_table_cols(config, tab))
-                print('e=',tab)
-                print('f=',str(n_row+n_batch_size))
 
                 while n_tab_total_rows>0:
                     st = "select {} from `{}` where {} between {} and {}"\
-                         .format(get_sync_table_cols(config, tab),tab,v_pk_col_name,str(n_row),str(n_row+n_batch_size))
+                         .format(get_sync_table_cols(config, tab),tab,v_pk_names,str(n_row),str(n_row+n_batch_size))
                     print('st=',st)
                     cr_source.execute(st)
                     rs_source = cr_source.fetchall()
@@ -1000,11 +1006,8 @@ def sync_mysql_data_no_pkid_7(config, ftab):
             rs_source  = cr_source.fetchmany(n_batch_size)
 
             while rs_source:
-                batch_sql = ""
-                batch_sql_del=""
                 v_sql = ''
                 v_sql_del = ''
-                v_sql_del2= ''
                 for r in list(rs_source):
                     rs_source_desc = cr_source.description
                     ins_val = ""
@@ -1022,7 +1025,6 @@ def sync_mysql_data_no_pkid_7(config, ftab):
                             ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
                     v_sql = v_sql + '(' + ins_val[0:-1] + '),'
                     v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
-                    #v_sql_del2 = v_sql_del2 + get_sync_where_batch(r[0]) + " union all "
                 batch_sql = ins_sql_header + v_sql[0:-1]
 
                 if ftab.split(':')[1] == '':
@@ -1032,8 +1034,6 @@ def sync_mysql_data_no_pkid_7(config, ftab):
                     for d in v_sql_del[0:-1].split(','):
                         config['run_sql'] = 'delete from {0} where {1}'.format(tab, d)
                         cr_desc.execute('delete from {0} where {1}'.format(tab, d))
-                    # print('delete from {0} where {1} in ({2})'.format(tab, v_pk_names,v_sql_del2[0:-11]))
-                    # cr_desc.execute('delete from {0} where {1} in ({2})'.format(tab, v_pk_names,v_sql_del2[0:-11]))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
@@ -1072,31 +1072,33 @@ def sync_mysql_data_no_pkid(config, ftab):
             v_pk_cols        = get_sync_table_pk_vals(db_source, tab)
             cr_desc          = db_desc.cursor()
             n_tab_total_rows = get_sync_table_total_rows(db_source, tab, v_where)
-            v_sql            = """select {0} as 'pk',{1} from `{2}` {3}""".format(v_pk_cols, get_sync_table_cols(config, tab), tab, v_where)
-            print(v_sql)
-            n_rows           = 0
-            cr_source.execute(v_sql)
-            rs_source  = cr_source.fetchmany(n_batch_size)
-            start_time = datetime.datetime.now()
 
             if ftab.split(':')[1] == '':
-                print( "Sync Table increment :{0} ...".format(ftab.split(':')[0]))
-            else:
-                print( "Sync Table increment :{0} for In recent {1} {2}..."
-                       .format(ftab.split(':')[0],ftab.split(':')[2],config['sync_time_type']))
+               print("Full Sync Table :{0} ...".format(ftab.split(':')[0]))
+               print('delete table:{0} all data,please wait...!'.format(tab))
+               st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+               cr_desc.execute(st_desc)
+               rs_desc = cr_desc.fetchall()
+               for r in list(rs_desc):
+                   v_del = get_sync_where(v_pk_names, r[0])
+                   cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
+               print('delete table:{0} all data ok!'.format(tab))
 
-            if ftab.split(':')[1] == '':
-               print('DB:{0},delete `{1}` table data please wait...'.format(config['db_mysql_desc_string'], tab,ftab.split(':')[2]))
-               cr_desc.execute('delete from `{0}`'.format(tab))
-               print('DB:{0},delete {1} table data ok!'.format(config['db_mysql_desc_string'], tab))
             else:
+                print("Increment Sync Table  :{0} for In recent {1} {2}..."
+                      .format(ftab.split(':')[0], ftab.split(':')[2], config['sync_time_type']))
                 print('delete from `{0}` {1} '.format(tab, v_where))
                 cr_desc.execute('delete from `{0}` {1} '.format(tab, v_where))
 
+
+            v_sql = """select {0} as 'pk',{1} from `{2}` {3}"""\
+                      .format(v_pk_cols, get_sync_table_cols(config, tab), tab, v_where)
+            cr_source.execute(v_sql)
+            rs_source = cr_source.fetchmany(n_batch_size)
+            start_time = datetime.datetime.now()
             while rs_source:
                 v_sql = ''
                 v_sql_del = ''
-                v_sql_del2 = ''
                 for r in list(rs_source):
                     rs_source_desc = cr_source.description
                     ins_val = ""
@@ -1114,7 +1116,6 @@ def sync_mysql_data_no_pkid(config, ftab):
                             ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
                     v_sql = v_sql + '(' + ins_val[0:-1] + '),'
                     v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
-                    #v_sql_del2 = v_sql_del2 + get_sync_where_batch(r[0]) + " union all "
                 batch_sql = ins_sql_header + v_sql[0:-1]
 
                 if ftab.split(':')[1] == '':
@@ -1124,8 +1125,6 @@ def sync_mysql_data_no_pkid(config, ftab):
                     for d in v_sql_del[0:-1].split(','):
                         config['run_sql'] = 'delete from `{0}` where {1}'.format(tab, d)
                         cr_desc.execute('delete from `{0}` where {1}'.format(tab, d))
-                    # print('delete from {0} where {1} in ({2})'.format(tab, v_pk_names, v_sql_del2[0:-11]))
-                    # cr_desc.execute('delete from {0} where {1} in ({2})'.format(tab, v_pk_names, v_sql_del2[0:-11]))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
@@ -1163,21 +1162,32 @@ def sync_mysql_data_pkid(config, ftab):
             cr_source        = db_source.cursor()
             db_desc          = config['db_mysql_desc']
             cr_desc          = db_desc.cursor()
+            v_pk_cols        = get_sync_table_pk_vals(config, tab)
+            v_pk_names       = get_sync_table_pk_names(config, tab)
             n_tab_total_rows = get_sync_table_total_rows(db_source, tab, v_where)
-            v_sql            = """select {0} from `{1}` {2}""".format(ins_sql_cols,tab, v_where)
-            n_rows           = 0
-            cr_source.execute(v_sql)
-            rs_source  = cr_source.fetchmany(n_batch_size)
-            start_time = datetime.datetime.now()
+
             if ftab.split(':')[1] == '':
-                print( "Sync Table increment :{0} ...".format(ftab.split(':')[0]))
+                print("Full Sync Table :{0} ...".format(ftab.split(':')[0]))
+                print('Delete table:{0} all data,please wait...!'.format(tab))
+                st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+                print(st_desc)
+                cr_desc.execute(st_desc)
+                rs_desc = cr_desc.fetchall()
+                for r in list(rs_desc):
+                    v_del = get_sync_where(v_pk_names, r[0])
+                    cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
+                print('Delete table:{0} all data ok!'.format(tab))
             else:
                 print( "Sync Table increment :{0} for In recent {1} {2}..."
                        .format(ftab.split(':')[0],ftab.split(':')[2],config['sync_time_type']))
+                cr_desc.execute('delete from {0} {1} '.format(tab, v_where))
+                print('DB:{0},delete {1} table recent {2} data...\n'
+                       .format(config['db_mysql_desc_string'],tab,ftab.split(':')[2]))
 
-            cr_desc.execute('delete from {0} {1} '.format(tab, v_where))
-            print('DB:{0},delete {1} table recent {2} data...\n'.format(config['db_mysql_desc_string'],tab,ftab.split(':')[2]))
-
+            v_sql = """select {0} from `{1}` {2}""".format(ins_sql_cols, tab, v_where)
+            cr_source.execute(v_sql)
+            rs_source = cr_source.fetchmany(n_batch_size)
+            start_time = datetime.datetime.now()
             while rs_source:
                 v_sql = ''
                 for i in range(len(rs_source)):
@@ -1539,7 +1549,7 @@ def sync(config,debug):
       check_mysql_data(config)
 
       # clearing desc table
-      cleaning_park(config)
+      # cleaning_park(config)
 
       disconnect(config)
 

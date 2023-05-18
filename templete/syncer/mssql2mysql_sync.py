@@ -1121,17 +1121,14 @@ def sync_sqlserver_init_pk(config, ftab):
         if (check_mysql_tab_exists(config, get_mapping_tname(tab)) == 0 \
                 or (check_mysql_tab_exists(config, get_mapping_tname(tab)) > 0
                      and check_mysql_tab_sync(config,get_mapping_tname(tab)) == 0)):
-            # write init dict
             status= True
-
-            # start first sync data
             i_counter = 0
             start_time = datetime.datetime.now()
             n_tab_total_rows = get_sync_table_total_rows(config, tab, '')
             ins_sql_header = get_tab_header(config, tab)
-            v_tab_cols = get_tab_columns(config, tab)
-            v_pk_name = get_sync_table_pk_names(config, tab)
+            v_pk_names = get_sync_table_pk_names(config, tab)
             v_pk_cols = get_sync_table_pk_vals(config, tab)
+            v_pk_cols_mysql = get_sync_table_pk_vals_mysql(config, tab)
             n_batch_size = int(config['batch_size'])
             db_source = config['db_sqlserver']
             cr_source = db_source.cursor()
@@ -1139,17 +1136,19 @@ def sync_sqlserver_init_pk(config, ftab):
             cr_desc = db_desc.cursor()
 
             print('delete table:{0} all data!'.format(get_mapping_tname(tab)))
-            cr_desc.execute('delete from {0}'.format(get_mapping_tname(tab)))
+            st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols_mysql, tab)
+            cr_desc.execute(st_desc)
+            rs_desc = cr_desc.fetchall()
+            for r in list(rs_desc):
+                v_del = get_sync_where(v_pk_names, r[0])
+                cr_desc.execute('delete from {0} where {1}'.format(get_mapping_tname(tab), v_del))
             print('delete table:{0} all data ok!'.format(get_mapping_tname(tab)))
 
-            #v_sql = "select {0} from {1} with(nolock)".format(v_tab_cols, tab)
             v_sql = "select  {0} as 'pk',{1}  from {2} with(nolock)"\
                     .format(v_pk_cols, get_tab_columns(config, tab),tab)
-            print(v_sql)
             cr_source.execute(v_sql)
             rs_source = cr_source.fetchmany(n_batch_size)
             while rs_source:
-                batch_sql = ""
                 v_sql = ''
                 for r in list(rs_source):
                     rs_source_desc = cr_source.description
@@ -1178,8 +1177,6 @@ def sync_sqlserver_init_pk(config, ftab):
                     v_sql = v_sql + '(' + ins_val + config['sync_col_val'].replace('$PK$',
                                                                                    r[0].replace('^^^', '_')) + '),'
                 batch_sql = ins_sql_header + v_sql[0:-1]
-                # print(r[0],r[0].replace('^^^', '_'),r[0].replace('$PK$',r[0].replace('^^^', '_')))
-                # print('batch_sql=',batch_sql)
                 config['run_sql'] = convert(batch_sql)
                 cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
@@ -1193,16 +1190,6 @@ def sync_sqlserver_init_pk(config, ftab):
                                   round(i_counter / n_tab_total_rows * 100, 2), str(get_seconds(start_time))),
                           end='')
                 rs_source = cr_source.fetchmany(n_batch_size)
-
-            if tab=='tc.recordarchive' and len(config['sync_col_val'].split(','))>1:
-               print('update table tc_recordarchive es_id...'.format(tab))
-               sql= """UPDATE tc_recordarchive
-                         SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
-                             doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
-                            where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0]+'_$PK$')
-               print(sql)
-               cr_desc.execute(sql)
-
             db_desc.commit()
             print('')
         return status
@@ -1218,15 +1205,14 @@ def sync_sqlserver_init_nopk(config,ftab):
         if (check_mysql_tab_exists(config,get_mapping_tname(tab))==0 \
                 or (check_mysql_tab_exists(config,get_mapping_tname(tab))>0
                      and check_mysql_tab_sync(config,get_mapping_tname(tab))==0)):
-            #write init dict
             status           = True
-            #start first sync data
             i_counter        = 0
             start_time       = datetime.datetime.now()
             n_tab_total_rows = get_sync_table_total_rows(config,tab,'')
             ins_sql_header   = get_tab_header(config,tab)
             v_tab_cols       = get_tab_columns(config,tab)
-            v_pk_name        = get_sync_table_pk_names(config,tab)
+            v_pk_names       = get_sync_table_pk_names(config,tab)
+            v_pk_cols_mysql = get_sync_table_pk_vals_mysql(config, tab)
             n_batch_size     = int(config['batch_size'])
             db_source        = config['db_sqlserver']
             cr_source        = db_source.cursor()
@@ -1234,15 +1220,18 @@ def sync_sqlserver_init_nopk(config,ftab):
             cr_desc          = db_desc.cursor()
 
             print('delete table:{0} all data!'.format(get_mapping_tname(tab)))
-            cr_desc.execute('delete from {0}'.format(get_mapping_tname(tab)))
+            st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols_mysql, tab)
+            cr_desc.execute(st_desc)
+            rs_desc = cr_desc.fetchall()
+            for r in list(rs_desc):
+                v_del = get_sync_where(v_pk_names, r[0])
+                cr_desc.execute('delete from {0} where {1}'.format(get_mapping_tname(tab), v_del))
             print('delete table:{0} all data ok!'.format(get_mapping_tname(tab)))
 
-            v_sql            = "select {0} from {1} with(nolock)".format(v_tab_cols,tab)
-            print(v_sql)
+            v_sql = "select {0} from {1} with(nolock)".format(v_tab_cols,tab)
             cr_source.execute(v_sql)
             rs_source = cr_source.fetchmany(n_batch_size)
             while rs_source:
-                batch_sql  = ""
                 v_sql      = ''
                 for i in range(len(rs_source)):
                     rs_source_desc = cr_source.description
@@ -1283,15 +1272,6 @@ def sync_sqlserver_init_nopk(config,ftab):
                           .format(get_time(), tab, n_tab_total_rows, i_counter,
                                   round(i_counter / n_tab_total_rows * 100, 2), str(get_seconds(start_time))), end='')
                 rs_source = cr_source.fetchmany(n_batch_size)
-
-            if tab=='tc.recordarchive' and len(config['sync_col_val'].split(','))>1:
-               print('update table tc_recordarchive es_id...'.format(tab))
-               sql= """UPDATE tc_recordarchive
-                         SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
-                             doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
-                            where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0]+'_$PK$')
-               print(sql)
-               cr_desc.execute(sql)
             db_desc.commit()
             print('')
         return status
@@ -1412,39 +1392,40 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
             ins_sql_header = get_tab_header(config, tab)
             v_pk_names = get_sync_table_pk_names(config, tab)
             v_pk_cols  = get_sync_table_pk_vals(config, tab)
+            v_pk_cols_mysql = get_sync_table_pk_vals_mysql(config, tab)
             n_batch_size = int(config['batch_size_incr'])
             db_source  = config['db_sqlserver']
-            db_source2 = config['db_sqlserver2']
             cr_source  = db_source.cursor()
             db_desc    = config['db_mysql']
             cr_desc    = db_desc.cursor()
-            v_sql = """select {0} as 'pk',{1} from {2} with(nolock) {3}
-                               """.format(v_pk_cols, get_tab_columns(config, tab), tab, v_where)
-            n_rows = 0
-            cr_source.execute(v_sql)
-            rs_source  = cr_source.fetchmany(n_batch_size)
-            start_time = datetime.datetime.now()
-            if ftab.split(':')[1] == '':
-                print("Sync Table increment :{0} ...".format(ftab.split(':')[0]))
-            else:
-                print("Sync Table increment :{0} for In recent {1} {2}..."
-                      .format(ftab.split(':')[0], ftab.split(':')[2],config['sync_time_type']))
 
             if ftab.split(':')[1] == '':
+                print("Full Sync Table :{0} ...".format(ftab.split(':')[0]))
                 print('DB:{0},delete {1} table data please wait...'
                       .format(config['db_mysql_string'],get_mapping_tname(tab)))
-                print('delete from {0}'.format(get_mapping_tname(tab)))
-                cr_desc.execute('delete from {0}'.format(get_mapping_tname(tab)))
-                print('DB:{0},delete {1} table data ok!'.format(config['db_mysql_string'], get_mapping_tname(tab)))
+
+                st_desc = """select {0} as 'pk' from {1}""".format(v_pk_cols_mysql, get_mapping_tname(tab))
+                cr_desc.execute(st_desc)
+                rs_desc = cr_desc.fetchall()
+                for r in list(rs_desc):
+                   v_del = get_sync_where(v_pk_names, r[0])
+                   cr_desc.execute('delete from {0} where {1}'.format(get_mapping_tname(tab), v_del))
+                print('delete table:{0} all data ok!'.format(get_mapping_tname(tab)))
             else:
+                print("Increment Sync Table  :{0} for In recent {1} {2}..."
+                      .format(ftab.split(':')[0], ftab.split(':')[2], config['sync_time_type']))
                 print('DB:{0},delete {1} table increment data for In recent {2} {3} please wait...'
                       .format(config['db_mysql_string'], get_mapping_tname(tab),ftab.split(':')[2],config['sync_time_type']))
                 print('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
                 cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
 
+            n_rows = 0
+            start_time = datetime.datetime.now()
+            v_sql = """select {0} as 'pk',{1} from {2} with(nolock) {3}
+                    """.format(v_pk_cols, get_tab_columns(config, tab), tab, v_where)
+            cr_source.execute(v_sql)
+            rs_source = cr_source.fetchmany(n_batch_size)
             while rs_source:
-                batch_sql = ""
-                batch_sql_del = ""
                 v_sql = ''
                 v_sql_del = ''
                 n_rows = n_rows + len(rs_source)
@@ -1489,10 +1470,6 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
                     cr_desc.execute(batch_sql)
                     i_counter = i_counter + len(rs_source)
 
-                    # print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
-                    #       .format(tab, n_tab_total_rows,
-                    #               i_counter, round(i_counter / n_tab_total_rows * 100, 2),
-                    #               str(get_seconds(start_time))), end='')
                     if n_tab_total_rows == 0:
                         print("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%,elapsed time:{4}s"
                               .format(tab, n_tab_total_rows, i_counter, round(i_counter / 1 * 100, 2),
@@ -1503,16 +1480,6 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
                                       str(get_seconds(start_time))), end='')
                 rs_source = cr_source.fetchmany(n_batch_size)
                 print('')
-
-            if tab == 'tc.recordarchive' and len(config['sync_col_val'].split(',')) > 1:
-                print('update table tc_recordarchive es_id...'.format(tab))
-                sql = """UPDATE tc_recordarchive
-                           SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
-                               doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
-                             where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0] + '_$PK$')
-                #print(sql)
-                cr_desc.execute(sql)
-
             db_desc.commit()
 
             if config['run_mode'] == 'remote':
@@ -1528,7 +1495,6 @@ def sync_sqlserver_data_pk(config, ftab, config_init):
 def sync_sqlserver_data_nopk(config, ftab, config_init):
     try:
         config['sync_amount'] = 0
-        # start sync dml data
         if check_full_sync(config, ftab.split(':')[0]) and not config_init[ftab.split(':')[0]]:
             tab = ftab.split(':')[0]
             v_where = get_sync_where_incr(ftab, config)
@@ -1537,38 +1503,42 @@ def sync_sqlserver_data_nopk(config, ftab, config_init):
             n_tab_total_rows = get_sync_table_total_rows(config, tab, v_where)
             ins_sql_header = get_tab_header(config, tab)
             n_batch_size = int(config['batch_size'])
+            v_pk_names = get_sync_table_pk_names(config, tab)
+            v_pk_cols_mysql = get_sync_table_pk_vals_mysql(config, tab)
             db_source = config['db_sqlserver']
             cr_source = db_source.cursor()
             db_desc = config['db_mysql']
             cr_desc = db_desc.cursor()
+
+            if ftab.split(':')[1] == '':
+                print("Full Sync Table :{0} ...".format(ftab.split(':')[0]))
+                print('DB:{0},delete {1} table data,please wait...'.
+                      format(config['db_mysql_string'],get_mapping_tname(tab)))
+                config['run_sql'] = 'delete from {0}'.format(get_mapping_tname(tab))
+                st_desc = """select {0} as 'pk' from {1}""".format(v_pk_cols_mysql, get_mapping_tname(tab))
+                cr_desc.execute(st_desc)
+                rs_desc = cr_desc.fetchall()
+                for r in list(rs_desc):
+                    v_del = get_sync_where(v_pk_names, r[0])
+                    cr_desc.execute('delete from {0} where {1}'.format(get_mapping_tname(tab), v_del))
+                print('delete table:{0} all data ok!'.format(get_mapping_tname(tab)))
+
+            else:
+                print("Increment Sync Table  :{0} for In recent {1} {2}...".
+                      format(ftab.split(':')[0], ftab.split(':')[2], config['sync_time_type']))
+                print('DB:{0},delete {1} table recent {2} {3} data please wait...'.
+                      format(config['db_mysql_string'], tab,
+                             ftab.split(':')[2],
+                             config['sync_time_type']))
+                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
+
+
             v_sql = """select {0} from {1} with(nolock) {2}""".format(get_tab_columns(config, tab), tab, v_where)
             n_rows = 0
             cr_source.execute(v_sql)
             rs_source = cr_source.fetchmany(n_batch_size)
             start_time = datetime.datetime.now()
-
-            if ftab.split(':')[1] == '':
-                print("Sync Table increment :{0} ...".format(ftab.split(':')[0]))
-            else:
-                print(
-                    "Sync Table increment :{0} for In recent {1} {2}...".format(ftab.split(':')[0], ftab.split(':')[2],
-                                                                                config['sync_time_type']))
-
-            if ftab.split(':')[1] == '':
-                print('DB:{0},delete {1} table data,please wait...'.format(config['db_mysql_string'],
-                                                                           get_mapping_tname(tab)))
-                config['run_sql'] = 'delete from {0}'.format(get_mapping_tname(tab))
-                cr_desc.execute('delete from {0}'.format(get_mapping_tname(tab)))
-                print('DB:{0},delete {1} table data ok!'.format(config['db_mysql_string'], get_mapping_tname(tab)))
-            else:
-                print(
-                    'DB:{0},delete {1} table recent {2} {3} data please wait...'.format(config['db_mysql_string'], tab,
-                                                                                        ftab.split(':')[2],
-                                                                                        config['sync_time_type']))
-                cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where_mysql))
-
             while rs_source:
-                batch_sql = ''
                 v_sql = ''
                 n_rows = n_rows + len(rs_source)
                 print("\r{0},Scanning table:{1},{2}/{3} rows,elapsed time:{4}s..."
@@ -1615,15 +1585,6 @@ def sync_sqlserver_data_nopk(config, ftab, config_init):
                               .format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2),
                                       str(get_seconds(start_time))), end='')
                 rs_source = cr_source.fetchmany(n_batch_size)
-
-            if tab == 'tc.recordarchive' and len(config['sync_col_val'].split(','))>1:
-                print('update table tc_recordarchive es_id...'.format(tab))
-                sql = """UPDATE tc_recordarchive
-                            SET es_id=CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid),
-                                 doc_id=MD5(CONCAT(market_id,'_',sid,'_',parkid,'_',inwid,'_',inid,'_',outwid,'_',outid))
-                               where es_id ='{0}'""".format(config['sync_col_val'].split(',')[0] + '_$PK$')
-                #print(sql)
-                cr_desc.execute(sql)
             db_desc.commit()
 
             if config['run_mode'] == 'remote':
@@ -1792,7 +1753,7 @@ def sync_sqlserver_data_pk_7_nopk(config, ftab):
                       .format(day, tab, n_tab_total_rows,n_tab_total_rows2))
                 cr_desc.execute('delete from {0} {1}'.format(get_mapping_tname(tab), v_where))
                 print('DB:{0},delete {1} table {2} data ok!'
-                        .format(config['db_mysql_string'], get_mapping_tname(tab),v_where))
+                      .format(config['db_mysql_string'], get_mapping_tname(tab),v_where))
 
             v_sql = "select {0} from {1} with(nolock) {2}".format(v_tab_cols, tab,v_where)
             #print(v_sql)
@@ -1864,10 +1825,8 @@ def sync_sqlserver_data(config, config_init):
     for v in config['sync_table'].split(","):
         tab = v.split(':')[0].lower()
         if check_full_sync(config, tab):
-            print('tab=',tab,'sync_sqlserver_data_nopk')
             sync_sqlserver_data_nopk(config, v, config_init)
         else:
-            print('tab=', tab, 'sync_sqlserver_data_pk')
             sync_sqlserver_data_pk(config, v, config_init)
 
         if config['run_mode'] == 'remote':
@@ -2227,7 +2186,7 @@ def sync(config, debug, workdir):
         check_sqlserver_data(config)
 
         # clearing desc table
-        cleaning_table(config)
+        # cleaning_table(config)
 
         disconnect(config)
 
