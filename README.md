@@ -71,33 +71,23 @@
 
 ## 五、docker部署 
 
-### 5.1 获取镜像
-
-    docker pull mafeicnnui/dbapi:2.0
-
-### 5.2 配置数据源
+### 5.1 配置数据源
 
     mkdir /home/dbops
     vi config.json 
     {
-        "db_ip"        : "192.168.1.100”,
+        "db_ip"        : "x.x.x.x”,
         "db_port"      : "3306",
         "db_user"      : "puppet",
-        "db_pass"      : "Abcd@1234",
+        "db_pass"      : "Puppet@123",
         "db_service"   : "puppet",
         "db_charset"   : "utf8"
     }
 
-
-### 5.3 运行容器
+### 5.2 运行容器
 
     docker run \
-       --name dbapi \
-       -p 8081:8081 \
-       -v /home/dbapi/config.json:/opt/dbapi/config/config.json:ro \
-       -d mafeicnnui/dbapi:2.0
-    
-### 5.4 测试 dbapi
-    
-    curl --head http://ip:8081/health
-    
+      --name dbapi \
+      -p 8081:8081 \
+      -v /home/dbops/config.json:/opt/dbapi/config/config.json:ro \
+      -d mafeicnnui/dbapi:3.0

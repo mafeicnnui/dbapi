@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export WORKDIR=`pwd`
+export WORKDIR='/opt/dbapi'
 echo "Starting dbapi Server..."
 for i in {8081..8081}
 do
