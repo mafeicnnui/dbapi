@@ -32,8 +32,10 @@ def get_real_sync_log_num(cfg):
 
 def set_real_sync_status(cfg,p_status):
     try:
-        par = {'status': p_status}
-        url = 'http://{}/set_mysql_real_sync_status'.format(cfg['api_server'])
+        par = {'tag':cfg['sync_tag'],'status': p_status}
+        url = 'http://{}/set_real_sync_status'.format(cfg['api_server'])
+        logging.info("par=" + str(par))
+        logging.info("url=" + url)
         res = requests.post(url, data=par,timeout=10).json()
         return res
     except:
@@ -41,10 +43,10 @@ def set_real_sync_status(cfg,p_status):
         logging.info(traceback.format_exc())
         sys.exit(0)
 
-def aes_decrypt(p_password,p_key):
+def aes_decrypt(p_api,p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://$$API_SERVER$$/read_db_decrypt'
+        url = 'http://{}/read_db_decrypt'.format(p_api)
         res = requests.post(url, data=par,timeout=1).json()
         if res['code'] == 200:
             config = res['msg']
@@ -78,7 +80,7 @@ def get_config_from_db(tag):
             config['db_mysql_port_log']    = config['ds_log']['port']
             config['db_mysql_service_log'] = config['ds_log']['service']
             config['db_mysql_user_log']    = config['ds_log']['user']
-            config['db_mysql_pass_log']    = aes_decrypt(config['ds_log']['password'],config['ds_log']['user'])
+            config['db_mysql_pass_log']    = aes_decrypt(config['api_server'],config['ds_log']['password'],config['ds_log']['user'])
             config['db_log']               = get_ds_mysql_dict(config['db_mysql_ip_log'],
                                                                config['db_mysql_port_log'],
                                                                config['log_db_name'],
@@ -133,7 +135,7 @@ if __name__ == "__main__":
     cfg = get_config_from_db(tag)
 
     # query system parameters to determine whether to run the  program
-    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
+    if read_real_sync_status(tag) is None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
         logging.info("\033[1;37;40mclear log task {} terminate!\033[0m".format(cfg['sync_tag']))
         sys.exit(0)
 

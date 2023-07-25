@@ -407,10 +407,10 @@ def write_mysql(cfg,tab):
             cr_dest.execute(r['statement'])
             ids = ids + '{},'.format(r['id'])
         except:
-            logging.info('execute statement error!')
-            logging.info(traceback.print_exc())
-            logging.info('\033[1;36;40mrs_log\033[0m',+rs_log)
+            logging.info('execute statement error!!!')
             logging.info('\033[0;36;40m' + r['statement'] + '\033[0m')
+            logging.info(traceback.print_exc())
+
             # send mail
             v_title = 'mysql->mysql实时同步任务执行失败告警[e]'
             v_error = 'execute statement error!\n' + traceback.print_exc()+'\n'+'rs_log='+rs_log+'\n'+'statement='+r['statement']
@@ -587,8 +587,8 @@ if __name__=="__main__":
     cfg = get_config_from_db(tag)
 
     # query system parameters to determine whether to run the  program
-    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
-        logging.info("\033[1;37;40mclear log task {} terminate!\033[0m".format(cfg['sync_tag']))
+    if read_real_sync_status(tag) is None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
+        logging.info("\033[1;37;40mTask `{}` terminate!\033[0m".format(cfg['sync_tag']))
         sys.exit(0)
 
     # check task

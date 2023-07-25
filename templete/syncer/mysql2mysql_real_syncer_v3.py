@@ -1608,7 +1608,7 @@ if __name__ == "__main__":
             debug = True
 
     # check sys parameter
-    if read_real_sync_status(tag) == None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
+    if read_real_sync_status(tag) is None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
           logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
           sys.exit(0)
 
