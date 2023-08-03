@@ -9,6 +9,7 @@ import requests
 import traceback
 
 ALERT_MESSAGE = '''监控项目：{}
+项目描述：{}
 监控结果：{}
 告警时间：{}'''
 
@@ -101,21 +102,45 @@ def init(config):
     print_dict(config)
     return config
 
+def get_row_info(row):
+    s=''
+    for r in row:
+        s=s+str(r)+' | '
+    return s[0:-2]
+
+def get_col_info(desc):
+    s = ''
+    for r in desc:
+        s = s + str(r[0]) + ' | '
+    return s[0:-2]
+
 def get_results(cfg,sql):
     db = cfg['db_mysql']
     cr = db.cursor()
     cr.execute(sql)
+    desc = get_col_info(cr.description)
     rs = cr.fetchall()
-    v=''
+    v = ''
+    i = 0
+    s = ' '*17
     for r in rs:
-        v=v+'{} {} {}\n'.format(r[0],r[1],r[2])
-    return v[0:-1] if len(rs)!=0 else '无数据'
+        print('s=',get_row_info(r))
+        if i == 0:
+           v=v+'{}\n'.format(get_row_info(r))
+        else:
+           v = v + s + '{}\n'.format(get_row_info(r))
+        print('i=',i,'v=', v)
+        i=i+1
+    message = v[0:-3] if len(rs)!=0 else '无数据'
+    return desc,message
 
 def monitor(cfg):
    for idx in cfg['templete_indexes_values']:
+      desc, message = get_results(cfg,idx['index_threshold'])
       MESSAGE = ALERT_MESSAGE. \
           format(idx['index_name'],
-                 get_results(cfg,idx['index_threshold']),
+                 desc,
+                 message,
                  get_time())
       send_message(cfg['receiver'], cfg['templete_name'], MESSAGE)
 

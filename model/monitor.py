@@ -262,3 +262,39 @@ async def push(tag):
     ssh.close()
     ftp.close()
     return res
+
+
+async def run(tag):
+    cfg = await get_db_monitor_config(tag)
+    if cfg['code']!=200:
+       return cfg
+
+    ssh = ssh_helper(cfg)
+    cmd1 = 'nohup {0}/db_monitor.sh {1} {2} &>/dev/null &'.format(cfg['msg']['script_path'], cfg['msg']['script_file'],tag)
+    res  = ssh.exec(cmd1)
+    if res['status']:
+        res = {'code': 200, 'msg': res['stdout']}
+    else:
+       res = {'code': -1, 'msg': 'failure!'}
+
+    ssh.close()
+    return res
+
+async def stop(tag):
+    cfg = await get_db_monitor_config(tag)
+    if cfg['code']!=200:
+       return cfg
+    cmd1 = "ps -ef | grep {0} |grep -v grep | wc -l".format(tag)
+    cmd2 = "ps -ef | grep "+tag+" |grep -v grep | awk '{print $2}'  | xargs kill -9"
+
+    ssh = ssh_helper(cfg)
+    res = ssh.exec(cmd1)
+    if  res['status'] and int(res['stdout'][0])>0:
+        res = ssh.exec(cmd2)
+        if res['status']:
+           res = {'code': 200, 'msg': res['stdout'],'cmd':[cmd1,cmd2]}
+        else:
+           res = {'code': -1, 'msg': res['stderr'],'cmd':[cmd1,cmd2]}
+    else:
+        res = {'code': -1, 'msg': '未运行!'.format(tag),'cmd':[cmd1,cmd2]}
+    return res

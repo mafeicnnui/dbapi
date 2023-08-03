@@ -25,13 +25,12 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="Complete documentation">
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/model/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/monitor/monitor_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/monitor_sql_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_clear.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/service/monitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/gather/monitor_sql_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/monitor_sql_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/urls/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/urls/monitor.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,19 +83,19 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\monitor" />
-      <recent name="D:\work\dbapi\templete\gather" />
-      <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\syncer\his" />
-      <recent name="D:\work\dbapi\model" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\work\dbapi\templete\gather" />
       <recent name="D:\work\dbapi\templete\syncer\his" />
       <recent name="D:\work\dbapi" />
       <recent name="D:\work\dbapi\templete\syncer" />
       <recent name="D:\work\dbapi\templete\minio" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\work\dbapi\templete\monitor" />
+      <recent name="D:\work\dbapi\templete\gather" />
+      <recent name="D:\work\dbapi\templete\syncer" />
+      <recent name="D:\work\dbapi\templete\syncer\his" />
+      <recent name="D:\work\dbapi\model" />
     </key>
   </component>
   <component name="RunManager" selected="Python.api_log_alert">
@@ -723,14 +722,10 @@
       <workItem from="1690158578027" duration="404000" />
       <workItem from="1690161610794" duration="9766000" />
       <workItem from="1690190664289" duration="162000" />
-      <workItem from="1690247134707" duration="5762000" />
-    </task>
-    <task id="LOCAL-00071" summary="support binlog backup">
-      <created>1647942302780</created>
-      <option name="number" value="00071" />
-      <option name="presentableId" value="LOCAL-00071" />
-      <option name="project" value="LOCAL" />
-      <updated>1647942302781</updated>
+      <workItem from="1690247134707" duration="6139000" />
+      <workItem from="1690264480091" duration="5872000" />
+      <workItem from="1690335305378" duration="681000" />
+      <workItem from="1691032559079" duration="4424000" />
     </task>
     <task id="LOCAL-00072" summary="support mysql real sync">
       <created>1648716923892</created>
@@ -1068,7 +1063,14 @@
       <option name="project" value="LOCAL" />
       <updated>1684485063902</updated>
     </task>
-    <option name="localTasksCounter" value="120" />
+    <task id="LOCAL-00120" summary="bug fix">
+      <created>1690256475999</created>
+      <option name="number" value="00120" />
+      <option name="presentableId" value="LOCAL-00120" />
+      <option name="project" value="LOCAL" />
+      <updated>1690256475999</updated>
+    </task>
+    <option name="localTasksCounter" value="121" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1117,30 +1119,30 @@
     <MESSAGE value="support oss" />
     <MESSAGE value="real sync optimize" />
     <MESSAGE value="README.md update" />
-    <MESSAGE value="bug fix" />
     <MESSAGE value="monitor api update" />
     <MESSAGE value="mysql sync optimize" />
     <MESSAGE value="redis send wx fix" />
     <MESSAGE value="server alert send wx fix" />
     <MESSAGE value="update requirements.txt" />
     <MESSAGE value="Complete documentation" />
-    <option name="LAST_COMMIT_MESSAGE" value="Complete documentation" />
+    <MESSAGE value="bug fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="83" y="0" width="1241" height="824" key="#Deployment" timestamp="1690249784617">
+    <state x="83" y="0" width="1241" height="824" key="#Deployment" timestamp="1691033484257">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="83" y="60" width="1453" height="672" key="#Deployment/0.0.1536.824/-1920.-425.1920.1040@0.0.1536.824" timestamp="1683179119128" />
-    <state x="83" y="0" width="1241" height="824" key="#Deployment/0.0.1536.824@0.0.1536.824" timestamp="1690249784617" />
+    <state x="83" y="0" width="1241" height="824" key="#Deployment/0.0.1536.824@0.0.1536.824" timestamp="1691033484257" />
     <state x="415" y="137" width="709" height="338" key="#Notifications" timestamp="1684400492087">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="415" y="137" width="709" height="338" key="#Notifications/0.0.1536.824@0.0.1536.824" timestamp="1684400492087" />
-    <state x="99" y="0" width="1437" height="824" key="#SSH_Configurations" timestamp="1690249783744">
+    <state x="-19" y="0" width="1437" height="824" key="#SSH_Configurations" timestamp="1691033483311">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="193" y="0" key="#SSH_Configurations/0.0.1536.824/-1920.-425.1920.1040@0.0.1536.824" timestamp="1683179100446" />
-    <state x="99" y="0" width="1437" height="824" key="#SSH_Configurations/0.0.1536.824@0.0.1536.824" timestamp="1690249783744" />
+    <state x="-19" y="0" width="1437" height="824" key="#SSH_Configurations/0.0.1536.824@0.0.1536.824" timestamp="1691033483311" />
     <state x="496" y="107" key="FileChooserDialogImpl" timestamp="1684400884765">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -1149,29 +1151,28 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="575" y="303" key="Github.Dialog.Accounts.Choose/0.0.1536.824@0.0.1536.824" timestamp="1684485128585" />
-    <state x="61" y="0" key="SettingsEditor" timestamp="1690249787495">
+    <state x="61" y="0" key="SettingsEditor" timestamp="1691033487572">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="61" y="0" key="SettingsEditor/0.0.1536.824/-1920.-425.1920.1040@0.0.1536.824" timestamp="1683166649349" />
-    <state x="61" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1690249787495" />
-    <state x="442" y="159" key="Vcs.Push.Dialog.v2" timestamp="1685951260669">
+    <state x="61" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1691033487572" />
+    <state x="442" y="159" key="Vcs.Push.Dialog.v2" timestamp="1690256569178">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="442" y="159" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1685951260669" />
-    <state x="530" y="51" width="784" height="700" key="find.popup" timestamp="1688094165057">
+    <state x="442" y="159" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1690256569178" />
+    <state x="530" y="51" width="784" height="700" key="find.popup" timestamp="1690267074115">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="530" y="51" width="784" height="664" key="find.popup/0.0.1536.824/-1920.-425.1920.1040@0.0.1536.824" timestamp="1682047746218" />
-    <state x="530" y="51" width="784" height="700" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1688094165057" />
+    <state x="530" y="51" width="784" height="700" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1690267074115" />
     <state x="558" y="317" width="976" height="240" key="git4idea.remote.GitConfigureRemotesDialog" timestamp="1684400970761">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="558" y="317" key="git4idea.remote.GitConfigureRemotesDialog/0.0.1536.824@0.0.1536.824" timestamp="1684400970761" />
-    <state x="613" y="337" key="publish.login" timestamp="1690251016345">
+    <state x="608" y="346" key="publish.login" timestamp="1691036088015">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="613" y="337" key="publish.login/0.0.1536.824/-1920.-425.1920.1040@0.0.1536.824" timestamp="1684218817760" />
-    <state x="613" y="337" key="publish.login/0.0.1536.824@0.0.1536.824" timestamp="1690251016345" />
+    <state x="608" y="346" key="publish.login/0.0.1536.824@0.0.1536.824" timestamp="1691036088015" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
