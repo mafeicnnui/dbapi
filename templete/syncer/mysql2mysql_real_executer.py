@@ -179,15 +179,17 @@ def format_sql(v_sql):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://210.13.35.136:21080/read_db_decrypt'
-        res = requests.post(url, data=par,timeout=1).json()
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
+        res = requests.post(url, data=par,timeout=60).json()
         if res['code'] == 200:
             config = res['msg']
             return config
         else:
             logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
+            return None
     except:
         logging.info('aes_decrypt api not available!')
+        return None
 
 def get_ds_mysql(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip,
@@ -266,59 +268,78 @@ def get_sync_tables(cfg):
     cfg['sync_table'] = v[0:-1]
     return cfg
 
-def get_config_from_db(tag):
-    url = 'http://210.13.35.136:21080/read_config_sync'
-    res = requests.post(url, data= { 'tag': tag},timeout=1).json()
-    if res['code'] == 200:
-        config                           = res['msg']
-        db_mysql_ip                      = config['sync_db_sour'].split(':')[0]
-        db_mysql_port                    = config['sync_db_sour'].split(':')[1]
-        db_mysql_service                 = config['sync_db_sour'].split(':')[2]
-        db_mysql_user                    = config['sync_db_sour'].split(':')[3]
-        db_mysql_pass                    = aes_decrypt(config['sync_db_sour'].split(':')[4],db_mysql_user)
-        db_mysql_ip_dest                 = config['sync_db_dest'].split(':')[0]
-        db_mysql_port_dest               = config['sync_db_dest'].split(':')[1]
-        db_mysql_service_dest            = config['sync_db_dest'].split(':')[2]
-        db_mysql_user_dest               = config['sync_db_dest'].split(':')[3]
-        db_mysql_pass_dest               = aes_decrypt(config['sync_db_dest'].split(':')[4], db_mysql_user_dest)
-        config['db_mysql_ip']            = db_mysql_ip
-        config['db_mysql_port']          = db_mysql_port
-        config['db_mysql_service']       = db_mysql_service
-        config['db_mysql_user']          = db_mysql_user
-        config['db_mysql_pass']          = db_mysql_pass
-        config['db_mysql_ip_dest']       = db_mysql_ip_dest
-        config['db_mysql_port_dest']     = db_mysql_port_dest
-        config['db_mysql_service_dest']  = db_mysql_service_dest
-        config['db_mysql_user_dest']     = db_mysql_user_dest
-        config['db_mysql_pass_dest']     = db_mysql_pass_dest
-        config['db_mysql_string']        = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
-        config['db_mysql_dest_string']   = db_mysql_ip_dest + ':' + db_mysql_port_dest + '/' + db_mysql_service_dest
-        config['exec_tag']               = config['sync_tag'].replace('_executer', '_logger')
-        config['sleep_time']             = float(config['sync_gap'])
 
-        if config.get('ds_ro') is not None and config.get('ds_ro') != '':
-            config['db_mysql_ip_ro']      = config['ds_ro']['ip']
-            config['db_mysql_port_ro']    = config['ds_ro']['port']
-            config['db_mysql_service_ro'] = config['ds_ro']['service']
-            config['db_mysql_user_ro']    = config['ds_ro']['user']
-            config['db_mysql_pass_ro']    = aes_decrypt(config['ds_ro']['password'],config['ds_ro']['user'])
 
-        if config.get('ds_log') is not None and config.get('ds_log') != '':
-            config['db_mysql_ip_log']      = config['ds_log']['ip']
-            config['db_mysql_port_log']    = config['ds_log']['port']
-            config['db_mysql_service_log'] = config['ds_log']['service']
-            config['db_mysql_user_log']    = config['ds_log']['user']
-            config['db_mysql_pass_log']    = aes_decrypt(config['ds_log']['password'],config['ds_log']['user'])
-        else:
-            print('mysql日志库不能为空!')
-            logging.info('mysql日志库不能为空!')
-            sys.exit(0)
+def upd_cfg(config):
+    db_mysql_ip = config['sync_db_sour'].split(':')[0]
+    db_mysql_port = config['sync_db_sour'].split(':')[1]
+    db_mysql_service = config['sync_db_sour'].split(':')[2]
+    db_mysql_user = config['sync_db_sour'].split(':')[3]
+    db_mysql_pass = aes_decrypt(config['sync_db_sour'].split(':')[4], db_mysql_user)
+    db_mysql_ip_dest = config['sync_db_dest'].split(':')[0]
+    db_mysql_port_dest = config['sync_db_dest'].split(':')[1]
+    db_mysql_service_dest = config['sync_db_dest'].split(':')[2]
+    db_mysql_user_dest = config['sync_db_dest'].split(':')[3]
+    db_mysql_pass_dest = aes_decrypt(config['sync_db_dest'].split(':')[4], db_mysql_user_dest)
+    config['db_mysql_ip'] = db_mysql_ip
+    config['db_mysql_port'] = db_mysql_port
+    config['db_mysql_service'] = db_mysql_service
+    config['db_mysql_user'] = db_mysql_user
+    config['db_mysql_pass'] = db_mysql_pass
+    config['db_mysql_ip_dest'] = db_mysql_ip_dest
+    config['db_mysql_port_dest'] = db_mysql_port_dest
+    config['db_mysql_service_dest'] = db_mysql_service_dest
+    config['db_mysql_user_dest'] = db_mysql_user_dest
+    config['db_mysql_pass_dest'] = db_mysql_pass_dest
+    config['db_mysql_string'] = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
+    config['db_mysql_dest_string'] = db_mysql_ip_dest + ':' + db_mysql_port_dest + '/' + db_mysql_service_dest
+    config['exec_tag'] = config['sync_tag'].replace('_executer', '_logger')
+    config['sleep_time'] = float(config['sync_gap'])
 
-        config = get_sync_tables(config)
+    if config.get('ds_ro') is not None and config.get('ds_ro') != '':
+        config['db_mysql_ip_ro'] = config['ds_ro']['ip']
+        config['db_mysql_port_ro'] = config['ds_ro']['port']
+        config['db_mysql_service_ro'] = config['ds_ro']['service']
+        config['db_mysql_user_ro'] = config['ds_ro']['user']
+        config['db_mysql_pass_ro'] = aes_decrypt(config['ds_ro']['password'], config['ds_ro']['user'])
+
+    if config.get('ds_log') is not None and config.get('ds_log') != '':
+        config['db_mysql_ip_log'] = config['ds_log']['ip']
+        config['db_mysql_port_log'] = config['ds_log']['port']
+        config['db_mysql_service_log'] = config['ds_log']['service']
+        config['db_mysql_user_log'] = config['ds_log']['user']
+        config['db_mysql_pass_log'] = aes_decrypt(config['ds_log']['password'], config['ds_log']['user'])
+    else:
+        print('mysql日志库不能为空!')
+        logging.info('mysql日志库不能为空!')
+        sys.exit(0)
+    config = get_sync_tables(config)
+    return config
+
+def get_config_from_db(tag,workdir):
+    url = 'http://$$API_SERVER$$/read_config_sync'
+    res = None
+    try:
+      res = requests.post(url, data= { 'tag': tag},timeout=30).json()
+    except:
+      pass
+
+    if res is not None and res['code'] == 200:
+        write_local_config(res['msg'])
+        config = upd_cfg(res['msg'])
         return config
     else:
-        log('load config failure:{0}'.format(res['msg']))
-        sys.exit(0)
+        lname = '{}/{}_cfg.json'.format(workdir, tag)
+        logging.info('Load interface `$$API_SERVER$$` failure!')
+        logging.info('Read local config file `{}`.'.format(lname))
+        config = get_local_config(lname)
+        if config is None:
+            logging.info('Load local config failure!')
+            return None
+        else:
+            config = upd_cfg(config)
+            return config
+
 
 def get_mysql_schema(cfg,event):
     for o in cfg['sync_table'].split(','):
@@ -363,13 +384,12 @@ def write_sync_log(config):
             'create_date'    : get_time()
     }
     try:
-        url = 'http://210.13.35.136:21080/write_sync_real_log'
-        res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
+        url = 'http://$$API_SERVER$$/write_sync_real_log'
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=30)
         if res.status_code != 200:
-           print('Interface write_sync_log call failed!')
+           logging.info('write_sync_log failure1!')
     except:
-         traceback.print_exc()
-         sys.exit(0)
+       logging.info('write_sync_log failure2!')
 
 def write_mysql(cfg,tab):
     db_dest = get_ds_mysql(cfg['db_mysql_ip_dest'],
@@ -420,7 +440,7 @@ def write_mysql(cfg,tab):
                             cfg.get('sendpass'),
                             cfg.get('receiver'),
                             v_title, v_templete)
-            sys.exit(0)
+            # sys.exit(0)
 
 
     if ids != '':
@@ -440,7 +460,7 @@ def write_mysql(cfg,tab):
                           cfg.get('sendpass'),
                           cfg.get('receiver'),
                           v_title, v_templete)
-          sys.exit(0)
+          # sys.exit(0)
 
 def get_tasks(cfg):
     db = get_ds_mysql_dict(cfg['db_mysql_ip_log'],
@@ -459,7 +479,7 @@ def read_real_sync_status(p_tag):
     try:
         par = {'tag': p_tag}
         url = 'http://$$API_SERVER$$/get_real_sync_status'
-        res = requests.post(url,data=par,timeout=3).json()
+        res = requests.post(url,data=par,timeout=30).json()
         return res
     except:
         logging.info('read_real_sync_status failure!')
@@ -497,22 +517,24 @@ def start_syncer(cfg):
                   logging.info('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
                   time.sleep(1)
 
-               if get_seconds(sync_time) >= 3:
+               if get_seconds(sync_time) >= 30:
                    sync_time = datetime.datetime.now()
-                   if read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
-                       while True:
-                           time.sleep(1)
-                           if read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
-                               logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
-                               continue
-                           elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
-                               logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
-                               break
-                           else:
-                               break
-                   elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
-                       logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
-                       break
+                   sync_status = read_real_sync_status(cfg['sync_tag'])
+                   if sync_status is not None:
+                       if sync_status['msg']['real_sync_status'] == 'PAUSE':
+                           while True:
+                               time.sleep(1)
+                               if sync_status['msg']['real_sync_status'] == 'PAUSE':
+                                   logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                                   continue
+                               elif sync_status['msg']['real_sync_status']== 'STOP':
+                                   logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                                   break
+                               else:
+                                   break
+                       elif sync_status['msg']['real_sync_status'] == 'STOP':
+                           logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                           break
 
 
 
@@ -571,12 +593,30 @@ class DateEncoder(json.JSONEncoder):
         else:
             return json.JSONEncoder.default(self, obj)
 
+def get_local_config(lname):
+    try:
+        with open(lname, 'r') as f:
+             cfg = json.loads(f.read())
+        return cfg
+    except:
+        return None
+
+def write_local_config(config):
+    file_name = '{}/{}_cfg.json'.format(config['script_path'],config['sync_tag'])
+    with open(file_name, 'w') as f:
+        f.write(json.dumps(config, ensure_ascii=False, indent=4, separators=(',', ':')))
+
+
 if __name__=="__main__":
     tag = ""
     warnings.filterwarnings("ignore")
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
+        elif sys.argv[p] == "-workdir":
+            workdir = sys.argv[p + 1]
+        elif sys.argv[p] == "-debug":
+            debug = True
 
     # init logger
     logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")),
@@ -584,10 +624,14 @@ if __name__=="__main__":
                         level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
 
     # call api get config
-    cfg = get_config_from_db(tag)
+    cfg = get_config_from_db(tag,workdir)
+
+    if cfg is None:
+        logging.info('load config failure,exit sync!')
+        sys.exit(0)
 
     # query system parameters to determine whether to run the  program
-    if read_real_sync_status(tag) is None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
+    if read_real_sync_status(tag) is not None and read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
         logging.info("\033[1;37;40mTask `{}` terminate!\033[0m".format(cfg['sync_tag']))
         sys.exit(0)
 

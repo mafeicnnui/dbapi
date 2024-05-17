@@ -84,16 +84,16 @@ def print_dict(config):
 
 def get_ds_mysql(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service,
-                           charset='utf8',read_timeout=3)
+                           charset='utf8',read_timeout=30)
     return conn
 
 def get_ds_mysql_dict(ip,port,service ,user,password):
     conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service,
-                           charset='utf8',read_timeout=3,cursorclass = pymysql.cursors.DictCursor)
+                           charset='utf8',read_timeout=30,cursorclass = pymysql.cursors.DictCursor)
     return conn
 
 def get_ds_sqlserver(ip, port, service, user, password):
-    conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8',timeout=3)
+    conn = pymssql.connect(host=ip, port=int(port), user=user, password=password, database=service, charset='utf8',timeout=30)
     return conn
 
 def get_ds_ck(ip,port,service ,user,password):

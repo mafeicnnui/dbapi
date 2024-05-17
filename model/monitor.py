@@ -31,7 +31,7 @@ async def get_itmes_from_templete_ids(p_templete):
     return t[0:-1]
 
 async def get_itmes_from_templete_ids_vals(p_templete):
-    st = "SELECT index_name,index_code,index_threshold FROM t_monitor_index \
+    st = "SELECT * FROM t_monitor_index \
               WHERE id IN(SELECT index_id FROM `t_monitor_templete_index` \
                            WHERE templete_id={}) AND STATUS='1'".format(p_templete)
     rs = await async_processer.query_dict_list(st)

@@ -1072,24 +1072,24 @@ def sync_mysql_data_no_pkid(config, ftab):
             v_pk_cols        = get_sync_table_pk_vals(db_source, tab)
             cr_desc          = db_desc.cursor()
             n_tab_total_rows = get_sync_table_total_rows(db_source, tab, v_where)
+            db_desc.commit()
 
             if ftab.split(':')[1] == '':
                print("Full Sync Table :{0} ...".format(ftab.split(':')[0]))
                print('delete table:{0} all data,please wait...!'.format(tab))
-               st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
-               cr_desc.execute(st_desc)
-               rs_desc = cr_desc.fetchall()
-               for r in list(rs_desc):
-                   v_del = get_sync_where(v_pk_names, r[0])
-                   cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
+               # st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+               # cr_desc.execute(st_desc)
+               # rs_desc = cr_desc.fetchall()
+               # for r in list(rs_desc):
+               #     v_del = get_sync_where(v_pk_names, r[0])
+               #     cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
+               cr_desc.execute('delete from {0}'.format(tab))
                print('delete table:{0} all data ok!'.format(tab))
-
             else:
                 print("Increment Sync Table  :{0} for In recent {1} {2}..."
                       .format(ftab.split(':')[0], ftab.split(':')[2], config['sync_time_type']))
                 print('delete from `{0}` {1} '.format(tab, v_where))
                 cr_desc.execute('delete from `{0}` {1} '.format(tab, v_where))
-
 
             v_sql = """select {0} as 'pk',{1} from `{2}` {3}"""\
                       .format(v_pk_cols, get_sync_table_cols(config, tab), tab, v_where)
@@ -1115,15 +1115,16 @@ def sync_mysql_data_no_pkid(config, ftab):
                         else:
                             ins_val = ins_val + "'" + format_sql(str(r[j])) + "',"
                     v_sql = v_sql + '(' + ins_val[0:-1] + '),'
-                    v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ ","
+                    v_sql_del = v_sql_del + get_sync_where(v_pk_names, r[0])+ "$$$"
                 batch_sql = ins_sql_header + v_sql[0:-1]
 
                 if ftab.split(':')[1] == '':
                     config['run_sql'] =batch_sql
                     cr_desc.execute(batch_sql)
                 else:
-                    for d in v_sql_del[0:-1].split(','):
+                    for d in v_sql_del[0:-3].split('$$$'):
                         config['run_sql'] = 'delete from `{0}` where {1}'.format(tab, d)
+                        print(config['run_sql'])
                         cr_desc.execute('delete from `{0}` where {1}'.format(tab, d))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)

@@ -599,7 +599,6 @@ def full_sync(cfg,event):
             if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
                 break
 
-
 def create_table_many(cfg):
     # create table
     for o in cfg['sync_table']:
@@ -906,100 +905,136 @@ def get_ds_mysql_dest(ip,port,service ,user,password):
 def aes_decrypt(p_password,p_key):
     par = { 'password': p_password,  'key':p_key }
     try:
-        url = 'http://210.13.35.136:21080/read_db_decrypt'
-        res = requests.post(url, data=par,timeout=1).json()
+        url = 'http://$$API_SERVER$$/read_db_decrypt'
+        res = requests.post(url, data=par,timeout=60).json()
         if res['code'] == 200:
             config = res['msg']
             return config
         else:
             logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
-            sys.exit(0)
+            return None
     except:
         logging.info('aes_decrypt api not available!')
-        sys.exit(0)
+        return None
 
-def get_config_from_db(tag):
-    url = 'http://210.13.35.136:21080/read_config_sync'
-    res = requests.post(url, data= { 'tag': tag},timeout=1).json()
-    if res['code'] == 200:
-        config                           = res['msg']
-        db_mysql_ip                      = config['sync_db_sour'].split(':')[0]
-        db_mysql_port                    = config['sync_db_sour'].split(':')[1]
-        db_mysql_service                 = config['sync_db_sour'].split(':')[2]
-        db_mysql_user                    = config['sync_db_sour'].split(':')[3]
-        db_mysql_pass                    = aes_decrypt(config['sync_db_sour'].split(':')[4],db_mysql_user)
-        db_mysql_ip_dest                 = config['sync_db_dest'].split(':')[0]
-        db_mysql_port_dest               = config['sync_db_dest'].split(':')[1]
-        db_mysql_service_dest            = config['sync_db_dest'].split(':')[2]
-        db_mysql_user_dest               = config['sync_db_dest'].split(':')[3]
-        db_mysql_pass_dest               = aes_decrypt(config['sync_db_dest'].split(':')[4],db_mysql_user_dest)
-        config['db_mysql_ip']            = db_mysql_ip
-        config['db_mysql_port']          = db_mysql_port
-        config['db_mysql_service']       = db_mysql_service
-        config['db_mysql_user']          = db_mysql_user
-        config['db_mysql_pass']          = db_mysql_pass
-        config['db_mysql_ip_dest']       = db_mysql_ip_dest
-        config['db_mysql_port_dest']     = db_mysql_port_dest
-        config['db_mysql_service_dest']  = db_mysql_service_dest
-        config['db_mysql_user_dest']     = db_mysql_user_dest
-        config['db_mysql_pass_dest']     = db_mysql_pass_dest
-        config['db_mysql_string']        = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
-        config['db_mysql_dest_string']   = db_mysql_ip_dest + ':' + db_mysql_port_dest + '/' + db_mysql_service_dest
-        config['db_mysql']               = get_ds_mysql_sour(db_mysql_ip, db_mysql_port, db_mysql_service, db_mysql_user, db_mysql_pass)
-        config['cr_mysql']               = config['db_mysql'].cursor()
-        config['db_mysql_dest']          = get_ds_mysql_dest(db_mysql_ip_dest, db_mysql_port_dest, db_mysql_service_dest, db_mysql_user_dest, db_mysql_pass_dest)
-        config['cr_mysql_dest']          = config['db_mysql_dest'].cursor()
+def upd_cfg_db_cur(config):
+    config['db_mysql']     =  get_ds_mysql_sour(
+                                   config['db_mysql_ip'],
+                                   config['db_mysql_port'],
+                                   config['db_mysql_service'],
+                                   config['db_mysql_user'],
+                                   config['db_mysql_pass'])
+    config['db_mysql_dest'] = get_ds_mysql_dest(
+                                   config['db_mysql_ip_dest'],
+                                   config['db_mysql_port_dest'],
+                                   config['db_mysql_service_dest'],
+                                   config['db_mysql_user_dest'],
+                                   config['db_mysql_pass_dest'])
+    config['cr_mysql'] = config['db_mysql'].cursor()
+    config['cr_mysql_dest'] = config['db_mysql_dest'].cursor()
+    if config.get('ds_ro') is not None and config.get('ds_ro') != '':
+       config['db_mysql_ro'] = get_ds_mysql_sour(config['db_mysql_ip_ro'],
+                                                  config['db_mysql_port_ro'],
+                                                  config['db_mysql_service_ro'],
+                                                  config['db_mysql_user_ro'],
+                                                  config['db_mysql_pass_ro'])
+    if config.get('ds_log') is not None and config.get('ds_log') != '':
+       config['db_mysql_log'] = get_ds_mysql_dest(config['db_mysql_ip_log'],
+                                                   config['db_mysql_port_log'],
+                                                   config['db_mysql_service_log'],
+                                                   config['db_mysql_user_log'],
+                                                   config['db_mysql_pass_log'])
+       config['cr_mysql_log'] = config['db_mysql_log'].cursor()
 
-        if config.get('ds_ro') is not None and config.get('ds_ro') != '':
-            config['db_mysql_ip_ro']      = config['ds_ro']['ip']
-            config['db_mysql_port_ro']    = config['ds_ro']['port']
-            config['db_mysql_service_ro'] = config['ds_ro']['service']
-            config['db_mysql_user_ro']    = config['ds_ro']['user']
-            config['db_mysql_pass_ro']    = aes_decrypt(config['ds_ro']['password'],config['ds_ro']['user'])
-            config['db_mysql_ro']         = get_ds_mysql_sour(config['db_mysql_ip_ro'] ,
-                                                         config['db_mysql_port_ro'],
-                                                         config['db_mysql_service_ro'],
-                                                         config['db_mysql_user_ro'],
-                                                         config['db_mysql_pass_ro'] )
-
-        if config.get('ds_log') is not None and config.get('ds_log') != '':
-            config['db_mysql_ip_log']      = config['ds_log']['ip']
-            config['db_mysql_port_log']    = config['ds_log']['port']
-            config['db_mysql_service_log'] = config['log_db_name']
-            config['db_mysql_user_log']    = config['ds_log']['user']
-            config['db_mysql_pass_log']    = aes_decrypt(config['ds_log']['password'],config['ds_log']['user'])
-            config['db_mysql_log']         = get_ds_mysql_dest(config['db_mysql_ip_log'],
-                                                               config['db_mysql_port_log'],
-                                                               config['db_mysql_service_log'],
-                                                               config['db_mysql_user_log'],
-                                                               config['db_mysql_pass_log'])
-            config['cr_mysql_log']        = config['db_mysql_log'].cursor()
-
-        if check_ckpt(config):
-            ckpt = read_ckpt(config)
-            file = ckpt['binlog_file']
-            pos = ckpt['binlog_pos']
-            pid = ckpt['pid']
-            if file not in get_binlog_files(config):
-                logging.info('binlog file not exist mysql server,get current file,pos!!!')
-                file, pos = get_file_and_pos(config)[0:2]
-        else:
+    if check_ckpt(config):
+        ckpt = read_ckpt(config)
+        file = ckpt['binlog_file']
+        pos = ckpt['binlog_pos']
+        pid = ckpt['pid']
+        if file not in get_binlog_files(config):
+            logging.info('binlog file not exist mysql server,get current file,pos!!!')
             file, pos = get_file_and_pos(config)[0:2]
-            pid = os.getpid()
+    else:
+        file, pos = get_file_and_pos(config)[0:2]
+        pid = os.getpid()
 
-        config['binlog_file'] = file
-        config['binlog_pos'] = pos
-        config['pid'] = pid
-        config['sleep_time'] = float(config['sync_gap'])
-        config['sync_event'] = []
-        config['sync_event_timeout'] = datetime.datetime.now()
-        config['full_checkpoint'] = {}
-        config = get_sync_tables(config)
-        upd_ckpt(config)
+    config['binlog_file'] = file
+    config['binlog_pos'] = pos
+    config['pid'] = pid
+    config['sleep_time'] = float(config['sync_gap'])
+    config['sync_event'] = []
+    config['sync_event_timeout'] = datetime.datetime.now()
+    config['full_checkpoint'] = {}
+    config = get_sync_tables(config)
+    upd_ckpt(config)
+    return config
+
+def upd_cfg(config):
+    db_mysql_ip      = config['sync_db_sour'].split(':')[0]
+    db_mysql_port    = config['sync_db_sour'].split(':')[1]
+    db_mysql_service = config['sync_db_sour'].split(':')[2]
+    db_mysql_user    = config['sync_db_sour'].split(':')[3]
+    db_mysql_pass    = aes_decrypt(config['sync_db_sour'].split(':')[4], db_mysql_user)
+    db_mysql_ip_dest = config['sync_db_dest'].split(':')[0]
+    db_mysql_port_dest = config['sync_db_dest'].split(':')[1]
+    db_mysql_service_dest = config['sync_db_dest'].split(':')[2]
+    db_mysql_user_dest = config['sync_db_dest'].split(':')[3]
+    db_mysql_pass_dest = aes_decrypt(config['sync_db_dest'].split(':')[4], db_mysql_user_dest)
+    config['db_mysql_ip']      = db_mysql_ip
+    config['db_mysql_port']    = db_mysql_port
+    config['db_mysql_service'] = db_mysql_service
+    config['db_mysql_user']    = db_mysql_user
+    config['db_mysql_pass']    = db_mysql_pass
+    config['db_mysql_ip_dest'] = db_mysql_ip_dest
+    config['db_mysql_port_dest'] = db_mysql_port_dest
+    config['db_mysql_service_dest'] = db_mysql_service_dest
+    config['db_mysql_user_dest'] = db_mysql_user_dest
+    config['db_mysql_pass_dest'] = db_mysql_pass_dest
+    config['db_mysql_string'] = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
+    config['db_mysql_dest_string'] = db_mysql_ip_dest + ':' + db_mysql_port_dest + '/' + db_mysql_service_dest
+
+    if config.get('ds_ro') is not None and config.get('ds_ro') != '':
+        config['db_mysql_ip_ro'] = config['ds_ro']['ip']
+        config['db_mysql_port_ro'] = config['ds_ro']['port']
+        config['db_mysql_service_ro'] = config['ds_ro']['service']
+        config['db_mysql_user_ro'] = config['ds_ro']['user']
+        config['db_mysql_pass_ro'] = aes_decrypt(config['ds_ro']['password'], config['ds_ro']['user'])
+
+    if config.get('ds_log') is not None and config.get('ds_log') != '':
+        config['db_mysql_ip_log'] = config['ds_log']['ip']
+        config['db_mysql_port_log'] = config['ds_log']['port']
+        config['db_mysql_service_log'] = config['log_db_name']
+        config['db_mysql_user_log'] = config['ds_log']['user']
+        config['db_mysql_pass_log'] = aes_decrypt(config['ds_log']['password'], config['ds_log']['user'])
+    return config
+
+def get_config_from_db(tag,workdir):
+    url = 'http://$$API_SERVER$$/read_config_sync'
+    res = None
+    try:
+      res = requests.post(url, data= { 'tag': tag},timeout=30).json()
+    except:
+      pass
+
+    if res is not None and res['code'] == 200:
+        config = upd_cfg(res['msg'])
+        write_local_config(config)
+        config = upd_cfg_db_cur(config)
         return config
     else:
-        logging.info('load config failure:{0}'.format(res['msg']))
-        return None
+        lname = '{}/{}_cfg.json'.format(workdir, tag)
+        logging.info('Load interface `url` failure!'.format(url))
+        logging.info('Read local config file `{}`.'.format(lname))
+        config = get_local_config(lname)
+        print_dict(config)
+        if config is None:
+            logging.info('Load local config failure!')
+            return None
+        else:
+            config = upd_cfg(config)
+            config = upd_cfg_db_cur(config)
+            print_dict(config)
+            return config
 
 def get_tables(cfg,o):
     cr  = cfg['cr_mysql']
@@ -1077,7 +1112,9 @@ def flush_buffer(cfg):
                 format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event'])),cfg['binlog_file'] ,cfg['binlog_pos'] ))
             write_ckpt(cfg)
             cfg['sync_event'] = []
-            cfg['sync_event_timeout'] = datetime.datetime.now()
+            cfg['sync_event_timeout'] = datetime.datetime.now()        #?
+    else:
+        write_ckpt(cfg)
 
 def write_sql(cfg,event):
     if cfg['full_checkpoint'].get(event['tab']):
@@ -1143,20 +1180,19 @@ def write_sync_log(config):
     }
     try:
         url = 'http://$$API_SERVER$$/write_sync_real_log'
-        res = requests.post(url, data={'tag': json.dumps(par)},timeout=3)
+        res = requests.post(url, data={'tag': json.dumps(par)},timeout=30)
         if res.status_code != 200:
            logging.info('Interface write_sync_log call failed!')
         else:
            logging.info('Interface write_sync_log success!')
     except:
          logging.info('write_sync_log failure!')
-         logging.info(traceback.format_exc())
 
 def read_real_sync_status(p_tag):
     try:
         par = {'tag': p_tag}
         url = 'http://$$API_SERVER$$/get_real_sync_status'
-        res = requests.post(url,data=par,timeout=3).json()
+        res = requests.post(url,data=par,timeout=30).json()
         return res
     except:
         logging.info('read_real_sync_status failure!')
@@ -1221,7 +1257,7 @@ def init_diff_cfg(cfg):
                 col[tab] = ''
     return types,pks,pkn,col
 
-def start_incr_sync(cfg):
+def start_incr_sync(cfg,workdir):
     logging.info("\033[0;36;40m[{}] start incr sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     logging.info("\033[0;36;40m binlog_file:{},binlog_pos:{}\033[0m".format(cfg['full_binlog_file'],cfg['full_binlog_pos']))
     MYSQL_SETTINGS = {
@@ -1251,31 +1287,38 @@ def start_incr_sync(cfg):
         ddl_amount    = 0
         apply_time    = datetime.datetime.now()
         gather_time   = datetime.datetime.now()
+        flush_time    = datetime.datetime.now()
         sync_time     = datetime.datetime.now()
 
         for binlogevent in stream:
             cfg['binlog_file'] = stream.log_file
             cfg['binlog_pos'] = stream.log_pos
 
-            if get_seconds(sync_time) >= 3:
+            if get_seconds(sync_time) >= 60:
                 sync_time = datetime.datetime.now()
-                if not read_real_sync_status(cfg['sync_tag']) is None:
-                    if read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
+                sync_status = read_real_sync_status(cfg['sync_tag'])
+                if  sync_status is not None:
+                    if sync_status['msg']['real_sync_status'] == 'PAUSE':
                        while True:
                             time.sleep(1)
-                            if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']  == 'PAUSE':
+                            if sync_status['msg']['real_sync_status'] == 'PAUSE':
                                logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                continue
-                            elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
+                            elif sync_status['msg']['real_sync_status']  == 'STOP':
                                logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                break
                             else:
                                break
-                    elif  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']  == 'STOP':
+                    elif sync_status['msg']['real_sync_status']  == 'STOP':
                         logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                         break
 
-            if get_seconds(gather_time) >= int(cfg['sync_gap']):
+            if get_seconds(flush_time) >= int(cfg['sync_gap']):
+               flush_buffer(cfg)
+               logging.info("\033[1;36;40m[{}] flush buffer update ckpt file!]!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               flush_time = datetime.datetime.now()
+
+            if get_seconds(gather_time) >= 600:
                cfg['event_amount']  = insert_amount+update_amount+delete_amount+ddl_amount
                cfg['insert_amount'] = insert_amount
                cfg['update_amount'] = update_amount
@@ -1290,7 +1333,6 @@ def start_incr_sync(cfg):
                gather_time = datetime.datetime.now()
                file, pos = get_file_and_pos(cfg)[0:2]
                logging.info("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlog_file'],cfg['binlog_pos']))
-               flush_buffer(cfg)
 
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                sync_event = cfg['sync_event']
@@ -1298,7 +1340,7 @@ def start_incr_sync(cfg):
                sync_binlog_file = cfg['binlog_file']
                sync_binlog_pos = cfg['binlog_pos']
                full_checkpoint = cfg['full_checkpoint']
-               tmp = get_config_from_db(cfg['sync_tag'])
+               tmp = get_config_from_db(cfg['sync_tag'],workdir)
                if tmp is None:
                    logging.info('config apply failure,skip load config!')
                else:
@@ -1352,21 +1394,25 @@ def start_incr_sync(cfg):
                     isinstance(binlogevent, UpdateRowsEvent) or \
                         isinstance(binlogevent, WriteRowsEvent):
 
-                if get_seconds(sync_time) >= 3:
+                if get_seconds(sync_time) >= 300:
                     sync_time = datetime.datetime.now()
-                    if not read_real_sync_status(cfg['sync_tag']) is None:
-                        if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
+                    sync_status = read_real_sync_status(cfg['sync_tag'])
+                    if sync_status is not None:
+                        if sync_status['msg']['real_sync_status'] == 'PAUSE':
                             while True:
                                 time.sleep(1)
-                                if  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'PAUSE':
+                                if  sync_status['msg']['real_sync_status'] == 'PAUSE':
                                     logging.info("\033[1;37;40m sync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                                    flush_buffer(cfg)
                                     continue
-                                elif read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status']== 'STOP':
+                                elif sync_status['msg']['real_sync_status'] == 'STOP':
+                                    flush_buffer(cfg)
                                     logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                     sys.exit(0)
                                 else:
                                     break
-                        elif  read_real_sync_status(cfg['sync_tag'])['msg']['real_sync_status'] == 'STOP':
+                        elif sync_status['msg']['real_sync_status'] == 'STOP':
+                            flush_buffer(cfg)
                             logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                             sys.exit(0)
 
@@ -1398,7 +1444,6 @@ def start_incr_sync(cfg):
                             event['sql']    = gen_sql(cfg,event)
                             write_sql(cfg, event)
                             delete_amount = delete_amount + 1
-                            #write_ckpt(cfg)
 
                         elif isinstance(binlogevent, UpdateRowsEvent):
                             event["action"]        = "update"
@@ -1411,7 +1456,6 @@ def start_incr_sync(cfg):
                             event['sql']           = gen_sql(cfg, event)
                             write_sql(cfg, event)
                             update_amount = update_amount +1
-                            #write_ckpt(cfg)
 
                         elif isinstance(binlogevent, WriteRowsEvent):
                             event["action"] = "insert"
@@ -1423,7 +1467,6 @@ def start_incr_sync(cfg):
                             event['sql']    = gen_sql(cfg, event)
                             write_sql(cfg, event)
                             insert_amount = insert_amount +1
-                            #write_ckpt(cfg)
 
     except :
         logging.info('start_incr_sync failure!')
@@ -1571,15 +1614,24 @@ def start_full_sync(cfg):
     logging.info("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     full_sync_many(cfg)
 
-def get_task_status(tag):
-    cfg = {}
-    url = 'http://210.13.35.136:20080/read_config_sync'
-    res = requests.post(url, data={'tag': tag}, timeout=1).json()
-    if res['code'] == 200:
+def get_task_status(tag,workdir):
+    url = 'http://$$API_SERVER$$/read_config_sync'
+    res=None
+    try:
+       res = requests.post(url, data={'tag': tag}, timeout=60).json()
+    except:
+       pass
+
+    if  res is not None and res['code'] == 200:
         cfg = res['msg']
     else:
-        logging.info('get_task_status load config failure:{0}'.format(res['msg']))
-        sys.exit(0)
+        lname = '{}/{}_cfg.json'.format(workdir, tag)
+        logging.info('Load interface `{}` failure!'.format(url))
+        logging.info('get_task_status:Read local config file `{}`.'.format(lname))
+        cfg = get_local_config(lname)
+        if cfg is None:
+            logging.info('get_task_status:Load local config failure!')
+            sys.exit(0)
 
     if check_ckpt(cfg):
         pid = read_ckpt(cfg).get('pid')
@@ -1597,6 +1649,19 @@ def get_task_status(tag):
         logging.info('config file :{}.json not exists!'.format(cfg['sync_tag']))
         return False
 
+def get_local_config(lname):
+    try:
+        with open(lname, 'r') as f:
+             cfg = json.loads(f.read())
+        return cfg
+    except:
+        return None
+
+def write_local_config(config):
+    file_name = '{}/{}_cfg.json'.format(config['script_path'],config['sync_tag'])
+    with open(file_name, 'w') as f:
+        f.write(json.dumps(config, ensure_ascii=False, indent=4, separators=(',', ':')))
+
 if __name__ == "__main__":
     tag = ""
     debug = False
@@ -1604,14 +1669,15 @@ if __name__ == "__main__":
     for p in range(len(sys.argv)):
         if sys.argv[p] == "-tag":
             tag = sys.argv[p + 1]
+        elif sys.argv[p] == "-workdir":
+            workdir = sys.argv[p + 1]
         elif sys.argv[p] == "-debug":
             debug = True
 
     # check sys parameter
-    if read_real_sync_status(tag) is None or read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
-          logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
-          sys.exit(0)
-
+    if read_real_sync_status(tag) is not None and read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
+        logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
+        sys.exit(0)
 
     # init logger
     logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
@@ -1619,12 +1685,13 @@ if __name__ == "__main__":
                         level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
 
     # check task
-    if not get_task_status(tag):
+    if not get_task_status(tag,workdir):
 
        # call api get config
-       cfg = get_config_from_db(tag)
+       cfg = get_config_from_db(tag,workdir)
        if cfg is None:
-          logging.info('load config failure,exit sync!')
+          logging.info('Load config failure,exit sync!')
+          logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
           sys.exit(0)
 
        # output parameter
@@ -1641,6 +1708,6 @@ if __name__ == "__main__":
        apply_diff_logs(cfg)
 
        # parse binlog incr sync
-       start_incr_sync(cfg)
+       start_incr_sync(cfg,workdir)
     else:
        logging.info('sync program:{} is running!'.format(tag))

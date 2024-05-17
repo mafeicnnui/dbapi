@@ -119,10 +119,10 @@ def gather(cfg):
 
 
 def check_pid(cfg):
-    return os.path.isfile('{}/{}'.format(cfg['script_path'],'redis_agent_{}.json'.format(cfg['market_id'])))
+    return os.path.isfile('{}/{}'.format(cfg['script_path'],'redis_agent_{}.json'.format(cfg['task_tag'])))
 
 def read_pid(cfg):
-    with open('{}/{}'.format(cfg['script_path'],'redis_agent_{}.json'.format(cfg['market_id'])), 'r') as f:
+    with open('{}/{}'.format(cfg['script_path'],'redis_agent_{}.json'.format(cfg['task_tag'])), 'r') as f:
         contents = f.read()
     if  contents == '':
         return ''
@@ -133,7 +133,7 @@ def upd_pid(cfg):
     ckpt = {
        'pid':cfg['pid']
     }
-    with open('{}/{}'.format(cfg['script_path'],'redis_agent_{}.json'.format(cfg['market_id'])), 'w') as f:
+    with open('{}/{}'.format(cfg['script_path'],'redis_agent_{}.json'.format(cfg['task_tag'])), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
 
 def get_task_status(cfg):

@@ -10,11 +10,26 @@ import traceback
 
 ALERT_MESSAGE = '''监控项目：{}
 项目描述：{}
-监控结果：{}
-告警时间：{}'''
+监控时间：{}
+监控结果：{}'''
+
+REPORT_MESSAGE = '''报表名称：{}
+统计时间：{}
+执行时长：{}秒
+执行结果：{}'''
+
+REPORT_MESSAGE_FAILURE = '''报表名称：{}
+统计时间：{}
+执行时长：{}秒
+执行结果：{}
+错误消息：{}'''
 
 def get_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def get_seconds(b):
+    a=datetime.datetime.now()
+    return int((a-b).total_seconds())
 
 def send_message(toUser,title,message):
     msg = {
@@ -134,15 +149,46 @@ def get_results(cfg,sql):
     message = v[0:-3] if len(rs)!=0 else '无数据'
     return desc,message
 
+
+def call_proc(cfg,sql):
+    start_time = datetime.datetime.now()
+    try:
+        db = cfg['db_mysql']
+        cr = db.cursor()
+        cr.callproc(sql)
+        print("call proc `{}` ok".format(sql))
+        return get_seconds(start_time),{'status':True,'message':'成功'}
+    except:
+        return 0,{'status':False,'message':traceback.format_exc()}
+
+
 def monitor(cfg):
    for idx in cfg['templete_indexes_values']:
-      desc, message = get_results(cfg,idx['index_threshold'])
-      MESSAGE = ALERT_MESSAGE. \
-          format(idx['index_name'],
-                 desc,
-                 message,
-                 get_time())
-      send_message(cfg['receiver'], cfg['templete_name'], MESSAGE)
+      if idx['index_type'] == '6':
+         elaspse,result = call_proc(cfg,idx['index_threshold'])
+         if result['status'] == True:
+             MESSAGE = REPORT_MESSAGE. \
+                  format(idx['index_name'],
+                         get_time(),
+                         str(elaspse),
+                         result['message'])
+             send_message(cfg['receiver'], cfg['templete_name'], MESSAGE)
+         else:
+             MESSAGE = REPORT_MESSAGE_FAILURE. \
+                 format(idx['index_name'],
+                        get_time(),
+                        str(elaspse),
+                        '失败',
+                        result['message'])
+             send_message(cfg['receiver'], cfg['templete_name'], MESSAGE)
+      else:
+          desc, message = get_results(cfg,idx['index_threshold'])
+          MESSAGE = ALERT_MESSAGE. \
+              format(idx['index_name'],
+                     desc,
+                     get_time(),
+                     message)
+          send_message(cfg['receiver'], cfg['templete_name'], MESSAGE)
 
 def main():
     config = ""

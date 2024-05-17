@@ -1136,15 +1136,14 @@ def sync_sqlserver_init_pk(config, ftab):
             cr_desc = db_desc.cursor()
 
             print('delete table:{0} all data!'.format(get_mapping_tname(tab)))
-            st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols_mysql, tab)
-            cr_desc.execute(st_desc)
-            rs_desc = cr_desc.fetchall()
-            for r in list(rs_desc):
+            st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+            cr_source.execute(st_desc)
+            for r in list(cr_source.fetchall()):
                 v_del = get_sync_where(v_pk_names, r[0])
                 cr_desc.execute('delete from {0} where {1}'.format(get_mapping_tname(tab), v_del))
             print('delete table:{0} all data ok!'.format(get_mapping_tname(tab)))
 
-            v_sql = "select  {0} as 'pk',{1}  from {2} with(nolock)"\
+            v_sql = "select  {0} as 'pk',{1} from {2} with(nolock)"\
                     .format(v_pk_cols, get_tab_columns(config, tab),tab)
             cr_source.execute(v_sql)
             rs_source = cr_source.fetchmany(n_batch_size)
@@ -1212,7 +1211,7 @@ def sync_sqlserver_init_nopk(config,ftab):
             ins_sql_header   = get_tab_header(config,tab)
             v_tab_cols       = get_tab_columns(config,tab)
             v_pk_names       = get_sync_table_pk_names(config,tab)
-            v_pk_cols_mysql = get_sync_table_pk_vals_mysql(config, tab)
+            v_pk_cols_mysql  = get_sync_table_pk_vals_mysql(config, tab)
             n_batch_size     = int(config['batch_size'])
             db_source        = config['db_sqlserver']
             cr_source        = db_source.cursor()

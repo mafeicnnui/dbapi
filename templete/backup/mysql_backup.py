@@ -283,7 +283,7 @@ def db_backup(config):
         gzip_name      = db[0]+'_'+get_date()+'.sql.gz'
         bk_cmd         = ''
         if config.get('ds') is not None and not config.get('ro') :
-            bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction ' \
+            bk_cmd  = '{0} -u{1} -p{2} -h{3} --port {4} --single-transaction --set-gtid-purged=OFF ' \
                       '--routines --force --quick --master-data=2 --databases {5} -r {6} &>{7}'.\
                       format(config['bk_cmd'],config['db_user'],config['newpass'],
                              config['db_ip'] ,config['db_port'],db[0],file_name,err_name)

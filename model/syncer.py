@@ -225,11 +225,11 @@ def write_remote_crontab_sync(cfg,ssh):
 
     v_cmd_   = '{0}/db_agent.sh '.format(cfg['msg']['script_path'])
 
-    v_cls    = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'],'mysql2clickhouse_clear.py',cfg['msg']['sync_tag'])
-
-    v_cls2   = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'],'mysql2mysql_real_clear.py',cfg['msg']['sync_tag'])
-
-    v_cls3 = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_clear_cluster.py',cfg['msg']['sync_tag'])
+    # v_cls    = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'],'mysql2clickhouse_clear.py',cfg['msg']['sync_tag'])
+    #
+    # v_cls2   = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'],'mysql2mysql_real_clear.py',cfg['msg']['sync_tag'])
+    #
+    # v_cls3 = '{0}/db_sync.sh {1} {2}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_clear_cluster.py',cfg['msg']['sync_tag'])
 
     v_cron   = '''crontab -l > /tmp/config && sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n{3} {4} &>/dev/null &" >> /tmp/config'''.format(cfg['msg']['sync_tag'],cfg['msg']['comments'],cfg['msg']['sync_tag'],cfg['msg']['run_time'],v_cmd)
 
@@ -239,17 +239,17 @@ def write_remote_crontab_sync(cfg,ssh):
 
     v_agent_ = '''sed -i "/{0}/d" /tmp/config && echo  -e "\n#{1} tag={2}\n#{3} {4} &>/dev/null &" >> /tmp/config'''.format('db_agent', '数据库代理服务', 'db_agent.py', '*/1 * * * *', v_cmd_)
 
-    v_clear  = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls)
-
-    v_clear_ = '''echo  -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls)
-
-    v_clear2 = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls2)
-
-    v_clear2_ = '''echo -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls2)
-
-    v_clear3 = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls3)
-
-    v_clear3_ = '''echo -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls3)
+    # v_clear  = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls)
+    #
+    # v_clear_ = '''echo  -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->clickhouse]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls)
+    #
+    # v_clear2 = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls2)
+    #
+    # v_clear2_ = '''echo -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls2)
+    #
+    # v_clear3 = '''echo  -e "\n#{0} tag={1}\n{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls3)
+    #
+    # v_clear3_ = '''echo -e "\n#{0} tag={1}\n#{2} {3} &>/dev/null &" >> /tmp/config'''.format('实时日志清理[mysql->mysql]', cfg['msg']['sync_tag'], '0 1 * * * ', v_cls3)
 
     v_cron2  = '''sed -i '/^$/{N;/\\n$/D};' /tmp/config'''
 
@@ -264,18 +264,18 @@ def write_remote_crontab_sync(cfg,ssh):
        if not ssh.exec(v_agent)['status']:
           return {'code': -1, 'msg': 'failure!'}
 
-       if cfg['msg']['sync_tag'].count('logger') >0:
-           if cfg['msg']['sync_type'] == '8':
-              if cfg['msg']['dest_db_type'] == '10':
-                 if not ssh.exec(v_clear3)['status']:
-                      return {'code': -1, 'msg': 'failure!'}
-              else:
-                 if not ssh.exec(v_clear)['status']:
-                      return {'code': -1, 'msg': 'failure!'}
-
-           if cfg['msg']['sync_type'] == '2':
-               if not ssh.exec(v_clear2)['status']:
-                  return {'code': -1, 'msg': 'failure!'}
+       # if cfg['msg']['sync_tag'].count('logger') >0:
+       #     if cfg['msg']['sync_type'] == '8':
+       #        if cfg['msg']['dest_db_type'] == '10':
+       #           if not ssh.exec(v_clear3)['status']:
+       #                return {'code': -1, 'msg': 'failure!'}
+       #        else:
+       #           if not ssh.exec(v_clear)['status']:
+       #                return {'code': -1, 'msg': 'failure!'}
+       #
+       #     if cfg['msg']['sync_type'] == '2':
+       #         if not ssh.exec(v_clear2)['status']:
+       #            return {'code': -1, 'msg': 'failure!'}
 
     else:
        if not ssh.exec(v_cron_)['status']:
@@ -284,17 +284,17 @@ def write_remote_crontab_sync(cfg,ssh):
        if not ssh.exec(v_agent_)['status']:
           return {'code': -1, 'msg': 'failure!'}
 
-       if cfg['msg']['sync_tag'].count('logger') > 0:
-           if cfg['msg']['sync_type'] == '8':
-               if cfg['msg']['dest_db_type'] == '10':
-                   if not ssh.exec(v_clear3_)['status']:
-                       return {'code': -1, 'msg': 'failure!'}
-               else:
-                   if not ssh.exec(v_clear_)['status']:
-                       return {'code': -1, 'msg': 'failure!'}
-           if cfg['msg']['sync_type'] == '2':
-               if not ssh.exec(v_clear2_)['status']:
-                   return {'code': -1, 'msg': 'failure!'}
+       # if cfg['msg']['sync_tag'].count('logger') > 0:
+       #     if cfg['msg']['sync_type'] == '8':
+       #         if cfg['msg']['dest_db_type'] == '10':
+       #             if not ssh.exec(v_clear3_)['status']:
+       #                 return {'code': -1, 'msg': 'failure!'}
+       #         else:
+       #             if not ssh.exec(v_clear_)['status']:
+       #                 return {'code': -1, 'msg': 'failure!'}
+       #     if cfg['msg']['sync_type'] == '2':
+       #         if not ssh.exec(v_clear2_)['status']:
+       #             return {'code': -1, 'msg': 'failure!'}
 
     if not ssh.exec(v_cron2)['status']:
        return {'code': -1, 'msg': 'failure!'}
@@ -334,17 +334,17 @@ def transfer_remote_file_sync(cfg,ssh,ftp):
     if not ftp.transfer(f_local, f_remote):
         return {'code': -1, 'msg': 'failure!'}
 
-    f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2clickhouse_clear_cluster.py')
-    if not ftp.transfer(f_local, f_remote):
-        return {'code': -1, 'msg': 'failure!'}
-
-    f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2clickhouse_clear.py')
-    if not ftp.transfer(f_local, f_remote):
-        return {'code': -1, 'msg': 'failure!'}
-
-    f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2mysql_real_clear.py')
-    if not ftp.transfer(f_local, f_remote):
-        return {'code': -1, 'msg': 'failure!'}
+    # f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2clickhouse_clear_cluster.py')
+    # if not ftp.transfer(f_local, f_remote):
+    #     return {'code': -1, 'msg': 'failure!'}
+    #
+    # f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2clickhouse_clear.py')
+    # if not ftp.transfer(f_local, f_remote):
+    #     return {'code': -1, 'msg': 'failure!'}
+    #
+    # f_local, f_remote = gen_transfer_file(cfg, 'syncer', 'mysql2mysql_real_clear.py')
+    # if not ftp.transfer(f_local, f_remote):
+    #     return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
 
@@ -355,9 +355,9 @@ def run_remote_cmd_sync(cfg,ssh):
     cmd3 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_sync.sh')
     cmd4 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_agent.sh')
     cmd5 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'db_agent.py')
-    cmd6 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_clear.py')
-    cmd7 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2mysql_real_clear.py')
-    cmd8 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_clear_cluster.py')
+    #cmd6 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_clear.py')
+    #cmd7 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2mysql_real_clear.py')
+    #cmd8 = 'chmod +x  {0}/{1}'.format(cfg['msg']['script_path'], 'mysql2clickhouse_clear_cluster.py')
 
     res = ssh.exec(cmd1)
     if not res['status']:
@@ -379,17 +379,17 @@ def run_remote_cmd_sync(cfg,ssh):
     if not res['status']:
         return {'code': -1, 'msg': 'failure!'}
 
-    res = ssh.exec(cmd6)
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
-
-    res = ssh.exec(cmd7)
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
-
-    res = ssh.exec(cmd8)
-    if not res['status']:
-        return {'code': -1, 'msg': 'failure!'}
+    # res = ssh.exec(cmd6)
+    # if not res['status']:
+    #     return {'code': -1, 'msg': 'failure!'}
+    #
+    # res = ssh.exec(cmd7)
+    # if not res['status']:
+    #     return {'code': -1, 'msg': 'failure!'}
+    #
+    # res = ssh.exec(cmd8)
+    # if not res['status']:
+    #     return {'code': -1, 'msg': 'failure!'}
 
     return {'code': 200, 'msg': 'success!'}
 

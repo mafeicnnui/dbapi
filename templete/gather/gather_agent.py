@@ -656,7 +656,6 @@ def get_es_available(config):
     else:
        return 0
 
-
 def get_redis_available(config):
     try:
         r= config['db_redis']
