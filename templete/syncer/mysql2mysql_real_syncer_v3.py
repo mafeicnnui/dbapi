@@ -22,6 +22,7 @@ import psutil
 from pymysqlreplication import BinLogStreamReader
 from pymysqlreplication.event import *
 from pymysqlreplication.row_event import (DeleteRowsEvent,UpdateRowsEvent,WriteRowsEvent,)
+from logging.handlers import TimedRotatingFileHandler
 
 class DateEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -37,12 +38,12 @@ class DateEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
 
 def print_dict(config):
-    logging.info('-'.ljust(85, '-'))
-    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
-    logging.info('-'.ljust(85, '-'))
+    logger.info('-'.ljust(85, '-'))
+    logger.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logger.info('-'.ljust(85, '-'))
     for key in config:
-        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
-    logging.info('-'.ljust(85, '-'))
+        logger.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
+    logger.info('-'.ljust(85, '-'))
 
 def format_sql(v_sql):
     return v_sql.replace("\\","\\\\").replace("'","\\'")
@@ -162,12 +163,12 @@ def create_mysql_table(cfg,event):
     if check_tab_exists_pk(cfg,event) >0:
         if check_mysql_database(cfg,event) == 0:
            cr.execute('create database `{}` /*!40100 DEFAULT CHARACTER SET utf8mb4 */'.format(get_mysql_schema(cfg, event)))
-           logging.info('\033[0;36;40mmysql => create  database `{}` success!\033[0m'.format(get_mysql_schema(cfg, event)))
+           logger.info('\033[0;36;40mmysql => create  database `{}` success!\033[0m'.format(get_mysql_schema(cfg, event)))
         st = f_get_table_ddl(cfg,event)
         cr.execute(st)
-        logging.info('Table:{}.{} created!'.format(get_mysql_schema(cfg, event),event['table']))
+        logger.info('Table:{}.{} created!'.format(get_mysql_schema(cfg, event),event['table']))
     else:
-        logging.info('Table `{}`.`{}` have no primary key,exit sync!'.format(get_mysql_schema(cfg, event),event['table']))
+        logger.info('Table `{}`.`{}` have no primary key,exit sync!'.format(get_mysql_schema(cfg, event),event['table']))
         sys.exit(0)
 
 def check_mysql_tab_sync(cfg,event):
@@ -210,14 +211,14 @@ def get_sync_table_id_minus(cfg,event):
     cr = cfg['cr_mysql']
     pk = get_sync_table_pk_names(cfg, event)
     rn = get_sync_table_total_rows(cfg, event)
-    logging.info('pk='+pk+',rn='+str(rn))
+    logger.info('pk='+pk+',rn='+str(rn))
     if rn  == 0:
        return False
     st = """select max({}) - min({})  from {}.{}""".format(pk,pk,event['schema'],event['table'])
-    logging.info('get_sync_table_id_minus:'+st)
+    logger.info('get_sync_table_id_minus:'+st)
     cr.execute(st)
     rs = cr.fetchone()
-    logging.info("get_sync_table_id_minus={} - minus:{}/3rn:{}".format(st, rs[0], 3 * rn))
+    logger.info("get_sync_table_id_minus={} - minus:{}/3rn:{}".format(st, rs[0], 3 * rn))
     if rs[0] > 3 * rn :
        return True
     else:
@@ -240,6 +241,13 @@ def get_tab_header(cfg,event):
     s2 = " values "
     s1 = s1+get_sync_table_cols(cfg,event)+")"
     return s1+s2
+
+def get_tab_header_new(cfg,event):
+    s1 = "insert into `{}`.`{}` (".format(get_mysql_schema(cfg,event),event['table'].lower())
+    s2 = " values "
+    s1 = s1+get_sync_table_cols(cfg,event)+")"
+    s3 = ','.join(['%s' for i in get_sync_table_cols(cfg,event).split(',')])
+    return s1+s2+'('+s3+')'
 
 def get_sync_table_pk_names(cfg,event):
     cr = cfg['cr_mysql']
@@ -376,10 +384,39 @@ def get_sync_table_total_rows(cfg,event):
     rs = cr.fetchone()
     return  rs[0]
 
-def full_sync(cfg,event):
-    logging.info('full sync table:{}...'.format(event['tab']))
-    tab = event['table']
+def full_sync_new(cfg,event):
+    logger.info('new full sync table:{}...'.format(event['tab']))
+    i_counter = 0
+    ins_sql_header = get_tab_header_new(cfg, event)
+    logger.info('ins_sql_header:'+ins_sql_header)
+    n_batch_size = int(cfg['batch_size'])
+    cr_source = cfg['cr_mysql']
+    cr_desc = cfg['cr_mysql_dest']
+    n_row = 0
+    if n_row is None:
+        logger.info('Table:{0} data is empty ,skip full sync!'.format(event['table']))
+        return
+    n_tab_total_rows = get_sync_table_total_rows(cfg, event)
+    while n_tab_total_rows > 0:
+        st = "select * from `{}`.`{}` limit {},{}" \
+            .format(event['schema'], event['table'], str(n_row),str(n_batch_size))
+        #logger.info('v1:' + st)
+        cr_source.execute(st)
+        rs_source = cr_source.fetchall()
+        if len(rs_source) > 0:
+            i_counter = i_counter + len(rs_source)
+            cr_desc.executemany(ins_sql_header, rs_source)
+            logger.info("Table:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                         format(event['table'], n_tab_total_rows, i_counter,
+                                round(i_counter / n_tab_total_rows * 100, 2)))
+        n_row = n_row + n_batch_size
+        if i_counter >= n_tab_total_rows or n_tab_total_rows == 0:
+            logger.info("n_row={},i_counter={},n_tab_total_rows={}".format(n_row,i_counter,n_tab_total_rows))
+            break
 
+def full_sync(cfg,event):
+    logger.info('full sync table:{}...'.format(event['tab']))
+    tab = event['table']
     # one primary key,int type and id continuous
     if (check_mysql_tab_exists(cfg, event) == 0 \
         or (check_mysql_tab_exists(cfg, event) > 0 and check_mysql_tab_sync(cfg, event) == 0)) \
@@ -391,7 +428,7 @@ def full_sync(cfg,event):
         cr_desc   = cfg['cr_mysql_dest']
         n_row     = get_sync_table_min_id(cfg, event)
         if n_row is None:
-            logging.info('Table:{0} data is empty ,skip full sync!'.format(tab))
+            logger.info('Table:{0} data is empty ,skip full sync!'.format(tab))
             return
         n_tab_total_rows = get_sync_table_total_rows(cfg, event)
         v_pk_col_name    = get_sync_table_pk_names(cfg, event)
@@ -400,7 +437,7 @@ def full_sync(cfg,event):
             st = "select {} from `{}`.`{}` where {} between {} and {}" \
                 .format(v_sync_table_cols, event['schema'],tab, v_pk_col_name, str(n_row),
                         str(n_row + n_batch_size))
-            logging.info('v1:'+st)
+            logger.info('v1:'+st)
             cr_source.execute(st)
             rs_source = cr_source.fetchall()
             v_sql = ''
@@ -424,7 +461,7 @@ def full_sync(cfg,event):
                 batch_sql = ins_sql_header + v_sql[0:-1]
                 cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
-                logging.info("Table:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                logger.info("Table:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
                              format(tab, n_tab_total_rows, i_counter,
                                     round(i_counter / n_tab_total_rows * 100, 2)))
             n_row = n_row + n_batch_size + 1
@@ -441,12 +478,12 @@ def full_sync(cfg,event):
         cr_desc = cfg['cr_mysql_dest']
         d_min_rq = get_sync_table_min_rq(cfg, event)
         if d_min_rq is None:
-            logging.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
+            logger.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
             return
         n_tab_total_rows = get_sync_table_total_rows(cfg, event)
         v_sync_col = get_sync_table_multi_pk_rq_col(cfg, event)
         if v_sync_col == '':
-            logging.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
+            logger.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
             return
         v_sync_table_cols = get_sync_table_cols(cfg, event)
 
@@ -455,7 +492,7 @@ def full_sync(cfg,event):
         while n_tab_total_rows > 0:
             st = "select {} from `{}`.`{}` where {} >= '{}' and  {}<'{}'" \
                 .format(v_sync_table_cols, event['schema'], tab, v_sync_col, d_rq_start, v_sync_col, d_rq_end)
-            logging.info('v2:'+st)
+            logger.info('v2:'+st)
             cr_source.execute(st)
             rs_source = cr_source.fetchall()
             v_sql = ''
@@ -479,7 +516,7 @@ def full_sync(cfg,event):
                 batch_sql = ins_sql_header + v_sql[0:-1]
                 cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
-                logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                logger.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
                              format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2)))
 
             d_rq_start = d_rq_end
@@ -497,12 +534,12 @@ def full_sync(cfg,event):
         cr_desc = cfg['cr_mysql_dest']
         d_min_rq = get_sync_table_min_rq(cfg, event)
         if d_min_rq is None:
-            logging.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
+            logger.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
             return
         n_tab_total_rows = get_sync_table_total_rows(cfg, event)
         v_sync_col = get_sync_table_multi_pk_rq_col(cfg, event)
         if v_sync_col=='':
-            logging.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
+            logger.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
             return
         v_sync_table_cols = get_sync_table_cols(cfg, event)
 
@@ -511,7 +548,7 @@ def full_sync(cfg,event):
         while n_tab_total_rows > 0:
             st = "select {} from `{}`.`{}` where {} >= '{}' and  {}<'{}'" \
                 .format(v_sync_table_cols, event['schema'], tab, v_sync_col, d_rq_start,v_sync_col,d_rq_end)
-            logging.info('v3:'+st)
+            logger.info('v3:'+st)
             cr_source.execute(st)
             rs_source = cr_source.fetchall()
             v_sql = ''
@@ -535,7 +572,7 @@ def full_sync(cfg,event):
                 batch_sql = ins_sql_header + v_sql[0:-1]
                 cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
-                logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                logger.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
                         format(tab, n_tab_total_rows, i_counter,round(i_counter / n_tab_total_rows * 100, 2)))
 
             d_rq_start = d_rq_end
@@ -553,12 +590,12 @@ def full_sync(cfg,event):
         cr_desc = cfg['cr_mysql_dest']
         d_min_rq = get_sync_table_min_rq(cfg, event)
         if d_min_rq is None:
-            logging.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
+            logger.info('Table:{0} date column  value is empty ,skip full sync!'.format(tab))
             return
         n_tab_total_rows = get_sync_table_total_rows(cfg, event)
         v_sync_col = get_sync_table_multi_pk_rq_col(cfg, event)
         if v_sync_col == '':
-            logging.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
+            logger.info('Table:{0} date column is not exists ,skip full sync!'.format(tab))
             return
         v_sync_table_cols = get_sync_table_cols(cfg, event)
 
@@ -567,7 +604,7 @@ def full_sync(cfg,event):
         while n_tab_total_rows > 0:
             st = "select {} from `{}`.`{}` where {} >= '{}' and  {}<'{}'" \
                 .format(v_sync_table_cols, event['schema'], tab, v_sync_col, d_rq_start, v_sync_col, d_rq_end)
-            logging.info('v3:' + st)
+            logger.info('v3:' + st)
             cr_source.execute(st)
             rs_source = cr_source.fetchall()
             v_sql = ''
@@ -591,7 +628,7 @@ def full_sync(cfg,event):
                 batch_sql = ins_sql_header + v_sql[0:-1]
                 cr_desc.execute(batch_sql)
                 i_counter = i_counter + len(rs_source)
-                logging.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
+                logger.info("\rTable:{0},Total rec:{1},Process rec:{2},Complete:{3}%".
                              format(tab, n_tab_total_rows, i_counter, round(i_counter / n_tab_total_rows * 100, 2)))
 
             d_rq_start = d_rq_end
@@ -607,7 +644,7 @@ def create_table_many(cfg):
                      'column': o.split('$')[0].split('.')[2]}
             if check_tab_exists_pk(cfg, event) > 0 and check_mysql_tab_exists(cfg, event) == 0:
                 event['tab'] = event['schema'] + '.' + event['table']
-                logging.info('create table {} ...'.format(event['tab']))
+                logger.info('create table {} ...'.format(event['tab']))
                 create_mysql_table(cfg, event)
 
 def full_sync_one(cfg,event):
@@ -632,7 +669,7 @@ def full_sync_many(cfg):
     cfg['cr_mysql'].execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
     cfg['cr_mysql'].execute('START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */')
     cfg['full_binlog_file'], cfg['full_binlog_pos'] = get_file_and_pos(cfg)[0:2]
-    logging.info('full sync checkpoint:{}/{}'.format(cfg['full_binlog_file'], cfg['full_binlog_pos']))
+    logger.info('full sync checkpoint:{}/{}'.format(cfg['full_binlog_file'], cfg['full_binlog_pos']))
     cfg['cr_mysql'].execute('UNLOCK TABLES')
     cfg['sync_table_diff'] = []
     for o in cfg['sync_table']:
@@ -642,13 +679,14 @@ def full_sync_many(cfg):
            if check_tab_exists_pk(cfg,event) >0 and check_mysql_tab_exists(cfg, event) == 0:
               cfg['sync_table_diff'].append(o)
               if check_mysql_tab_exists(cfg, event) == 0:
-                 logging.info('create table {} ...'.format(event['tab']))
+                 logger.info('create table {} ...'.format(event['tab']))
                  create_mysql_table(cfg, event)
               else:
-                 logging.info('Table {} exists!'.format(event['tab']))
+                 logger.info('Table {} exists!'.format(event['tab']))
               cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
-              logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
-              full_sync(cfg,event)
+              logger.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'],event['tab']))
+              #full_sync(cfg,event)
+              full_sync_new(cfg,event)
     cfg['db_mysql'].commit()
 
 def get_cols_from_mysql(cfg,event):
@@ -869,7 +907,7 @@ def write_ckpt(cfg):
     }
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ck, ensure_ascii=False, indent=4, separators=(',', ':')))
-    logging.info('update checkpoint:{}/{}'.format(cfg['binlog_file'],cfg['binlog_pos'] ))
+    logger.info('update checkpoint:{}/{}'.format(cfg['binlog_file'],cfg['binlog_pos'] ))
 
 def upd_ckpt(cfg):
     ckpt = {
@@ -880,7 +918,7 @@ def upd_ckpt(cfg):
     }
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
-    logging.info('update ckpt:{}/{}'.format(cfg['binlog_file'],cfg['binlog_pos'] ))
+    logger.info('update ckpt:{}/{}'.format(cfg['binlog_file'],cfg['binlog_pos'] ))
 
 def check_ckpt(cfg):
     return os.path.isfile('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']))
@@ -895,11 +933,11 @@ def read_ckpt(cfg):
         return binlog
 
 def get_ds_mysql_sour(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=False)
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=False,max_allowed_packet=1073741824)
     return conn
 
 def get_ds_mysql_dest(ip,port,service ,user,password):
-    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=True)
+    conn = pymysql.connect(host=ip, port=int(port), user=user, passwd=password, db=service, charset='utf8mb4',autocommit=True,max_allowed_packet=1073741824)
     return conn
 
 def aes_decrypt(p_password,p_key):
@@ -911,10 +949,10 @@ def aes_decrypt(p_password,p_key):
             config = res['msg']
             return config
         else:
-            logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
+            logger.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
             return None
     except:
-        logging.info('aes_decrypt api not available!')
+        logger.info('aes_decrypt api not available!')
         return None
 
 def upd_cfg_db_cur(config):
@@ -952,7 +990,7 @@ def upd_cfg_db_cur(config):
         pos = ckpt['binlog_pos']
         pid = ckpt['pid']
         if file not in get_binlog_files(config):
-            logging.info('binlog file not exist mysql server,get current file,pos!!!')
+            logger.info('binlog file not exist mysql server,get current file,pos!!!')
             file, pos = get_file_and_pos(config)[0:2]
     else:
         file, pos = get_file_and_pos(config)[0:2]
@@ -1023,15 +1061,15 @@ def get_config_from_db(tag,workdir):
         return config
     else:
         lname = '{}/{}_cfg.json'.format(workdir, tag)
-        logging.info('Load interface `url` failure!'.format(url))
-        logging.info('Read local config file `{}`.'.format(lname))
+        logger.info('Load interface `url` failure!'.format(url))
+        logger.info('Read local config file `{}`.'.format(lname))
         config = get_local_config(lname)
         print_dict(config)
         if config is None:
-            logging.info('Load local config failure!')
+            logger.info('Load local config failure!')
             return None
         else:
-            config = upd_cfg(config)
+            #config = upd_cfg(config)
             config = upd_cfg_db_cur(config)
             print_dict(config)
             return config
@@ -1079,8 +1117,8 @@ def write_event(cfg,event):
                values('{}','{}') """.format(event['tab'],json.dumps(event,cls=DateEncoder))
        cfg['cr_mysql_log'].execute(st)
     except:
-        logging.info('write event failure!')
-        logging.info(traceback.format_exc())
+        logger.info('write event failure!')
+        logger.info(traceback.format_exc())
 
 def merge_insert(data):
    s = "insert into t_db_sync_log(`sync_tag`,`sync_table`,`statement`,`type`) values "
@@ -1099,7 +1137,7 @@ def flush_buffer(cfg):
         if get_seconds(cfg['sync_event_timeout']) >= int(cfg['sync_gap']):
             st = merge_insert(cfg['sync_event'])
             cfg['cr_mysql_log'].execute(st)
-            logging.info('[{}] writing buffer into log table(timeout:{},binlog:{}/{})!'.
+            logger.info('[{}] writing buffer into log table(timeout:{},binlog:{}/{})!'.
                 format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event'])),cfg['binlog_file'] ,cfg['binlog_pos'] ))
             write_ckpt(cfg)
             cfg['sync_event'] = []
@@ -1108,7 +1146,7 @@ def flush_buffer(cfg):
         if len(cfg['sync_event']) >= int(cfg['batch_size_incr']):
             st = merge_insert(cfg['sync_event'])
             cfg['cr_mysql_log'].execute(st)
-            logging.info('[{}] writing buffer into log server(full:{},binlog:{}/{})!'.
+            logger.info('[{}] writing buffer into log server(full:{},binlog:{}/{})!'.
                 format(cfg['sync_tag'].split('_')[0],str(len(cfg['sync_event'])),cfg['binlog_file'] ,cfg['binlog_pos'] ))
             write_ckpt(cfg)
             cfg['sync_event'] = []
@@ -1121,8 +1159,8 @@ def write_sql(cfg,event):
        ect = '{}.{}'.format(cfg['binlog_file'], str(cfg['binlog_pos']))
        fct = '{}.{}'.format(cfg['full_checkpoint'][event['tab']]['binlog_file'],str(cfg['full_checkpoint'][event['tab']]['binlog_pos']))
        if ect > fct :
-           logging.info('full sync checkpoint:{}'.format(fct))
-           logging.info('incr sync checkpoint:{}'.format(ect))
+           logger.info('full sync checkpoint:{}'.format(fct))
+           logger.info('incr sync checkpoint:{}'.format(ect))
            cfg['sync_event'].append(
                {
                    'sync_tag': cfg['sync_tag'],
@@ -1131,7 +1169,7 @@ def write_sql(cfg,event):
                    'type': event['action']
                }
            )
-           logging.info('[{}] writing event {} into buffer[{}/{},binlog:{}/{}]!'.
+           logger.info('[{}] writing event {} into buffer[{}/{},binlog:{}/{}]!'.
                         format(cfg['sync_tag'].split('_')[0],
                                event['action'],
                                int(cfg['batch_size_incr']),
@@ -1139,12 +1177,12 @@ def write_sql(cfg,event):
                                cfg['binlog_file'],
                                cfg['binlog_pos']))
            flush_buffer(cfg)
-           logging.info('delete full sync table {},checkpoint:{}'.format(event['tab'], cfg['full_checkpoint'][event['tab']]))
+           logger.info('delete full sync table {},checkpoint:{}'.format(event['tab'], cfg['full_checkpoint'][event['tab']]))
            del cfg['full_checkpoint'][event['tab']]
        else:
-           logging.info('full sync checkpoint skipped!')
-           logging.info('full checkpoint:{}'.format(fct))
-           logging.info('incr checkpoint:{}'.format(ect))
+           logger.info('full sync checkpoint skipped!')
+           logger.info('full checkpoint:{}'.format(fct))
+           logger.info('incr checkpoint:{}'.format(ect))
     else:
         cfg['sync_event'].append(
           {
@@ -1154,7 +1192,7 @@ def write_sql(cfg,event):
              'type'       : event['action']
           }
         )
-        logging.info('[{}] writing event {} into buffer[{}/{},binlog:{}/{}]!'.
+        logger.info('[{}] writing event {} into buffer[{}/{},binlog:{}/{}]!'.
              format(cfg['sync_tag'].split('_')[0],
                     event['action'],
                     int(cfg['batch_size_incr']),
@@ -1182,11 +1220,11 @@ def write_sync_log(config):
         url = 'http://$$API_SERVER$$/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=30)
         if res.status_code != 200:
-           logging.info('Interface write_sync_log call failed!')
+           logger.info('Interface write_sync_log call failed!')
         else:
-           logging.info('Interface write_sync_log success!')
+           logger.info('Interface write_sync_log success!')
     except:
-         logging.info('write_sync_log failure!')
+         logger.info('write_sync_log failure!')
 
 def read_real_sync_status(p_tag):
     try:
@@ -1195,7 +1233,7 @@ def read_real_sync_status(p_tag):
         res = requests.post(url,data=par,timeout=30).json()
         return res
     except:
-        logging.info('read_real_sync_status failure!')
+        logger.info('read_real_sync_status failure!')
         return None
 
 
@@ -1228,7 +1266,7 @@ def init_cfg(cfg):
                 pkn[tab]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
                 col[tab]   = evt['column']
             else:
-                logging.info("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
+                logger.info("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
                 types[tab] = None
                 pks[tab] = False
                 pkn[tab] = ''
@@ -1250,7 +1288,7 @@ def init_diff_cfg(cfg):
                 pkn[tab]   = get_table_pk_names(cfg,evt).replace('`','').split(',')
                 col[tab]   = evt['column']
             else:
-                logging.info("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
+                logger.info("\033[0;31;40mTable:{}.{} not primary key,skip sync...\033[0m".format(evt['schema'],evt['table']))
                 types[tab] = None
                 pks[tab] = False
                 pkn[tab] = ''
@@ -1258,8 +1296,8 @@ def init_diff_cfg(cfg):
     return types,pks,pkn,col
 
 def start_incr_sync(cfg,workdir):
-    logging.info("\033[0;36;40m[{}] start incr sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
-    logging.info("\033[0;36;40m binlog_file:{},binlog_pos:{}\033[0m".format(cfg['full_binlog_file'],cfg['full_binlog_pos']))
+    logger.info("\033[0;36;40m[{}] start incr sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
+    logger.info("\033[0;36;40m binlog_file:{},binlog_pos:{}\033[0m".format(cfg['full_binlog_file'],cfg['full_binlog_pos']))
     MYSQL_SETTINGS = {
         "host"   : cfg['db_mysql_ip'],
         "port"   : int(cfg['db_mysql_port']),
@@ -1302,20 +1340,20 @@ def start_incr_sync(cfg,workdir):
                        while True:
                             time.sleep(1)
                             if sync_status['msg']['real_sync_status'] == 'PAUSE':
-                               logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                               logger.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                continue
                             elif sync_status['msg']['real_sync_status']  == 'STOP':
-                               logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                               logger.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                break
                             else:
                                break
                     elif sync_status['msg']['real_sync_status']  == 'STOP':
-                        logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                        logger.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                         break
 
             if get_seconds(flush_time) >= int(cfg['sync_gap']):
                flush_buffer(cfg)
-               logging.info("\033[1;36;40m[{}] flush buffer update ckpt file!]!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               logger.info("\033[1;36;40m[{}] flush buffer update ckpt file!]!\033[0m".format(cfg['sync_tag'].split('_')[0]))
                flush_time = datetime.datetime.now()
 
             if get_seconds(gather_time) >= 600:
@@ -1325,14 +1363,14 @@ def start_incr_sync(cfg,workdir):
                cfg['delete_amount'] = delete_amount
                cfg['ddl_amount']    = ddl_amount
                write_sync_log(cfg)
-               logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               logger.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
                insert_amount = 0
                update_amount = 0
                delete_amount = 0
                ddl_amount = 0
                gather_time = datetime.datetime.now()
                file, pos = get_file_and_pos(cfg)[0:2]
-               logging.info("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlog_file'],cfg['binlog_pos']))
+               logger.info("\033[1;36;40m[{}] update ckpt file: [db: {}/{} - sync:{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],file,pos,cfg['binlog_file'],cfg['binlog_pos']))
 
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                sync_event = cfg['sync_event']
@@ -1342,7 +1380,7 @@ def start_incr_sync(cfg,workdir):
                full_checkpoint = cfg['full_checkpoint']
                tmp = get_config_from_db(cfg['sync_tag'],workdir)
                if tmp is None:
-                   logging.info('config apply failure,skip load config!')
+                   logger.info('config apply failure,skip load config!')
                else:
                    cfg = tmp
                    cfg['sync_event'] = sync_event
@@ -1352,21 +1390,21 @@ def start_incr_sync(cfg,workdir):
                    cfg['full_checkpoint'] = full_checkpoint
                    types,pks,pkn,col = init_cfg(cfg)
                    apply_time = datetime.datetime.now()
-                   logging.info("\033[1;36;40m[{}] apply config success!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+                   logger.info("\033[1;36;40m[{}] apply config success!\033[0m".format(cfg['sync_tag'].split('_')[0]))
                    flush_buffer(cfg)
 
             if isinstance(binlogevent, RotateEvent):
                 cfg['binlog_file'] = binlogevent.next_binlog
-                logging.info("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+                logger.info("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, QueryEvent):
                 cfg['binlog_pos'] = binlogevent.packet.log_pos
                 event = {"schema": bytes.decode(binlogevent.schema), "query": binlogevent.query.lower()}
                 if 'create' in event['query'] or 'drop' in event['query']  or 'alter' in event['query'] or 'truncate' in event['query']:
-                    logging.info('query:' + event['query'])
+                    logger.info('query:' + event['query'])
                     ddl = gen_ddl_sql(event['query'])
                     if ddl is not None:
-                      logging.info('DDL:' + ddl)
+                      logger.info('DDL:' + ddl)
                       event['table'] = get_obj_name(event['query']).lower()
                       event['tab'] = event['schema']+'.'+event['table']
 
@@ -1374,16 +1412,16 @@ def start_incr_sync(cfg,workdir):
                         if check_mysql_tab_exists(cfg,event) == 0:
                            create_mysql_table(cfg,event)
                            cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
-                           logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
+                           logger.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
                            full_sync_one(cfg, event)
-                           logging.info("\033[1;36;40m[{}] The table:{}  is fully synchronized!\033[0m".format(event['tab']))
-                           logging.info("\033[1;37;40m full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
+                           logger.info("\033[1;36;40m[{}] The table:{}  is fully synchronized!\033[0m".format(event['tab']))
+                           logger.info("\033[1;37;40m full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
                            types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                            ddl_amount = ddl_amount +1
                         else:
                            try:
-                               logging.info('Execute DDL:{}'.format(ddl))
-                               logging.info('use {}'.format(event['schema']))
+                               logger.info('Execute DDL:{}'.format(ddl))
+                               logger.info('use {}'.format(event['schema']))
                                cfg['db_mysql_dest'].cursor().execute('use {}'.format(event['schema']))
                                cfg['db_mysql_dest'].cursor().execute(ddl)
                            except:
@@ -1402,18 +1440,18 @@ def start_incr_sync(cfg,workdir):
                             while True:
                                 time.sleep(1)
                                 if  sync_status['msg']['real_sync_status'] == 'PAUSE':
-                                    logging.info("\033[1;37;40m sync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                                    logger.info("\033[1;37;40m sync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                     flush_buffer(cfg)
                                     continue
                                 elif sync_status['msg']['real_sync_status'] == 'STOP':
                                     flush_buffer(cfg)
-                                    logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                                    logger.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                     sys.exit(0)
                                 else:
                                     break
                         elif sync_status['msg']['real_sync_status'] == 'STOP':
                             flush_buffer(cfg)
-                            logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                            logger.info("\033[1;37;40m sync task {} terminate!\033[0m".format(cfg['sync_tag']))
                             sys.exit(0)
 
                 for row in binlogevent.rows:
@@ -1427,10 +1465,10 @@ def start_incr_sync(cfg,workdir):
                             event['column'] = col[event['tab']]
                             create_mysql_table(cfg, event)
                             cfg['cr_mysql_log'].execute("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
-                            logging.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
+                            logger.info("delete from t_db_sync_log where sync_tag='{}' and sync_table='{}'".format(cfg['sync_tag'], event['tab']))
                             full_sync_one(cfg, event)
-                            logging.info("\033[1;36;40m[{}] The table:{}  is fully synchronized!\033[0m".format(event['tab']))
-                            logging.info("\033[1;37;40m full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
+                            logger.info("\033[1;36;40m[{}] The table:{}  is fully synchronized!\033[0m".format(event['tab']))
+                            logger.info("\033[1;37;40m full sync checkpoint:{}!\033[0m".format(json.dumps(cfg['full_checkpoint'])))
                             types[event['schema'] + '.' + event['table']] = get_col_type(cfg, event)
                             write_ckpt(cfg)
 
@@ -1469,8 +1507,8 @@ def start_incr_sync(cfg,workdir):
                             insert_amount = insert_amount +1
 
     except :
-        logging.info('start_incr_sync failure!')
-        logging.info(traceback.format_exc())
+        logger.info('start_incr_sync failure!')
+        logger.info(traceback.format_exc())
     finally:
         stream.close()
 
@@ -1478,8 +1516,8 @@ def apply_diff_logs(cfg):
     if list(set(cfg['sync_table']) - set(cfg['sync_table_diff'])) == [] or cfg['sync_table_diff'] == []:
        return
 
-    logging.info("\033[0;36;40m[{}] apply diff logs...\033[0m".format(cfg['sync_tag'].split('_')[0]))
-    logging.info("\033[0;36;40mFrom binlog_file:{}/{} To binlog_pos:{}/{}\033[0m".format(cfg['binlog_file'],cfg['binlog_pos'],cfg['full_binlog_file'],cfg['full_binlog_pos']))
+    logger.info("\033[0;36;40m[{}] apply diff logs...\033[0m".format(cfg['sync_tag'].split('_')[0]))
+    logger.info("\033[0;36;40mFrom binlog_file:{}/{} To binlog_pos:{}/{}\033[0m".format(cfg['binlog_file'],cfg['binlog_pos'],cfg['full_binlog_file'],cfg['full_binlog_pos']))
     MYSQL_SETTINGS = {
         "host"   : cfg['db_mysql_ip'],
         "port"   : int(cfg['db_mysql_port']),
@@ -1518,17 +1556,17 @@ def apply_diff_logs(cfg):
                cfg['delete_amount'] = delete_amount
                cfg['ddl_amount']    = ddl_amount
                write_sync_log(cfg)
-               logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+               logger.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
                insert_amount = 0
                update_amount = 0
                delete_amount = 0
                ddl_amount  = 0
                gather_time = datetime.datetime.now()
-               logging.info("\033[1;36;40m[{}] apply diff ckpt : [{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],stream.log_file,stream.log_pos))
+               logger.info("\033[1;36;40m[{}] apply diff ckpt : [{}/{}]!\033[0m".format(cfg['sync_tag'].split('_')[0],stream.log_file,stream.log_pos))
                flush_buffer(cfg)
 
             if isinstance(binlogevent, RotateEvent):
-                logging.info("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+                logger.info("\033[1;34;40m[{}] binlog file has changed!\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
             if isinstance(binlogevent, QueryEvent):
                 cfg['binlog_pos'] = binlogevent.packet.log_pos
@@ -1545,7 +1583,7 @@ def apply_diff_logs(cfg):
                           types[event['schema']+'.'+event['table']] = get_col_type(cfg, event)
                           ddl_amount = ddl_amount +1
                        else:
-                          logging.info('Execute DDL:{}'.format(ddl))
+                          logger.info('Execute DDL:{}'.format(ddl))
                           cfg['db_mysql_dest'].cursor().execute(ddl)
 
             if isinstance(binlogevent, DeleteRowsEvent) or \
@@ -1602,16 +1640,16 @@ def apply_diff_logs(cfg):
             if stream.log_file == cfg['full_binlog_file'] and (stream.log_pos + 31 == int(cfg['full_binlog_pos']) or stream.log_pos >=int(cfg['full_binlog_pos'])):
                 stream.close()
                 break
-        logging.info("\033[0;36;40m[{}] apply diff logs ok!...\033[0m".format(cfg['sync_tag'].split('_')[0]))
+        logger.info("\033[0;36;40m[{}] apply diff logs ok!...\033[0m".format(cfg['sync_tag'].split('_')[0]))
 
     except Exception as e:
-        logging.info('apply_diff_logs failure!')
-        logging.info(traceback.format_exc())
+        logger.info('apply_diff_logs failure!')
+        logger.info(traceback.format_exc())
     finally:
         stream.close()
 
 def start_full_sync(cfg):
-    logging.info("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
+    logger.info("\033[0;36;40m[{}] start full sync...\033[0m".format(cfg['sync_tag'].split('_')[0]))
     full_sync_many(cfg)
 
 def get_task_status(tag,workdir):
@@ -1626,11 +1664,11 @@ def get_task_status(tag,workdir):
         cfg = res['msg']
     else:
         lname = '{}/{}_cfg.json'.format(workdir, tag)
-        logging.info('Load interface `{}` failure!'.format(url))
-        logging.info('get_task_status:Read local config file `{}`.'.format(lname))
+        logger.info('Load interface `{}` failure!'.format(url))
+        logger.info('get_task_status:Read local config file `{}`.'.format(lname))
         cfg = get_local_config(lname)
         if cfg is None:
-            logging.info('get_task_status:Load local config failure!')
+            logger.info('get_task_status:Load local config failure!')
             sys.exit(0)
 
     if check_ckpt(cfg):
@@ -1646,7 +1684,7 @@ def get_task_status(tag,workdir):
         else:
             return False
     else:
-        logging.info('config file :{}.json not exists!'.format(cfg['sync_tag']))
+        logger.info('config file :{}.json not exists!'.format(cfg['sync_tag']))
         return False
 
 def get_local_config(lname):
@@ -1680,9 +1718,19 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # init logger
-    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
-                        format='[%(asctime)s-%(levelname)s:%(message)s]',
-                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+    # logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag, datetime.datetime.now().strftime("%Y-%m-%d")),
+    #                     format='[%(asctime)s-%(levelname)s:%(message)s]',
+    #                     level=logger.info, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+
+    # 配置日志
+    logging.basicConfig()
+    logger = logging.getLogger('my_logger')
+    logger.setLevel(logging.INFO)
+    # 创建TimedRotatingFileHandler，按天切割日志
+    handler = TimedRotatingFileHandler(filename='/tmp/{}.log'.format(tag), when='D', interval=1, backupCount=7)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    # 添加到logger
+    logger.addHandler(handler)
 
     # check task
     if not get_task_status(tag,workdir):
@@ -1690,8 +1738,8 @@ if __name__ == "__main__":
        # call api get config
        cfg = get_config_from_db(tag,workdir)
        if cfg is None:
-          logging.info('Load config failure,exit sync!')
-          logging.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
+          logger.info('Load config failure,exit sync!')
+          logger.info("\033[1;37;40m sync task {} terminate!\033[0m".format(tag))
           sys.exit(0)
 
        # output parameter
@@ -1709,5 +1757,5 @@ if __name__ == "__main__":
 
        # parse binlog incr sync
        start_incr_sync(cfg,workdir)
-    else:
-       logging.info('sync program:{} is running!'.format(tag))
+    # else:
+    #    logger.info('sync program:{} is running!'.format(tag))

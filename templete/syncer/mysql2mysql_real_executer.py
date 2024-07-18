@@ -21,6 +21,7 @@ import psutil
 from email.mime.text import MIMEText
 from clickhouse_driver import Client
 from concurrent.futures import ProcessPoolExecutor,wait,as_completed
+from logging.handlers import TimedRotatingFileHandler
 
 def socket_port(ip, port):
     try:
@@ -165,12 +166,12 @@ def get_seconds(b):
     return int((a-b).total_seconds())
 
 def print_dict(config):
-    logging.info('-'.ljust(85, '-'))
-    logging.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
-    logging.info('-'.ljust(85, '-'))
+    logger.info('-'.ljust(85, '-'))
+    logger.info(' '.ljust(3, ' ') + "name".ljust(20, ' ') + 'value')
+    logger.info('-'.ljust(85, '-'))
     for key in config:
-        logging.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
-    logging.info('-'.ljust(85, '-'))
+        logger.info(' '.ljust(3, ' ') + key.ljust(20, ' ') + '=' + str(config[key]))
+    logger.info('-'.ljust(85, '-'))
 
 
 def format_sql(v_sql):
@@ -185,10 +186,10 @@ def aes_decrypt(p_password,p_key):
             config = res['msg']
             return config
         else:
-            logging.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
+            logger.info('Api read_db_decrypt call failure!,{0}'.format(res['msg']))
             return None
     except:
-        logging.info('aes_decrypt api not available!')
+        logger.info('aes_decrypt api not available!')
         return None
 
 def get_ds_mysql(ip,port,service ,user,password):
@@ -291,8 +292,9 @@ def upd_cfg(config):
     config['db_mysql_service_dest'] = db_mysql_service_dest
     config['db_mysql_user_dest'] = db_mysql_user_dest
     config['db_mysql_pass_dest'] = db_mysql_pass_dest
-    config['db_mysql_string'] = db_mysql_ip + ':' + db_mysql_port + '/' + db_mysql_service
-    config['db_mysql_dest_string'] = db_mysql_ip_dest + ':' + db_mysql_port_dest + '/' + db_mysql_service_dest
+
+    config['db_mysql_string'] = config['db_mysql_ip'] + ':' + config['db_mysql_port'] + '/' + config['db_mysql_service']
+    config['db_mysql_dest_string'] = config['db_mysql_ip_dest'] + ':' + config['db_mysql_port_dest'] + '/' + config['db_mysql_service_dest']
     config['exec_tag'] = config['sync_tag'].replace('_executer', '_logger')
     config['sleep_time'] = float(config['sync_gap'])
 
@@ -311,7 +313,7 @@ def upd_cfg(config):
         config['db_mysql_pass_log'] = aes_decrypt(config['ds_log']['password'], config['ds_log']['user'])
     else:
         print('mysql日志库不能为空!')
-        logging.info('mysql日志库不能为空!')
+        logger.info('mysql日志库不能为空!')
         sys.exit(0)
     config = get_sync_tables(config)
     return config
@@ -325,19 +327,19 @@ def get_config_from_db(tag,workdir):
       pass
 
     if res is not None and res['code'] == 200:
-        write_local_config(res['msg'])
         config = upd_cfg(res['msg'])
+        write_local_config(res['msg'])
         return config
     else:
         lname = '{}/{}_cfg.json'.format(workdir, tag)
-        logging.info('Load interface `$$API_SERVER$$` failure!')
-        logging.info('Read local config file `{}`.'.format(lname))
+        logger.info('Load interface `$$API_SERVER$$` failure!')
+        logger.info('Read local config file `{}`.'.format(lname))
         config = get_local_config(lname)
         if config is None:
-            logging.info('Load local config failure!')
+            logger.info('Load local config failure!')
             return None
         else:
-            config = upd_cfg(config)
+            #config = upd_cfg(config)
             return config
 
 
@@ -387,9 +389,9 @@ def write_sync_log(config):
         url = 'http://$$API_SERVER$$/write_sync_real_log'
         res = requests.post(url, data={'tag': json.dumps(par)},timeout=30)
         if res.status_code != 200:
-           logging.info('write_sync_log failure1!')
+           logger.info('write_sync_log failure1!')
     except:
-       logging.info('write_sync_log failure2!')
+       logger.info('write_sync_log failure2!')
 
 def write_mysql(cfg,tab):
     db_dest = get_ds_mysql(cfg['db_mysql_ip_dest'],
@@ -415,21 +417,21 @@ def write_mysql(cfg,tab):
     cfg['delete_amount'] = 0
     cfg['ddl_amount'] = 0
     write_sync_log(cfg)
-    logging.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
+    logger.info("\033[1;37;40m[{}] write sync log to db!\033[0m".format(cfg['sync_tag'].split('_')[0]))
     ids=''
     for r in rs_log:
         event = {'schema': r['sync_table'].split('.')[0], 'table': r['sync_table'].split('.')[1]}
         if check_mysql_tab_exists(cr_dest,cfg,event) == 0:
-           logging.info('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
+           logger.info('Table:{}.{} not exists,skip incr sync!'.format(get_mysql_schema(cfg,event),event['table']))
            time.sleep(1)
            continue
         try:
             cr_dest.execute(r['statement'])
             ids = ids + '{},'.format(r['id'])
         except:
-            logging.info('execute statement error!!!')
-            logging.info('\033[0;36;40m' + r['statement'] + '\033[0m')
-            logging.info(traceback.print_exc())
+            logger.info('execute statement error!!!')
+            logger.info('\033[0;36;40m' + r['statement'] + '\033[0m')
+            logger.info(traceback.print_exc())
 
             # send mail
             v_title = 'mysql->mysql实时同步任务执行失败告警[e]'
@@ -447,10 +449,10 @@ def write_mysql(cfg,tab):
         upd = "update t_db_sync_log set status='1' where id in({})".format(ids[0:-1])
         try:
           cr_log.execute(upd)
-          logging.info('Task {} execute complete!'.format(tab))
+          logger.info('Task {} execute complete!'.format(tab))
         except:
-          logging.info('update t_db_sync_log error!')
-          logging.info(traceback.print_exc())
+          logger.info('update t_db_sync_log error!')
+          logger.info(traceback.print_exc())
           # send mail
           v_title = 'mysql->mysql实时同步任务执行失败告警[u]'
           v_error = 'update t_db_sync_log error!\n' + traceback.print_exc() + '\n' + 'upd=' + upd
@@ -482,10 +484,10 @@ def read_real_sync_status(p_tag):
         res = requests.post(url,data=par,timeout=30).json()
         return res
     except:
-        logging.info('read_real_sync_status failure!')
+        logger.info('read_real_sync_status failure!')
         return None
 
-def start_syncer(cfg):
+def start_syncer(cfg,workdir):
     apply_time = datetime.datetime.now()
     sleep_time = datetime.datetime.now()
     sync_time  = datetime.datetime.now()
@@ -493,17 +495,17 @@ def start_syncer(cfg):
         while True:
             if get_seconds(apply_time) >= cfg['apply_timeout']:
                apply_time = datetime.datetime.now()
-               cfg = get_config_from_db(cfg['sync_tag'])
-               logging.info("\033[1;36;40\nmapply config success\033[0m")
+               cfg = get_config_from_db(cfg['sync_tag'],workdir)
+               logger.info("\033[1;36;40\nmapply config success\033[0m")
 
             tasks = get_tasks(cfg)
             if tasks!=():
-                logging.info('\n检测到新事件：')
-                logging.info('-'.ljust(85, '-'))
+                logger.info('\n检测到新事件：')
+                logger.info('-'.ljust(85, '-'))
                 for task in tasks:
-                    logging.info(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = '+ str(task['amount']))
-                logging.info('-'.ljust(85, '-'))
-                logging.info('\n')
+                    logger.info(' '.ljust(3, ' ') + task['sync_table'].ljust(50, ' ') + ' = '+ str(task['amount']))
+                logger.info('-'.ljust(85, '-'))
+                logger.info('\n')
 
                 sleep_time = datetime.datetime.now()
                 all_task = [executor.submit(write_mysql,cfg,t['sync_table']) for t in tasks]
@@ -514,7 +516,7 @@ def start_syncer(cfg):
                        log(res)
             else:
                if get_seconds(sleep_time) % 60 == 0:
-                  logging.info('\r未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
+                  logger.info('未检测到任务，休眠中:{}s ...'.format(str(get_seconds(sleep_time))))
                   time.sleep(1)
 
                if get_seconds(sync_time) >= 30:
@@ -525,15 +527,15 @@ def start_syncer(cfg):
                            while True:
                                time.sleep(1)
                                if sync_status['msg']['real_sync_status'] == 'PAUSE':
-                                   logging.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
+                                   logger.info("\033[1;37;40msync task {} suspended!\033[0m".format(cfg['sync_tag']))
                                    continue
                                elif sync_status['msg']['real_sync_status']== 'STOP':
-                                   logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                                   logger.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                                    break
                                else:
                                    break
                        elif sync_status['msg']['real_sync_status'] == 'STOP':
-                           logging.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
+                           logger.info("\033[1;37;40msync task {} terminate!\033[0m".format(cfg['sync_tag']))
                            break
 
 
@@ -544,7 +546,7 @@ def write_pid(cfg):
     }
     with open('{}/{}.json'.format(cfg['script_path'],cfg['sync_tag']), 'w') as f:
         f.write(json.dumps(ckpt, ensure_ascii=False, indent=4, separators=(',', ':')))
-    logging.info('write pid:{}'.format(ckpt['pid']))
+    logger.info('write pid:{}'.format(ckpt['pid']))
 
 
 def check_pid(cfg):
@@ -563,7 +565,7 @@ def read_pid(cfg):
 #     c = 'ps -ef|grep {} |grep {} | grep -v grep |  wc -l'.format(cfg['sync_tag'],cfg['script_file'])
 #     r = os.popen(c).read()
 #     if len(r.split('\n')) >= 3 :
-#        logging.info('Executer Task already running!')
+#        logger.info('Executer Task already running!')
 #        return True
 #     else:
 #        return False
@@ -619,26 +621,36 @@ if __name__=="__main__":
             debug = True
 
     # init logger
-    logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")),
-                        format='[%(asctime)s-%(levelname)s:%(message)s]',
-                        level=logging.INFO, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+    # logging.basicConfig(filename='/tmp/{}.{}.log'.format(tag,datetime.datetime.now().strftime("%Y-%m-%d")),
+    #                     format='[%(asctime)s-%(levelname)s:%(message)s]',
+    #                     level=logger.info, filemode='a', datefmt='%Y-%m-%d %I:%M:%S')
+
+    # 配置日志
+    logging.basicConfig()
+    logger = logging.getLogger('my_logger')
+    logger.setLevel(logging.INFO)
+    # 创建TimedRotatingFileHandler，按天切割日志
+    handler = TimedRotatingFileHandler(filename='/tmp/{}.log'.format(tag), when='D', interval=1, backupCount=7)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    # 添加到logger
+    logger.addHandler(handler)
 
     # call api get config
     cfg = get_config_from_db(tag,workdir)
 
     if cfg is None:
-        logging.info('load config failure,exit sync!')
+        logger.info('load config failure,exit sync!')
         sys.exit(0)
 
     # query system parameters to determine whether to run the  program
     if read_real_sync_status(tag) is not None and read_real_sync_status(tag)['msg']['real_sync_status'] == 'STOP':
-        logging.info("\033[1;37;40mTask `{}` terminate!\033[0m".format(cfg['sync_tag']))
+        logger.info("\033[1;37;40mTask `{}` terminate!\033[0m".format(cfg['sync_tag']))
         sys.exit(0)
 
     # check task
     if not get_task_status(cfg):
        write_pid(cfg)
        print_dict(cfg)
-       start_syncer(cfg)
-    else:
-       logging.info('sync program:{} is running!'.format(tag))
+       start_syncer(cfg,workdir)
+    # else:
+    #    logger.info('sync program:{} is running!'.format(tag))
