@@ -15,6 +15,7 @@ from urls.instance import instance
 from urls.slowlog  import slowlog
 from urls.health   import health
 from urls.alert    import alert
+from urls.bbgl     import bbgl
 
 urls = []
 urls.extend(backup)
@@ -27,4 +28,4 @@ urls.extend(instance)
 urls.extend(slowlog)
 urls.extend(health)
 urls.extend(alert)
-
+urls.extend(bbgl)
