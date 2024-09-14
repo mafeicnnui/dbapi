@@ -21,7 +21,7 @@ import json
 '''
 config = {
     "chat_interface":"https://api.hopsontone.com/wxcp/message/template/send",
-    "mysql":"10.2.39.18:3306:puppet:puppet:Puppet@123",
+    "mysql":"10.2.39.59:3306:puppet:puppet:Puppet@123",
     "warn_level":"紧急"
 }
 

@@ -1124,7 +1124,7 @@ def sync_mysql_data_no_pkid(config, ftab):
                 else:
                     for d in v_sql_del[0:-3].split('$$$'):
                         config['run_sql'] = 'delete from `{0}` where {1}'.format(tab, d)
-                        print(config['run_sql'])
+                        #print(config['run_sql'])
                         cr_desc.execute('delete from `{0}` where {1}'.format(tab, d))
                     config['run_sql'] = batch_sql
                     cr_desc.execute(batch_sql)
@@ -1170,14 +1170,15 @@ def sync_mysql_data_pkid(config, ftab):
             if ftab.split(':')[1] == '':
                 print("Full Sync Table :{0} ...".format(ftab.split(':')[0]))
                 print('Delete table:{0} all data,please wait...!'.format(tab))
-                st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
-                print(st_desc)
-                cr_desc.execute(st_desc)
-                rs_desc = cr_desc.fetchall()
-                for r in list(rs_desc):
-                    v_del = get_sync_where(v_pk_names, r[0])
-                    cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
-                print('Delete table:{0} all data ok!'.format(tab))
+                #st_desc = """select {0} as 'pk' from {1} """.format(v_pk_cols, tab)
+                #print(st_desc)
+                #cr_desc.execute(st_desc)
+                #rs_desc = cr_desc.fetchall()
+                #for r in list(rs_desc):
+                #    v_del = get_sync_where(v_pk_names, r[0])
+                #    cr_desc.execute('delete from {0} where {1}'.format(tab, v_del))
+                cr_desc.execute('delete from {0}'.format(tab))
+                print('delete table:{0} all data ok!'.format(tab))
             else:
                 print( "Sync Table increment :{0} for In recent {1} {2}..."
                        .format(ftab.split(':')[0],ftab.split(':')[2],config['sync_time_type']))

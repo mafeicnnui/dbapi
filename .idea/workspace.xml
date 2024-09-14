@@ -25,19 +25,15 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="bug fix">
-      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
+    <list default="true" id="d11799d4-bcce-489a-a687-18d32518c13a" name="Default" comment="api update">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer_v4.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v4.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/syncer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/syncer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/backup/mysql_backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/backup/mysql_backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/gather/gather_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/gather_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/gather/gather_redis_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/gather_redis_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/gather/monitor_sql_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/gather/monitor_sql_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/db_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/db_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/monitor/db_alert.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/monitor/db_alert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templete/monitor/server_alert.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/monitor/server_alert.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mssql2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mssql2mysql_sync.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_executer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_real_syncer_v3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/templete/syncer/mysql2mysql_sync.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -84,7 +80,7 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/templete/monitor" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/templete/syncer" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
@@ -99,11 +95,11 @@
       <recent name="D:\work\dbapi\templete\minio" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\work\dbapi\templete\monitor" />
-      <recent name="D:\work\dbapi\templete\gather" />
       <recent name="D:\work\dbapi\templete\syncer" />
-      <recent name="D:\work\dbapi\templete\syncer\his" />
       <recent name="D:\work\dbapi\model" />
+      <recent name="D:\work\dbapi\service" />
+      <recent name="D:\work\dbapi\urls" />
+      <recent name="D:\work\dbapi\templete\bbgl" />
     </key>
   </component>
   <component name="RunManager" selected="Python.dbapi">
@@ -779,35 +775,37 @@
       <workItem from="1714116525683" duration="6961000" />
       <workItem from="1715737450087" duration="552000" />
       <workItem from="1715824746337" duration="906000" />
-      <workItem from="1715847515481" duration="24990000" />
-    </task>
-    <task id="LOCAL-00073" summary="update mysql real sync">
-      <created>1649237807247</created>
-      <option name="number" value="00073" />
-      <option name="presentableId" value="LOCAL-00073" />
-      <option name="project" value="LOCAL" />
-      <updated>1649237807248</updated>
-    </task>
-    <task id="LOCAL-00074" summary="update mysql real sync">
-      <created>1649669161608</created>
-      <option name="number" value="00074" />
-      <option name="presentableId" value="LOCAL-00074" />
-      <option name="project" value="LOCAL" />
-      <updated>1649669161608</updated>
-    </task>
-    <task id="LOCAL-00075" summary="optimize mysql real sync">
-      <created>1649843314663</created>
-      <option name="number" value="00075" />
-      <option name="presentableId" value="LOCAL-00075" />
-      <option name="project" value="LOCAL" />
-      <updated>1649843314663</updated>
-    </task>
-    <task id="LOCAL-00076" summary="backup issue fix">
-      <created>1649843337726</created>
-      <option name="number" value="00076" />
-      <option name="presentableId" value="LOCAL-00076" />
-      <option name="project" value="LOCAL" />
-      <updated>1649843337726</updated>
+      <workItem from="1715847515481" duration="25287000" />
+      <workItem from="1716168683657" duration="606000" />
+      <workItem from="1716256407681" duration="906000" />
+      <workItem from="1716273384373" duration="28043000" />
+      <workItem from="1717720631359" duration="975000" />
+      <workItem from="1718936380413" duration="2304000" />
+      <workItem from="1721093299627" duration="7565000" />
+      <workItem from="1721115429347" duration="16781000" />
+      <workItem from="1721265339754" duration="913000" />
+      <workItem from="1721277203850" duration="682000" />
+      <workItem from="1721286237049" duration="4155000" />
+      <workItem from="1721291251735" duration="357000" />
+      <workItem from="1721294923544" duration="253000" />
+      <workItem from="1721715310107" duration="1368000" />
+      <workItem from="1721899746462" duration="240000" />
+      <workItem from="1722503567334" duration="472000" />
+      <workItem from="1722568859410" duration="2073000" />
+      <workItem from="1723441043136" duration="5166000" />
+      <workItem from="1723512507301" duration="3065000" />
+      <workItem from="1723530886374" duration="7829000" />
+      <workItem from="1723594852984" duration="5858000" />
+      <workItem from="1723771935952" duration="2029000" />
+      <workItem from="1724047611518" duration="118593000" />
+      <workItem from="1724980591888" duration="2205000" />
+      <workItem from="1725002875296" duration="52000" />
+      <workItem from="1725007041965" duration="696000" />
+      <workItem from="1725010263767" duration="95000" />
+      <workItem from="1725345076786" duration="77000" />
+      <workItem from="1725538841091" duration="2006000" />
+      <workItem from="1726300748111" duration="1702000" />
+      <workItem from="1726304291145" duration="330000" />
     </task>
     <task id="LOCAL-00077" summary="mysql real sync fix">
       <created>1649843570970</created>
@@ -1124,7 +1122,35 @@
       <option name="project" value="LOCAL" />
       <updated>1691046723515</updated>
     </task>
-    <option name="localTasksCounter" value="122" />
+    <task id="LOCAL-00122" summary="bug fix">
+      <created>1715937071897</created>
+      <option name="number" value="00122" />
+      <option name="presentableId" value="LOCAL-00122" />
+      <option name="project" value="LOCAL" />
+      <updated>1715937071897</updated>
+    </task>
+    <task id="LOCAL-00123" summary="add bbgl api">
+      <created>1721291387853</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1721291387854</updated>
+    </task>
+    <task id="LOCAL-00124" summary="real sync api bug fix">
+      <created>1721291409034</created>
+      <option name="number" value="00124" />
+      <option name="presentableId" value="LOCAL-00124" />
+      <option name="project" value="LOCAL" />
+      <updated>1721291409034</updated>
+    </task>
+    <task id="LOCAL-00125" summary="api update">
+      <created>1721291423868</created>
+      <option name="number" value="00125" />
+      <option name="presentableId" value="LOCAL-00125" />
+      <option name="project" value="LOCAL" />
+      <updated>1721291423868</updated>
+    </task>
+    <option name="localTasksCounter" value="126" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1155,9 +1181,6 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="update mysql real sync" />
-    <MESSAGE value="optimize mysql real sync" />
-    <MESSAGE value="backup issue fix" />
     <MESSAGE value="mysql real sync fix" />
     <MESSAGE value="mysql real sync optimize" />
     <MESSAGE value="myysql2clickhouse archive" />
@@ -1180,45 +1203,52 @@
     <MESSAGE value="update requirements.txt" />
     <MESSAGE value="Complete documentation" />
     <MESSAGE value="bug fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
+    <MESSAGE value="add bbgl api" />
+    <MESSAGE value="real sync api bug fix" />
+    <MESSAGE value="api update" />
+    <option name="LAST_COMMIT_MESSAGE" value="api update" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="191" y="0" width="1189" height="824" key="#Deployment" timestamp="1715927919743">
+    <state x="440" y="277" key="#com.jetbrains.python.refactoring.move.PyMoveModuleMembersDialog" timestamp="1724051548689">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="191" y="0" width="1189" height="824" key="#Deployment/0.0.1536.824@0.0.1536.824" timestamp="1715927919743" />
-    <state x="328" y="0" key="#SSH_Configurations" timestamp="1715927880543">
+    <state x="440" y="277" key="#com.jetbrains.python.refactoring.move.PyMoveModuleMembersDialog/0.0.1536.824@0.0.1536.824" timestamp="1724051548689" />
+    <state x="575" y="316" key="Github.Dialog.Accounts.Choose" timestamp="1721291466503">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="328" y="0" key="#SSH_Configurations/0.0.1536.824@0.0.1536.824" timestamp="1715927880543" />
-    <state x="219" y="57" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1715848041793">
+    <state x="575" y="316" key="Github.Dialog.Accounts.Choose/0.0.1536.824@0.0.1536.824" timestamp="1721291466503" />
+    <state width="1483" height="221" key="GridCell.Tab.0.bottom" timestamp="1716432046816">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="219" y="57" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.824@0.0.1536.824" timestamp="1715848041793" />
-    <state x="93" y="93" width="1350" height="638" key="DirDiffDialog" timestamp="1712558391999">
+    <state width="1483" height="221" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1716432046816" />
+    <state width="1483" height="221" key="GridCell.Tab.0.center" timestamp="1716432046816">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="93" y="93" width="1350" height="638" key="DirDiffDialog/0.0.1536.824@0.0.1536.824" timestamp="1712558391999" />
-    <state x="138" y="0" key="SettingsEditor" timestamp="1715927924212">
+    <state width="1483" height="221" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1716432046816" />
+    <state width="1483" height="221" key="GridCell.Tab.0.left" timestamp="1716432046816">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="138" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1715927924212" />
-    <state x="261" y="79" key="Vcs.Push.Dialog.v2" timestamp="1715937059161">
+    <state width="1483" height="221" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1716432046816" />
+    <state width="1483" height="221" key="GridCell.Tab.0.right" timestamp="1716432046816">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="261" y="79" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1715937059161" />
-    <state x="395" y="80" width="745" height="664" key="find.popup" timestamp="1715911095142">
+    <state width="1483" height="221" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1716432046816" />
+    <state x="261" y="79" key="Vcs.Push.Dialog.v2" timestamp="1721291442680">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="395" y="80" width="745" height="664" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1715911095142" />
-    <state x="524" y="295" key="publish.login" timestamp="1715928230603">
+    <state x="261" y="79" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1721291442680" />
+    <state x="395" y="80" width="745" height="664" key="find.popup" timestamp="1722569460842">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="524" y="295" key="publish.login/0.0.1536.824@0.0.1536.824" timestamp="1715928230603" />
-    <state x="347" y="-1" width="840" height="1034" key="search.everywhere.popup" timestamp="1712560705129">
+    <state x="395" y="80" width="745" height="664" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1722569460842" />
+    <state x="524" y="295" key="publish.login" timestamp="1725007076892">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="347" y="-1" width="840" height="1034" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1712560705129" />
+    <state x="524" y="295" key="publish.login/0.0.1536.824@0.0.1536.824" timestamp="1725007076892" />
+    <state x="347" y="-1" width="840" height="1034" key="search.everywhere.popup" timestamp="1724118425493">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="347" y="-1" width="840" height="1034" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1724118425493" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1233,7 +1263,7 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/dbapi$backup.coverage" NAME="backup Coverage Results" MODIFIED="1665208548371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/model" />
-    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1695608228080" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/dbapi$dbapi.coverage" NAME="dbapi Coverage Results" MODIFIED="1716283101701" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/dbapi$api_agent.coverage" NAME="api_agent Coverage Results" MODIFIED="1677735525314" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/templete/monitor" />
     <SUITE FILE_PATH="coverage/dbapi$redis_alert.coverage" NAME="redis_alert Coverage Results" MODIFIED="1679377739210" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/templete/monitor" />
     <SUITE FILE_PATH="coverage/dbapi$common.coverage" NAME="common Coverage Results" MODIFIED="1618212101870" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />

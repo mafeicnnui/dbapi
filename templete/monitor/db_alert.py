@@ -18,7 +18,7 @@ from email.mime.text import MIMEText
 '''
 config = {
     "chat_interface":"https://alarm.lifeat.cn/wx/cp/msg/1000011",
-    "mysql":"10.2.39.18:3306:puppet:puppet:Puppet@123",
+    "mysql":"10.2.39.59:3306:puppet:puppet:Puppet@123",
     "warn_level":"紧急"
 }
 

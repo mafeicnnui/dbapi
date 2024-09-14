@@ -429,7 +429,7 @@ def write_mysql(cfg,tab):
             cr_dest.execute(r['statement'])
             ids = ids + '{},'.format(r['id'])
         except:
-            if traceback.format_exc().count('Duplicate entry') > 0:
+            if traceback.format_exc().count('Duplicate entry')>0:
                 ids = ids + '{},'.format(r['id'])
             else:
                 logger.info('execute statement error!!!')
@@ -438,9 +438,8 @@ def write_mysql(cfg,tab):
 
                 # send mail
                 v_title = 'mysql->mysql实时同步任务执行失败告警[e]'
-                v_error = 'execute statement error!\n' + traceback.print_exc() + '\n' + 'rs_log=' + rs_log + '\n' + 'statement=' + \
-                          r['statement']
-                v_templete = exception_executer(cfg, v_error)
+                v_error = 'execute statement error!\n' + traceback.print_exc()+'\n'+'rs_log='+rs_log+'\n'+'statement='+r['statement']
+                v_templete = exception_executer(cfg,v_error)
                 send_mail_param(cfg.get('send_server'),
                                 cfg.get('sender'),
                                 cfg.get('sendpass'),
